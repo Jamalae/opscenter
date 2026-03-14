@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsCenter — Teletherapeutics Health</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c10;--bg2:#0f1218;--bg3:#151922;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--text2:#8892a4;--text3:#4a5568;
+  --accent:#00d4aa;--accent2:#0091ff;--accent3:#ff6b6b;--accent4:#f5a623;
+  --brand-tt:#00d4aa;--brand-wa:#0091ff;--brand-hb:#a855f7;--brand-tc:#f5a623;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,170,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(10,12,16,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.5px;}
+.logo span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.last-updated{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);}
+.sync-btn{font-family:'DM Mono',monospace;font-size:11px;background:transparent;border:1px solid var(--border2);color:var(--accent);padding:6px 14px;border-radius:4px;cursor:pointer;letter-spacing:0.5px;transition:all 0.2s;text-transform:uppercase;}
+.sync-btn:hover{background:rgba(0,212,170,0.08);}
+.settings-btn{background:transparent;border:1px solid var(--border);color:var(--text2);width:34px;height:34px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-size:16px;}
+.settings-btn:hover{border-color:var(--border2);color:var(--text);}
+
+/* MAIN */
+main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px 32px 80px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:28px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;}
+.tab{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all 0.2s;}
+.tab.active{background:var(--bg3);color:var(--text);border:1px solid var(--border2);}
+.tab:hover:not(.active){color:var(--text2);}
+
+/* SECTION */
+.section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:20px;}
+.section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);}
+.section-line{flex:1;height:1px;background:var(--border);}
+
+/* BRAND PILLS */
+.brand-filter{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+.brand-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);transition:all 0.2s;}
+.brand-pill[data-brand="all"].active{border-color:var(--text2);color:var(--text);background:var(--bg3);}
+.brand-pill[data-brand="tt"].active{border-color:var(--brand-tt);color:var(--brand-tt);background:rgba(0,212,170,0.08);}
+.brand-pill[data-brand="wa"].active{border-color:var(--brand-wa);color:var(--brand-wa);background:rgba(0,145,255,0.08);}
+.brand-pill[data-brand="hb"].active{border-color:var(--brand-hb);color:var(--brand-hb);background:rgba(168,85,247,0.08);}
+.brand-pill[data-brand="tc"].active{border-color:var(--brand-tc);color:var(--brand-tc);background:rgba(245,166,35,0.08);}
+.brand-pill:hover:not(.active){border-color:var(--border2);color:var(--text2);}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px;}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 16px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-accent,var(--accent));opacity:0.6;}
+.kpi-card:hover{border-color:var(--border2);}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.kpi-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--text);line-height:1;margin-bottom:4px;}
+.kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+
+/* CHARTS ROW */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:32px;}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.chart-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.chart-sub{font-size:11px;color:var(--text3);margin-bottom:20px;font-family:'DM Mono',monospace;}
+
+/* BRAND TABLE */
+.brand-table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:32px;}
+.brand-table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.brand-table-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+table{width:100%;border-collapse:collapse;}
+thead th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:12px 20px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th:not(:first-child){text-align:right;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+tbody td{padding:14px 20px;font-size:13px;color:var(--text2);text-align:right;}
+tbody td:first-child{text-align:left;}
+.brand-name-cell{display:flex;align-items:center;gap:10px;}
+.brand-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.brand-name-text{font-size:13px;font-weight:500;color:var(--text);}
+.brand-abbr{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;}
+.num{font-family:'DM Mono',monospace;font-size:12px;}
+.mini-bar{height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-top:4px;}
+.mini-bar-fill{height:100%;border-radius:2px;}
+
+/* STAFF */
+.staff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+@media(max-width:900px){.staff-grid{grid-template-columns:1fr;}}
+.staff-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.staff-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.staff-card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);}
+.staff-badge{font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;letter-spacing:0.5px;text-transform:uppercase;}
+.staff-row{display:flex;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border);gap:12px;transition:background 0.15s;}
+.staff-row:last-child{border-bottom:none;}
+.staff-row:hover{background:rgba(255,255,255,0.02);}
+.staff-avatar{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;}
+.staff-info{flex:1;min-width:0;}
+.staff-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.staff-role{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-top:1px;}
+.staff-metric{text-align:right;}
+.staff-metric-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);font-weight:500;}
+.staff-metric-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;}
+.progress-wrap{flex:1;max-width:80px;}
+.progress-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;}
+
+/* ═══ CONTENT TAB ═══ */
+.content-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:900px){.content-stats-row{grid-template-columns:repeat(2,1fr);}}
+.stat-pill{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+.stat-pill::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--pill-accent,var(--accent));opacity:0.5;}
+.stat-pill-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1;}
+.stat-pill-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-top:6px;}
+
+.content-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+@media(max-width:900px){.content-two-col{grid-template-columns:1fr;}}
+
+/* PIPELINE BOARD */
+.pipeline-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px;}
+.pipeline-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.pipeline-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+.pipeline-cols{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.pipeline-col{padding:16px;}
+.pipeline-col:first-child{border-right:1px solid var(--border);}
+.pipeline-col-head{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.p-dot{width:7px;height:7px;border-radius:50%;}
+.reel-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:8px;cursor:default;transition:border-color 0.15s;}
+.reel-card:hover{border-color:var(--border2);}
+.reel-topic{font-size:11px;color:var(--text);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.reel-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.reel-acct{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:10px;letter-spacing:0.5px;}
+.reel-model{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);}
+
+/* CONTENT BRAND BREAKDOWN */
+.brand-breakdown{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.brand-breakdown-row{display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);gap:14px;}
+.brand-breakdown-row:last-child{border-bottom:none;}
+.bdr-name{font-size:12px;font-weight:500;color:var(--text);min-width:180px;}
+.bdr-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.bdr-bar{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+.bdr-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);min-width:30px;text-align:right;}
+.bdr-done{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);min-width:60px;text-align:right;}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:20px;}
+.search-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:10px 14px 10px 38px;outline:none;transition:border-color 0.2s;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--text3);}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px;width:520px;max-width:90vw;transform:translateY(20px);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px;}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:24px;font-family:'DM Mono',monospace;line-height:1.6;}
+.field-group{margin-bottom:16px;}
+.field-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.field-dot{width:8px;height:8px;border-radius:50%;}
+input[type="text"],input[type="url"]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px 14px;outline:none;transition:border-color 0.2s;}
+input[type="text"]:focus,input[type="url"]:focus{border-color:var(--accent);}
+input::placeholder{color:var(--text3);}
+.modal-footer{display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
+.btn-primary{flex:1;background:var(--accent);color:#0a0c10;border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:11px;cursor:pointer;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.85;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:11px 18px;cursor:pointer;transition:all 0.2s;}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text);}
+
+/* STATUS DOT */
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);display:inline-block;margin-right:6px;}
+.status-dot.live{background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* LOADING */
+.loading-banner{display:none;align-items:center;gap:10px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);}
+.loading-banner.show{display:flex;}
+.spinner{width:14px;height:14px;border:2px solid rgba(0,212,170,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* VIEWS */
+.view{display:none;}
+.view.active{display:block;}
+
+/* FADE */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.4s ease forwards;}
+.fade-in-1{animation-delay:0.05s;opacity:0;}
+.fade-in-2{animation-delay:0.1s;opacity:0;}
+.fade-in-3{animation-delay:0.15s;opacity:0;}
+.fade-in-4{animation-delay:0.2s;opacity:0;}
+.fade-in-5{animation-delay:0.25s;opacity:0;}
+.fade-in-6{animation-delay:0.3s;opacity:0;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">Data Source Configuration</div>
+    <div class="modal-sub">Paste your published Google Sheets CSV URLs.<br>File → Share → Publish to web → select tab → CSV</div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tt)"></span>Teletherapeutics Health — Ads</div><input type="url" id="url-tt" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-wa)"></span>Well-America — Ads</div><input type="url" id="url-wa" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-hb)"></span>Hamilton Behavioral MD PA — Ads</div><input type="url" id="url-hb" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tc)"></span>Therapy Central — Ads</div><input type="url" id="url-tc" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="field-group"><div class="field-label">Staff Metrics Sheet</div><input type="url" id="url-staff" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveAndLoad()">Save & Load Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Ops<span>Center</span></div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated"><span class="status-dot live" id="statusDot"></span>Live · Social Reels loaded</span>
+    <button class="sync-btn" onclick="refreshData()">↻ Refresh</button>
+    <button class="settings-btn" onclick="openModal()" title="Configure data sources">⚙</button>
+  </div>
+</header>
+
+<main>
+  <div class="loading-banner" id="loadingBanner"><div class="spinner"></div>Fetching data from Google Sheets...</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchView('marketing',this)">Marketing KPIs</button>
+    <button class="tab" onclick="switchView('brand',this)">Brand Performance</button>
+    <button class="tab" onclick="switchView('content',this)">Content Pipeline</button>
+    <button class="tab" onclick="switchView('staff',this)">Staff Metrics</button>
+  </div>
+
+  <!-- MARKETING -->
+  <div class="view active" id="view-marketing">
+    <div class="section-header"><span class="section-title">KPI Summary</span><div class="section-line"></div></div>
+    <div class="brand-filter" id="kpiFilter">
+      <button class="brand-pill active" data-brand="all" onclick="filterKPI('all',this)">All Brands</button>
+      <button class="brand-pill" data-brand="tt" onclick="filterKPI('tt',this)">Teletherapeutics</button>
+      <button class="brand-pill" data-brand="wa" onclick="filterKPI('wa',this)">Well-America</button>
+      <button class="brand-pill" data-brand="hb" onclick="filterKPI('hb',this)">Hamilton Behavioral</button>
+      <button class="brand-pill" data-brand="tc" onclick="filterKPI('tc',this)">Therapy Central</button>
+    </div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">Spend vs Conversions</div><div class="chart-sub">Monthly trend — all active brands</div><canvas id="trendChart" height="200"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Budget Allocation</div><div class="chart-sub">Ad spend by brand</div><canvas id="donutChart" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- BRAND -->
+  <div class="view" id="view-brand">
+    <div class="section-header"><span class="section-title">Multi-Brand Performance</span><div class="section-line"></div></div>
+    <div class="brand-table-wrap">
+      <div class="brand-table-header"><span class="brand-table-title">All Brands — Current Period</span><span class="last-updated">Demo data — connect sheets via ⚙</span></div>
+      <table><thead><tr><th>Brand</th><th>Spend</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Conversions</th><th>CPL</th><th>ROAS</th></tr></thead>
+      <tbody id="brandTableBody"></tbody></table>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">CPL by Brand</div><div class="chart-sub">Cost per lead comparison</div><canvas id="cplChart" height="180"></canvas></div>
+      <div class="chart-card"><div class="chart-title">CTR by Brand</div><div class="chart-sub">Click-through rate %</div><canvas id="ctrChart" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CONTENT PIPELINE -->
+  <div class="view" id="view-content">
+    <div class="section-header"><span class="section-title">Content Pipeline</span><div class="section-line"></div></div>
+
+    <!-- STATS ROW -->
+    <div class="content-stats-row">
+      <div class="stat-pill fade-in fade-in-1" style="--pill-accent:#00d4aa">
+        <div class="stat-pill-val" id="cs-total">86</div>
+        <div class="stat-pill-label">Total Reels</div>
+      </div>
+      <div class="stat-pill fade-in fade-in-2" style="--pill-accent:#0091ff">
+        <div class="stat-pill-val" id="cs-uploaded">63</div>
+        <div class="stat-pill-label">Uploaded / Live</div>
+      </div>
+      <div class="stat-pill fade-in fade-in-3" style="--pill-accent:#f5a623">
+        <div class="stat-pill-val" id="cs-done">23</div>
+        <div class="stat-pill-label">Done / Rendered</div>
+      </div>
+      <div class="stat-pill fade-in fade-in-4" style="--pill-accent:#a855f7">
+        <div class="stat-pill-val" id="cs-models">2</div>
+        <div class="stat-pill-label">Image Models</div>
+      </div>
+    </div>
+
+    <!-- BRAND FILTER -->
+    <div class="brand-filter" id="contentFilter">
+      <button class="brand-pill active" data-brand="all" onclick="filterContent('all',this)">All Brands</button>
+      <button class="brand-pill" data-brand="tt" onclick="filterContent('tt',this)">TH — Account 1</button>
+      <button class="brand-pill" data-brand="wa" onclick="filterContent('wa',this)">WA — Account 2</button>
+      <button class="brand-pill" data-brand="hb" onclick="filterContent('hb',this)">HB — Account 3</button>
+      <button class="brand-pill" data-brand="tc" onclick="filterContent('tc',this)">TC — Account 4</button>
+    </div>
+
+    <!-- TWO COL: breakdown + model chart -->
+    <div class="content-two-col">
+      <div class="chart-card">
+        <div class="chart-title">Reels by Brand</div>
+        <div class="chart-sub">Total volume per account</div>
+        <canvas id="reelsByBrandChart" height="160"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Status Breakdown</div>
+        <div class="chart-sub">Uploaded vs Done</div>
+        <canvas id="statusChart" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- PIPELINE BOARD -->
+    <div class="pipeline-wrap">
+      <div class="pipeline-header">
+        <span class="pipeline-title">Content Board</span>
+        <div class="search-wrap" style="margin:0;width:260px;">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="reelSearch" placeholder="Search topics..." oninput="renderPipeline()">
+        </div>
+      </div>
+      <div class="pipeline-cols">
+        <div class="pipeline-col">
+          <div class="pipeline-col-head"><span class="p-dot" style="background:#0091ff"></span><span style="color:#0091ff">Uploaded</span><span style="color:var(--text3);margin-left:4px" id="uploaded-count"></span></div>
+          <div id="pipeline-uploaded"></div>
+        </div>
+        <div class="pipeline-col">
+          <div class="pipeline-col-head"><span class="p-dot" style="background:#00d4aa"></span><span style="color:#00d4aa">Done</span><span style="color:var(--text3);margin-left:4px" id="done-count"></span></div>
+          <div id="pipeline-done"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAFF -->
+  <div class="view" id="view-staff">
+    <div class="section-header"><span class="section-title">Staff Metrics</span><div class="section-line"></div></div>
+    <div class="staff-grid" id="staffGrid"></div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const REELS_DATA = [{"topic": "Mental Health Motivation When You Feel Empty", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Luckiest Guy", "status": "Uploaded", "account": "Account 1"}, {"topic": "The silent health crisis nobody talks about. How chronic stress is quietly reshaping our brains, immunity, and lifespan.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Mental Health Motivation When You Feel Empty", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "20+ Min Power Sessions for Mental Fitness (Men's Edge): 2025 report shows men practicing longer sessions report 83% mental fitness gains. Add walking meditation combining mindful steps and breath. Beat distractions\u2014level up now! Practical progression for frequent practitioners with data-driven encouragement.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "3 Breathing Hacks to Cut Stress in 1 Min (Science-Backed)", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "How 5 Min Daily Rewires Your Brain Against AI Anxiety", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Luckiest Guy", "status": "Uploaded", "account": "Account 2"}, {"topic": "Why Your Phone Is Sabotaging Your Mental Health: Digital Boundaries You Need Now", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "The 60-Second Attention Reset That Actually Works to Reduce Anxiety and Overthinking", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "You're Resting Wrong (And Here's Why Real Rest Matters for Your Nervous System)", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Replace These 3 Self-Critical Phrases with Compassionate Alternatives Today", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "The 10-Minute Anxiety Reset (Backed by Research) \u2014 Teach a specific mindfulness or breathing technique proven to reduce depression symptoms by nearly 20%. A quick mental reset to manage daily stress effectively.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Why You're Burned Out (And It's Not Your Fault) \u2014 Understand high-functioning burnout as a legitimate mental health condition and learn how to shift to a preventive care mindset to recover without guilt.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "3 Stress Management Hacks Your Doctor Wishes You Knew \u2014 Scientifically backed tips including better sleep, movement, and mindfulness exercises for immediate stress relief.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Stop Waiting for Crisis: Your Mental Health Check-In Guide \u2014 Embrace proactive mental health care by recognizing early emotional signs before burnout hits to maintain balance and well-being.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Workplace Stress Is a Mental Health Emergency (Here's Why) \u2014 Explore why 31% of workers experience frequent stress and learn when and how to take mental health leave effectively.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "The Stress Relief Nobody Talks About: Digital Detox \u2014 Discover how reducing your digital consumption can drastically lower stress, improve mindfulness, and boost mental health.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "High-Functioning Anxiety: The Silent Killer \u2014 Learn about this invisible stress condition affecting high-performers and how to manage it effectively to avoid burnout.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Why Your Sleep Schedule Is Sabotaging Your Mental Health \u2014 Understand the critical link between sleep hygiene and stress levels, and tips for an anxiety-friendly bedtime routine.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "ADHD & Burnout: Why You're Stressed Differently \u2014 Highlight unique stress challenges faced by neurodivergent individuals and tailored stress management strategies.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Free Stress Management Tools (That Actually Work) \u2014 Showcase top telehealth apps and digital tools that provide affordable and accessible anxiety and stress relief.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Mindfulness as Preventive Medicine \u2014 Explain how daily mindfulness practice acts as preventive care to reduce anxiety and promote long-term stress resilience.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "The Truth About Stress Management Nobody Tells You \u2014 Debunk common myths around stress relief and share effective strategies backed by science.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Spot the Sneaky SAD symptoms Hiding in Your 2026 Indoor Life \u2013 Beat the Winter Blues Now! Think mornings feel heavier despite your best intentions? Discover 5 evolved signs of seasonal affective disorder like lagging motivation and screen-induced fatigue that hit even sunny climates\u2014then claim your power with one quick morning light hack to reset your mood today.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Unlock Light therapy for SAD That Actually Rewires Your Brain \u2013 Ditch Fatigue in 2026 Winters! Tired of artificial lights failing you? Learn why 10,000-lux therapy lamps mimic missing sunlight to fix circadian chaos, backed by doctors' top recs\u2014plus a 60-second setup routine to surge energy and crush hopelessness before it peaks in Feb.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "How Your 2026 Lifestyle Fuels Winter blues \u2013 Transform It to Thrive Through SAD Season! Remote days, late nights, and New Year pressure amplifying low energy? Expose the hidden lifestyle hits like disrupted sleep and isolation driving 5% of adults to SAD symptoms, then flip it with 3 simple swaps for unstoppable daily wins.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Prevent SAD symptoms Before They Strike: 2026's Game-Changing Strategies for Winter Warriors! Searches spiking 125% as fall hits\u2014don't wait for Dec-Jan crashes! Arm yourself with preventive power moves like dawn-simulating routines, social boosts, and sleep hygiene to outsmart light deprivation and own your vibrant season from day one.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "5 Casual Hellos That End Daily Loneliness - Demonstrate simple, everyday greetings like in a grocery line that help build social recognition and instantly boost mood by tapping into empathy traits.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Weekly Group Hack: Connect Deeper Without Awkwardness - Step-by-step tips for organizing themed meetups that ease nervousness and foster deeper social connections through inward reflection.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Combat Holiday Isolation: 3 Quick Connection Rituals - Expert-backed tips to overcome loneliness during holidays with easy rituals that create meaningful social bonds.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Why Short Videos Are Stealing Your Real Friends - Myth-busting youth data that shows how excessive short video watching can displace real-life friendships; challenge viewers to cut 30 minutes daily for better connections.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Digital Play Truth: Games Friend or Loneliness Foe? - Insights from WHO on how video games impact social bonds, discussing benefits and risks with a \"screen swap for real bonds\" hook.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "AI Care Hype: Why Human Chats Still Win for Mental Health - A quick pros and cons comparison highlighting why human interaction remains crucial despite AI care trends forecasted for 2026.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Youth Loneliness Fix: Build Mentorship in 60 Seconds - Based on JED Foundation trends, this video provides a quick script for teens to reach out to adult allies and build supportive mentorships.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "LGBTQ+ Teens: Online Tribes to Offline Power - Encourages LGBTQ+ youth to leverage their online communities to build real-world support, highlighting hope and empowerment.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Tech Traps Teens Face: 4 Signs & Escape Routes - Educates teens on recognizing digital addiction signs and provides actionable swaps for face-to-face interactions.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Paralysis Proof: How Community Crushes Isolation - Story-driven video with nurse/psychologist personal anecdotes showing how community support breaks isolation even in paralysis.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "Empath Secret: Thrive in Small Circles Without Burnout - Reveal how empaths can thrive by focusing on a small, trusted social circle to protect mental health and maintain energy.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "2026 Mental Reset: From News Doom to Real Bonds - Motivational angle addressing news overload and stress, encouraging viewers to reset mental habits and build meaningful connections through a breathing and connect challenge.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "5 Micro-Habits to Boost Competence & Crush Life Challenges - Tie to DBT skills for resilient 2026", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "3 Signs Low Confidence is Sabotaging You + Instant Fix to Build Self-Belief Like Entrepreneurs", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Build Real Connection in 60s to End Loneliness - Foster Belonging Amid Psychological Safety Trends", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Unlock Character Strength: Integrity Hacks for Daily Wins to Create a Burnout-Proof Mindset", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Why Self-Caring Isn't Selfish: 1-Minute Empathy Reset for Better Workplace Empathy", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "From Overwhelmed to Capable: Competence Blueprint for Stress Management and Control Regain", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "AI Anxiety? Build Unshakable Confidence in 2026 to Overcome Tech Fears", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Quiet Burnout Fix: 3 Ways to Strengthen Connections at Work for Psychological Safety", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "Regain Control When Life Feels Chaotic with 5 Cs Hack for Lower Stress and Autonomy", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Character Building: Show Up Strong Without Burning Out by Balancing Responsibility and Self-Care", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "Empathy for Others Starts Here: Quick Caring Routine to Reduce Mental Health Stigma", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "Master the 5 Cs: Your 60-Second Mental Health Glow-Up Challenge for 2026", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "Why Your Anxiety Might Actually Be ADHD - Educational myth-busting video explaining how 50% of adults with ADHD also experience anxiety, leading to common misdiagnosis. Highlights how symptoms overlap but require different treatments.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "The 25% Statistic Nobody's Talking About - Eye-opening awareness video revealing that 1 in 4 adults suspect they have undiagnosed ADHD but very few have discussed it with healthcare providers, stressing the importance of professional diagnosis.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Women's ADHD Looks Nothing Like You Think - Educational empowerment video highlighting how adult women's ADHD symptoms differ and are often mistaken for depression, explaining the 344% rise in female diagnoses and masking behaviors.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "The Comorbidity Trap: Why You Feel Broken - Validating educational video explaining that adults with ADHD often have multiple disorders including depression, leading to misdiagnosis and the need for proper evaluation and treatment.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "5 Signs Your ADHD Is Being Missed (Not Anxiety) - Quick educational checklist of ADHD symptoms often confused with anxiety, including memory issues, emotional regulation, and time blindness, helping viewers identify missed signs.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Why TikTok Made ADHD Diagnosis Explode (And Why That's Complicated) - Trend analysis video exploring how viral ADHD videos increased awareness and stimulant prescriptions during COVID-19, highlighting the risks of self-diagnosis without professional evaluation.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "The Pandemic Blurred Everything: ADHD vs. Anxiety vs. Depression - Contextual education on how the pandemic exacerbated symptoms and increased telehealth stimulant prescriptions, complicating diagnosis between ADHD, anxiety, and depression.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "What Happens When You Treat Anxiety But Have ADHD - Cautionary educational video showing consequences of misdiagnosis and wrong medication, emphasizing the critical need for differential diagnosis and proper treatment.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "The Gender Bias in ADHD Diagnosis (Still Happening in 2026) - Social justice and education angle addressing how Black and Brown men are often misdiagnosed and women are mistaken for depression cases, calling attention to systemic inequities.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Over Half of ADHD Diagnoses Happen in Adulthood\u2014Here's Why - Educational validation explaining why many adults receive ADHD diagnosis later in life due to masking and symptom differences, emphasizing genetic factors.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "The Critical Difference: Self-Diagnosis vs. Professional Evaluation - Practical guidance on how to properly get evaluated for ADHD, risks of self-diagnosis, and the importance of formal diagnosis and treatment.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 4"}, {"topic": "Why Anxiety Meds Can Make ADHD Worse (A Doctor Explains) - Expert-backed educational video explaining why stimulants calm ADHD brains but may worsen anxiety, highlighting the importance of correct diagnosis for effective treatment.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "Hidden PTSD Triggers in Everyday Life: Explore 3 common reintegration triggers like crowds or finances that spike symptoms, backed by VA data on trauma-exposed vets. End with a quick grounding technique: \"Breathe in resilience\u2014you've got this.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 1"}, {"topic": "Why Your Body Remembers Deployment Trauma: Break down how health challenges amplify PTSD and depression post-deployment. Share a 30-second body scan exercise to reclaim control and build daily functionality.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 1"}, {"topic": "From Battlefield to Boardroom: PTSD at Work: Reveal how vocational readjustment struggles link to poor mental health. Motivate with \"1 job hack that changed my life\" for seamless civilian transitions.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 1"}, {"topic": "Telehealth Hacks for Rural Vets Battling Reintegration: Spotlight VA's digital platforms ending travel barriers for PTSD therapy. Demo a 20-second app signup + first-session tip: \"Access help from your couch\u2014start healing today.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Uploaded", "account": "Account 2"}, {"topic": "Breaking the Stigma: Why Vets Hide Reintegration Pain: Tackle military culture shame masking depression and anxiety. Use real stats on wait times and a bold call: \"Admit it, get help\u2014your squad would approve.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 2"}, {"topic": "Virtual Therapy Wins: Real Stories from Deployed Vets: Feature anonymized successes via telehealth for trauma, linking to better functionality. Hook: \"Skip the drive, crush reintegration stress in one call.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 2"}, {"topic": "Family Reunions Gone Wrong: Reintegration Shock: Address social readjustment gaps causing depression spikes. Offer 3 family convo starters: \"Rebuild bonds stronger than before\u2014start tonight.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Uploaded", "account": "Account 3"}, {"topic": "Suicide Warning Signs Post-Deployment No One Talks About: Highlight 17+ daily vet suicides and linked isolation. Empower with \"Spot it, stop it: 1 call that saves lives\" via VA crisis lines.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "Spouse Survival Guide: Supporting Your Vet's Reintegration: Guide families on handling PTSD moods and financial stress. Motivational twist: \"You're their anchor\u2014unlock these 2 support moves.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "Build Reintegration Resilience: Beat Depression's Grip: Draw from studies showing early financial/social help prevents long-term issues. Share \"Daily win ritual\" for trauma-exposed vets.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "From Homeless to Hopeful: Resilience After Deployment: Connect housing instability, PTSD, and recovery cycles. Inspire: \"3 steps to stable sleep and mental strength\u2014your comeback starts now.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "2026 Reintegration Roadmap: Thrive, Don't Just Survive: Synthesize smooth transitions via proactive outreach and health focus. End with viewer challenge: \"Pick one action today\u2014tag a battle buddy.\"", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "27.5% of Deployments End in Mental Evacuations - 3 Coping Strategies That Work: Highlight the sharp rise in mental health evacuations from military deployments, featuring breathing exercises and telehealth tips to help active duty personnel manage stress effectively.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 1"}, {"topic": "Veteran Suicide Prevention Urgency: Present the critical statistics on veteran suicides, explaining delays in access to care and promoting steps individuals can take to break the cycle with crisis line support visuals to increase awareness.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 1"}, {"topic": "Drone Pilots' Silent PTSD: 2026 Study Reveals All: Explore mental health challenges faced by drone pilots including PTSD and moral injury, encouraging viewers to seek peer support and acknowledging their invisible struggles.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 1"}, {"topic": "Why Rural Veterans Wait 90 Days for Help (And Telehealth Fixes It): Address wait times and geographic barriers that rural veterans face, showcasing telehealth as a practical breakthrough improving timely access to mental health care.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 2"}, {"topic": "High-Rank Stigma: Why Officers Skip Mental Health (And How to Fix It): Discuss reluctance among higher-ranking military members to seek mental health care due to stigma, presenting anonymous support options and quick practical coping tips.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 2"}, {"topic": "TBI and Long-Term Injury Struggles in Veterans: Highlight the prevalence of traumatic brain injuries among veterans, emphasizing delayed symptoms and the importance of seeking disability support and ongoing care.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 2"}, {"topic": "Mental Health Evacuations Now Outpace Battle Injuries: Share compelling statistics about how mental health reasons have become the leading cause for military evacuations, using urgent visuals to stress the importance of readiness and wellness.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "Beating Stigma: Quick Coping for High-Ranking Service Members: Empower service members to overcome stigma with actionable mental health tips, focusing on telehealth apps and peer support networks to encourage help-seeking.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "VA Workforce Shortages Threaten Mental Health Services: Discuss the impact of psychologist shortages in the VA, breaking myths about mental health care availability and stressing the urgency for reforms to protect veteran support systems.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 3"}, {"topic": "2026 Policy Shifts Boost Telehealth for Veterans: Explain recent 2026 healthcare policy changes improving telehealth access for veterans, emphasizing benefits like reduced wait times and easier mental health support delivery.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "Moral Injury in Armed Forces: Identifying Signs and Seeking Help: Cover signs of moral injury among armed forces personnel and the importance of early intervention, including peer discussion and mental health resources tailored for military members.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "flux-pro", "font": "Oswald", "status": "Done", "account": "Account 4"}, {"topic": "Breaking Barriers: How Telehealth is Closing Gaps for Rural Veterans: Focus on how telehealth services are overcoming isolation and long wait times for rural veterans, making mental health care more accessible and reducing treatment drop-offs.", "language": "English", "voice": "en-US-AmandaMultilingualNeural", "image_model": "nano-banana", "font": "Oswald", "status": "Done", "account": "Account 4"}];
+
+// ═══════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════
+const BRANDS = [
+  {key:'tt',name:'Teletherapeutics Health',abbr:'TH',color:'#00d4aa',account:'Account 1'},
+  {key:'wa',name:'Well-America',abbr:'WA',color:'#0091ff',account:'Account 2'},
+  {key:'hb',name:'Hamilton Behavioral MD PA',abbr:'HB',color:'#a855f7',account:'Account 3'},
+  {key:'tc',name:'Therapy Central',abbr:'TC',color:'#f5a623',account:'Account 4'},
+];
+
+const DEMO_BRANDS = {
+  tt:{spend:4820,impressions:142000,clicks:3210,conversions:48,revenue:19200},
+  wa:{spend:6340,impressions:218000,clicks:5180,conversions:72,revenue:36000},
+  hb:{spend:2190,impressions:87000,clicks:1640,conversions:29,revenue:11600},
+  tc:{spend:3450,impressions:109000,clicks:2870,conversions:41,revenue:16400},
+};
+
+const DEMO_MONTHLY = {
+  labels:['Oct','Nov','Dec','Jan','Feb','Mar'],
+  spend:[14200,15800,12400,16200,17400,16800],
+  conversions:[148,162,131,174,188,190],
+};
+
+const DEMO_STAFF = [
+  {brand:'tt',color:'#00d4aa',bg:'rgba(0,212,170,0.12)',members:[
+    {name:'Dr. Kazmi',role:'Physician',metric:'94%',label:'utilization',pct:94},
+    {name:'Rina',role:'Scheduling',metric:'247',label:'appts/mo',pct:82},
+    {name:'Maricel',role:'Billing',metric:'$91K',label:'collected',pct:88},
+  ]},
+  {brand:'wa',color:'#0091ff',bg:'rgba(0,145,255,0.12)',members:[
+    {name:'Chris',role:'VA Collections',metric:'$44K',label:'collected',pct:73},
+    {name:'Fathy Abdalla',role:'Dir. of Operations',metric:'97%',label:'compliance',pct:97},
+    {name:'Shavonda',role:'School Referrals',metric:'18',label:'referrals',pct:60},
+  ]},
+  {brand:'hb',color:'#a855f7',bg:'rgba(168,85,247,0.12)',members:[
+    {name:'Front Desk',role:'Reception',metric:'96%',label:'ans. rate',pct:96},
+  ]},
+];
+
+let state = {urls:{tt:'',wa:'',hb:'',tc:'',staff:''},data:null,kpiFilter:'all',contentFilter:'all',charts:{}};
+const STORAGE_KEY='opscenter_urls';
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved=localStorage.getItem(STORAGE_KEY);
+  if(saved)state.urls=JSON.parse(saved);
+  // Delay chart init by one frame so canvases have real pixel dimensions
+  setTimeout(()=>{
+    renderDemo();
+    renderContentTab('all');
+  },60);
+});
+
+function renderDemo(){
+  renderKPIGrid(DEMO_BRANDS,'all');
+  renderBrandTable(DEMO_BRANDS);
+  renderMarketingCharts(DEMO_BRANDS);
+  renderStaff(DEMO_STAFF);
+}
+
+// ═══════════════════════════════════
+// MODAL
+// ═══════════════════════════════════
+function openModal(){
+  Object.keys(state.urls).forEach(k=>{const e=document.getElementById('url-'+k);if(e)e.value=state.urls[k]||'';});
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeModal(){document.getElementById('settingsModal').classList.remove('open');}
+document.getElementById('settingsModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+async function saveAndLoad(){
+  ['tt','wa','hb','tc','staff'].forEach(k=>{state.urls[k]=document.getElementById('url-'+k).value.trim();});
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state.urls));
+  closeModal();
+  await fetchSheets();
+}
+
+async function fetchSheets(){
+  document.getElementById('loadingBanner').classList.add('show');
+  const results={};
+  for(const k of ['tt','wa','hb','tc']){
+    if(!state.urls[k])continue;
+    try{
+      const r=await fetch(ensureCSV(state.urls[k]));
+      if(!r.ok)throw new Error();
+      results[k]=parseCSV(await r.text());
+    }catch(e){console.warn('fetch failed',k);}
+  }
+  if(state.urls.staff){
+    try{const r=await fetch(ensureCSV(state.urls.staff));results.staff=parseCSV(await r.text());}catch(e){}
+  }
+  document.getElementById('loadingBanner').classList.remove('show');
+  if(!Object.keys(results).length){alert('Could not load data. Ensure sheets are published as CSV.');return;}
+  state.data=results;
+  const brands={};
+  BRANDS.forEach(b=>{brands[b.key]=extractMetrics(results[b.key])||{};});
+  renderKPIGrid(brands,'all');
+  renderBrandTable(brands);
+  renderMarketingCharts(brands);
+  document.getElementById('lastUpdated').innerHTML='<span class="status-dot live"></span>Live · '+new Date().toLocaleTimeString();
+}
+
+async function refreshData(){
+  if(!Object.values(state.urls).some(u=>u)){openModal();return;}
+  await fetchSheets();
+}
+
+function ensureCSV(url){
+  if(url.includes('output=csv'))return url;
+  if(url.includes('pub?'))return url+'&output=csv';
+  if(url.includes('/pub'))return url+'?output=csv';
+  return url;
+}
+
+function parseCSV(text){
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.split(',');const obj={};
+    headers.forEach((h,i)=>{obj[h]=(vals[i]||'').trim();});
+    return obj;
+  });
+}
+
+function extractMetrics(rows){
+  if(!rows||!rows.length)return null;
+  const sum=(key)=>rows.reduce((acc,r)=>{
+    for(const a of[key,key+'s','total_'+key,'ad_'+key]){if(r[a]!==undefined)return acc+parseFloat(r[a].replace(/[^0-9.]/g,''))||0;}
+    return acc;
+  },0);
+  return{spend:sum('spend')||sum('cost')||sum('amount_spent'),impressions:sum('impression'),clicks:sum('click')||sum('link_click'),conversions:sum('conversion')||sum('result')||sum('lead'),revenue:sum('revenue')||sum('value')||0};
+}
+
+// ═══════════════════════════════════
+// KPI GRID
+// ═══════════════════════════════════
+function renderKPIGrid(brands,filter){
+  const data=filter==='all'
+    ?{spend:sum(brands,'spend'),impressions:sum(brands,'impressions'),clicks:sum(brands,'clicks'),conversions:sum(brands,'conversions'),revenue:sum(brands,'revenue')}
+    :brands[filter]||{};
+  const ctr=data.clicks&&data.impressions?((data.clicks/data.impressions)*100).toFixed(2):'—';
+  const cpl=data.conversions&&data.spend?'$'+(data.spend/data.conversions).toFixed(0):'—';
+  const kpis=[
+    {label:'Ad Spend',value:data.spend?'$'+fmt(data.spend):'—',sub:'Budget deployed',accent:'#00d4aa'},
+    {label:'Impressions',value:data.impressions?fmtK(data.impressions):'—',sub:'Total reach',accent:'#0091ff'},
+    {label:'Clicks',value:data.clicks?fmtK(data.clicks):'—',sub:'Link clicks',accent:'#a855f7'},
+    {label:'CTR',value:ctr!=='—'?ctr+'%':'—',sub:'Click-through rate',accent:'#f5a623'},
+    {label:'Conversions',value:data.conversions||'—',sub:'Intake leads',accent:'#00d4aa'},
+    {label:'Cost Per Lead',value:cpl,sub:'Spend ÷ conversions',accent:'#ff6b6b'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map((k,i)=>`
+    <div class="kpi-card fade-in fade-in-${i+1}" style="--card-accent:${k.accent}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+function filterKPI(brand,btn){
+  state.kpiFilter=brand;
+  document.querySelectorAll('#kpiFilter .brand-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const brands=state.data?Object.fromEntries(BRANDS.map(b=>[b.key,extractMetrics(state.data[b.key])||{}])):DEMO_BRANDS;
+  renderKPIGrid(brands,brand);
+}
+
+function sum(brands,key){return Object.values(brands).reduce((a,b)=>a+(b[key]||0),0);}
+
+// ═══════════════════════════════════
+// BRAND TABLE
+// ═══════════════════════════════════
+function renderBrandTable(brands){
+  const maxSpend=Math.max(...BRANDS.map(b=>brands[b.key]?.spend||0));
+  document.getElementById('brandTableBody').innerHTML=BRANDS.map(b=>{
+    const m=brands[b.key]||{};
+    const ctr=m.clicks&&m.impressions?((m.clicks/m.impressions)*100).toFixed(2)+'%':'—';
+    const cpl=m.conversions&&m.spend?'$'+(m.spend/m.conversions).toFixed(0):'—';
+    const roas=m.revenue&&m.spend?(m.revenue/m.spend).toFixed(2)+'x':'—';
+    const pct=maxSpend?((m.spend||0)/maxSpend*100):0;
+    return`<tr><td><div class="brand-name-cell"><span class="brand-dot" style="background:${b.color}"></span><div><div class="brand-name-text">${b.name}</div><div class="brand-abbr">${b.abbr}</div></div></div></td>
+    <td><div class="num">${m.spend?'$'+fmt(m.spend):'—'}</div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${b.color}"></div></div></td>
+    <td class="num">${m.impressions?fmtK(m.impressions):'—'}</td><td class="num">${m.clicks?fmtK(m.clicks):'—'}</td>
+    <td class="num">${ctr}</td><td class="num">${m.conversions||'—'}</td><td class="num">${cpl}</td><td class="num">${roas}</td></tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+// MARKETING CHARTS
+// ═══════════════════════════════════
+Chart.defaults.color='#4a5568';Chart.defaults.borderColor='rgba(255,255,255,0.06)';
+Chart.defaults.font.family="'DM Mono', monospace";Chart.defaults.font.size=10;
+
+function renderMarketingCharts(brands){
+  dc('trendChart');
+  new Chart(document.getElementById('trendChart').getContext('2d'),{type:'line',data:{labels:DEMO_MONTHLY.labels,datasets:[
+    {label:'Ad Spend ($)',data:DEMO_MONTHLY.spend,borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,0.06)',tension:0.4,fill:true,yAxisID:'y'},
+    {label:'Conversions',data:DEMO_MONTHLY.conversions,borderColor:'#0091ff',backgroundColor:'rgba(0,145,255,0.06)',tension:0.4,fill:true,yAxisID:'y1'}
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:10,padding:16}}},scales:{y:{position:'left',grid:{color:'rgba(255,255,255,0.04)'}},y1:{position:'right',grid:{drawOnChartArea:false}}}}});
+
+  dc('donutChart');
+  new Chart(document.getElementById('donutChart').getContext('2d'),{type:'doughnut',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{data:BRANDS.map(b=>brands[b.key]?.spend||0),backgroundColor:BRANDS.map(b=>b.color),borderColor:'#0f1218',borderWidth:3,hoverOffset:6}]},options:{responsive:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{padding:14,boxWidth:10}}}}});
+
+  dc('cplChart');
+  new Chart(document.getElementById('cplChart').getContext('2d'),{type:'bar',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{label:'CPL ($)',data:BRANDS.map(b=>{const m=brands[b.key]||{};return m.spend&&m.conversions?Math.round(m.spend/m.conversions):0;}),backgroundColor:BRANDS.map(b=>b.color+'99'),borderColor:BRANDS.map(b=>b.color),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>'$'+v}},x:{grid:{display:false}}}}});
+
+  dc('ctrChart');
+  new Chart(document.getElementById('ctrChart').getContext('2d'),{type:'bar',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{label:'CTR (%)',data:BRANDS.map(b=>{const m=brands[b.key]||{};return m.clicks&&m.impressions?+((m.clicks/m.impressions)*100).toFixed(2):0;}),backgroundColor:BRANDS.map(b=>b.color+'99'),borderColor:BRANDS.map(b=>b.color),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}});
+}
+
+function dc(id){const c=Chart.getChart(id);if(c)c.destroy();}
+
+// ═══════════════════════════════════
+// CONTENT TAB
+// ═══════════════════════════════════
+function filterContent(brand,btn){
+  state.contentFilter=brand;
+  document.querySelectorAll('#contentFilter .brand-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  renderContentTab(brand);
+}
+
+function renderContentTab(filter){
+  const accountMap={tt:'Account 1',wa:'Account 2',hb:'Account 3',tc:'Account 4'};
+  let filtered=REELS_DATA;
+  if(filter!=='all') filtered=REELS_DATA.filter(r=>r.account===accountMap[filter]);
+
+  // Stats
+  const total=filtered.length;
+  const uploaded=filtered.filter(r=>r.status==='Uploaded').length;
+  const done=filtered.filter(r=>r.status==='Done').length;
+  const models=new Set(filtered.map(r=>r.image_model)).size;
+  document.getElementById('cs-total').textContent=total;
+  document.getElementById('cs-uploaded').textContent=uploaded;
+  document.getElementById('cs-done').textContent=done;
+  document.getElementById('cs-models').textContent=models;
+
+  // Charts
+  dc('reelsByBrandChart');
+  const brandCounts=BRANDS.map(b=>REELS_DATA.filter(r=>r.account===b.account).length);
+  new Chart(document.getElementById('reelsByBrandChart').getContext('2d'),{type:'bar',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{label:'Reels',data:brandCounts,backgroundColor:BRANDS.map(b=>b.color+'99'),borderColor:BRANDS.map(b=>b.color),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{stepSize:5}},x:{grid:{display:false}}}}});
+
+  dc('statusChart');
+  new Chart(document.getElementById('statusChart').getContext('2d'),{type:'doughnut',data:{labels:['Uploaded','Done'],datasets:[{data:[uploaded,done],backgroundColor:['#0091ff','#00d4aa'],borderColor:'#0f1218',borderWidth:3,hoverOffset:4}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{padding:14,boxWidth:10}}}}});
+
+  renderPipeline(filtered);
+}
+
+function renderPipeline(data){
+  const q=document.getElementById('reelSearch')?.value?.toLowerCase()||'';
+  const accountMap={tt:'Account 1',wa:'Account 2',hb:'Account 3',tc:'Account 4'};
+  let src=data||REELS_DATA;
+  if(state.contentFilter!=='all') src=REELS_DATA.filter(r=>r.account===accountMap[state.contentFilter]);
+  if(q) src=src.filter(r=>r.topic.toLowerCase().includes(q));
+
+  const uploaded=src.filter(r=>r.status==='Uploaded');
+  const done=src.filter(r=>r.status==='Done');
+
+  document.getElementById('uploaded-count').textContent='('+uploaded.length+')';
+  document.getElementById('done-count').textContent='('+done.length+')';
+
+  const brandForAccount=(acct)=>{const b=BRANDS.find(x=>x.account===acct);return b||{color:'#8892a4',key:'?'};};
+
+  const cardHTML=(r)=>{
+    const b=brandForAccount(r.account);
+    return`<div class="reel-card">
+      <div class="reel-topic">${r.topic}</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:${b.color}22;color:${b.color}">${r.account}</span>
+        <span class="reel-model">${r.image_model}</span>
+      </div>
+    </div>`;
+  };
+
+  document.getElementById('pipeline-uploaded').innerHTML=uploaded.map(cardHTML).join('')||'<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text3);padding:12px 0">No items</div>';
+  document.getElementById('pipeline-done').innerHTML=done.map(cardHTML).join('')||'<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text3);padding:12px 0">No items</div>';
+}
+
+// ═══════════════════════════════════
+// STAFF
+// ═══════════════════════════════════
+function renderStaff(groups){
+  document.getElementById('staffGrid').innerHTML=groups.map(group=>{
+    const brand=BRANDS.find(b=>b.key===group.brand);
+    return`<div class="staff-card fade-in fade-in-1">
+      <div class="staff-card-header"><span class="staff-card-title">${brand.name}</span><span class="staff-badge" style="background:${group.bg};color:${group.color}">${brand.abbr}</span></div>
+      ${group.members.map(m=>`
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:${group.bg};color:${group.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+          <div class="staff-info"><div class="staff-name">${m.name}</div><div class="staff-role">${m.role}</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">${m.pct}%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:${m.pct}%;background:${group.color}"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">${m.metric}</div><div class="staff-metric-label">${m.label}</div></div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+// VIEW SWITCH
+// ═══════════════════════════════════
+function switchView(view,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  btn.classList.add('active');
+  if(view==='content') renderContentTab(state.contentFilter);
+  // Re-render charts after tab becomes visible so canvas has real dimensions
+  if(view==='marketing'){
+    setTimeout(()=>renderMarketingCharts(state.data||DEMO_BRANDS),50);
+  }
+  if(view==='brands'){
+    setTimeout(()=>{dc('cplChart');dc('ctrChart');
+      const brands=state.data||DEMO_BRANDS;
+      new Chart(document.getElementById('cplChart').getContext('2d'),{type:'bar',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{label:'CPL ($)',data:BRANDS.map(b=>{const m=brands[b.key]||{};return m.spend&&m.conversions?Math.round(m.spend/m.conversions):0;}),backgroundColor:BRANDS.map(b=>b.color+'99'),borderColor:BRANDS.map(b=>b.color),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>'$'+v}},x:{grid:{display:false}}}}});
+      new Chart(document.getElementById('ctrChart').getContext('2d'),{type:'bar',data:{labels:BRANDS.map(b=>b.abbr),datasets:[{label:'CTR (%)',data:BRANDS.map(b=>{const m=brands[b.key]||{};return m.clicks&&m.impressions?+((m.clicks/m.impressions)*100).toFixed(2):0;}),backgroundColor:BRANDS.map(b=>b.color+'99'),borderColor:BRANDS.map(b=>b.color),borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}});
+    },50);
+  }
+}
+
+// ═══════════════════════════════════
+// UTILS
+// ═══════════════════════════════════
+function fmt(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return n.toString();}
+function fmtK(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(0)+'K';return n.toString();}
+</script>
+</body>
+</html>
