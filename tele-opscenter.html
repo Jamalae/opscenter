@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teletherapeutics Inc. — OpsCenter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+<style>
+:root {
+  --bg:#09090f;--bg2:#0e0e18;--bg3:#13131f;--bg4:#18182a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);
+  --text:#dde0f0;--text2:#7a80a0;--text3:#3d4260;
+  --red:#f87171;--yellow:#fbbf24;--green:#34d399;
+  --th:#00d4aa;--th-dim:rgba(0,212,170,0.09);
+  --wa:#0091ff;--wa-dim:rgba(0,145,255,0.09);
+  --tc:#f5a623;--tc-dim:rgba(245,166,35,0.09);
+  --accent:var(--th);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,170,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,0.015) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0;}
+header{position:sticky;top:0;z-index:100;background:rgba(9,9,15,0.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-0.5px;}
+.logo-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-left:10px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.live-dot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:5px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.header-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);}
+.brand-switcher{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);}
+.brand-tab{flex:1;padding:18px 28px;cursor:pointer;border:none;background:transparent;transition:all 0.25s;text-align:left;border-bottom:3px solid transparent;}
+.brand-tab.active-th{border-bottom-color:#00d4aa;background:linear-gradient(180deg,rgba(0,212,170,0.09) 0%,transparent 100%);}
+.brand-tab.active-wa{border-bottom-color:#0091ff;background:linear-gradient(180deg,rgba(0,145,255,0.09) 0%,transparent 100%);}
+.brand-tab.active-tc{border-bottom-color:#f5a623;background:linear-gradient(180deg,rgba(245,166,35,0.09) 0%,transparent 100%);}
+.brand-tab:hover:not(.active-th):not(.active-wa):not(.active-tc){background:rgba(255,255,255,0.02);}
+.bt-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.bt-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-0.3px;}
+.bt-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px;}
+main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:28px 32px 80px;}
+.tabs{display:flex;gap:4px;margin-bottom:28px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;}
+.tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all 0.2s;position:relative;}
+.tab.active{background:var(--bg3);color:var(--text);border:1px solid var(--border2);}
+.tab:hover:not(.active){color:var(--text2);}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;background:#f87171;color:#fff;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;margin-left:6px;padding:0 4px;vertical-align:middle;}
+.brand-view{display:none;}.brand-view.active{display:block;}
+.inner-view{display:none;}.inner-view.active{display:block;}
+.hero{border-radius:14px;padding:22px 28px;margin-bottom:28px;display:grid;align-items:center;gap:24px;}
+.hero-th{background:linear-gradient(135deg,rgba(0,212,170,0.08),rgba(0,212,170,0.02));border:1px solid rgba(0,212,170,0.14);grid-template-columns:1fr auto auto auto auto;}
+.hero-wa{background:linear-gradient(135deg,rgba(0,145,255,0.08),rgba(0,145,255,0.02));border:1px solid rgba(0,145,255,0.14);grid-template-columns:1fr auto auto auto auto;}
+.hero-tc{background:linear-gradient(135deg,rgba(245,166,35,0.07),rgba(245,166,35,0.02));border:1px solid rgba(245,166,35,0.14);grid-template-columns:1fr auto auto auto auto;}
+.hero-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+.hero-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-top:4px;}
+.hero-stat{text-align:center;padding:0 4px;}
+.hero-stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;}
+.hero-stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.sh-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);}
+.sh-line{flex:1;height:1px;background:var(--border);}
+.kpi-grid{display:grid;gap:12px;margin-bottom:28px;}
+.kpi-5{grid-template-columns:repeat(5,1fr);}
+.kpi-4{grid-template-columns:repeat(4,1fr);}
+@media(max-width:1100px){.kpi-5,.kpi-4{grid-template-columns:repeat(3,1fr);}}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 16px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--k-c,#00d4aa);opacity:0.75;}
+.kpi:hover{border-color:var(--border2);}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.kpi-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:5px;}
+.kpi-delta{font-family:'DM Mono',monospace;font-size:10px;margin-top:4px;}
+.du{color:var(--green);}.dd{color:var(--red);}.dn{color:var(--text3);}
+.ch2{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:28px;}
+.ch3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:28px;}
+.ch2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+@media(max-width:1000px){.ch2,.ch3,.ch2b{grid-template-columns:1fr;}}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.cc-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:3px;}
+.cc-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:18px;}
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px;}
+.th-row{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.th-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:10px 18px;text-align:left;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+tbody td{padding:11px 18px;font-size:12px;color:var(--text2);}
+tbody td:first-child{color:var(--text);font-weight:500;}
+.mono{font-family:'DM Mono',monospace;font-size:11px;}
+.sp{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+.sp-g{background:rgba(52,211,153,0.12);color:#34d399;}
+.sp-w{background:rgba(251,191,36,0.12);color:#fbbf24;}
+.sp-r{background:rgba(248,113,113,0.12);color:#f87171;}
+.ind{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.ig{background:#34d399;box-shadow:0 0 5px #34d399;}
+.iw{background:#fbbf24;box-shadow:0 0 5px #fbbf24;}
+.ir{background:#f87171;box-shadow:0 0 5px #f87171;}
+.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--border);gap:14px;transition:background 0.15s;}
+.prow:last-child{border-bottom:none;}
+.prow:hover{background:rgba(255,255,255,0.02);}
+.pav{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;}
+.pinfo{flex:1;}
+.pname{font-size:12px;font-weight:500;color:var(--text);}
+.prole{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;}
+.util-w{width:90px;}
+.util-pct{font-family:'DM Mono',monospace;font-size:9px;color:var(--text2);text-align:right;margin-bottom:3px;}
+.util-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.util-fill{height:100%;border-radius:2px;}
+.ci{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--border);gap:13px;transition:background 0.15s;}
+.ci:last-child{border-bottom:none;}
+.ci:hover{background:rgba(255,255,255,0.02);}
+.ci-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ci-name{flex:1;font-size:12px;color:var(--text);}
+.ci-due{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+.sparkline-wrap{margin-top:9px;border-top:1px solid var(--border);padding-top:8px;}
+.sparkline{display:block;width:100%;height:36px;}
+.alert-banner{border-radius:10px;margin-bottom:18px;border:1px solid rgba(248,113,113,0.18);overflow:hidden;display:none;}
+.alert-banner.has-alerts{display:block;}
+.alert-banner-head{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(248,113,113,0.06);cursor:pointer;user-select:none;}
+.alert-banner-title{font-family:'DM Mono',monospace;font-size:11px;color:#f87171;flex:1;}
+.alert-toggle{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);transition:transform 0.2s;}
+.alert-toggle.rotated{transform:rotate(180deg);}
+.alert-body{max-height:0;overflow:hidden;transition:max-height 0.3s ease;}
+.alert-body.open{max-height:400px;}
+.alert-list{padding:10px 16px;background:rgba(248,113,113,0.03);}
+.alert-item{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid rgba(248,113,113,0.06);}
+.alert-item:last-child{border-bottom:none;}
+.alert-dot{width:5px;height:5px;border-radius:50%;background:#f87171;flex-shrink:0;margin-top:5px;}
+.alert-text{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);line-height:1.5;}
+.gear-btn{background:transparent;border:1px solid var(--border);border-radius:8px;padding:7px 11px;cursor:pointer;color:var(--text3);font-size:16px;transition:all 0.2s;display:flex;align-items:center;line-height:1;}
+.gear-btn:hover{border-color:var(--border2);color:var(--text2);}
+.data-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid;}
+.badge-live{border-color:rgba(52,211,153,0.4);color:#34d399;background:rgba(52,211,153,0.08);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:30px;width:560px;max-width:95vw;max-height:88vh;overflow-y:auto;}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:5px;}
+.modal-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:24px;line-height:1.6;}
+.modal-field{margin-bottom:14px;}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.8px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;display:block;}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;transition:border-color 0.2s;}
+.modal-input:focus{border-color:var(--accent);}
+.modal-input::placeholder{color:var(--text3);}
+.modal-actions{display:flex;gap:10px;margin-top:24px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:20px;}
+.btn-primary{font-family:'DM Mono',monospace;font-size:11px;padding:10px 22px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.85;}
+.btn-secondary{font-family:'DM Mono',monospace;font-size:11px;padding:10px 22px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;}
+@keyframes fi{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+.fi{animation:fi 0.3s ease forwards;}
+.fi1{animation-delay:0.04s;opacity:0;}.fi2{animation-delay:0.08s;opacity:0;}.fi3{animation-delay:0.12s;opacity:0;}.fi4{animation-delay:0.16s;opacity:0;}.fi5{animation-delay:0.20s;opacity:0;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:4px">
+    <div class="logo">Tele<span id="hdr-accent" style="color:#00d4aa">Ops</span></div>
+    <span class="logo-tag" id="hdr-tag">TH · Teletherapeutics Health</span>
+  </div>
+  <div class="header-right">
+    <button class="gear-btn" onclick="openSettings()">⚙</button>
+    <span class="data-badge badge-live" id="dataBadge">LIVE</span>
+    <span class="header-time"><span class="live-dot" id="live-dot" style="background:#00d4aa;box-shadow:0 0 8px #00d4aa"></span><span id="liveTime"></span></span>
+  </div>
+</header>
+
+<div class="brand-switcher">
+  <button class="brand-tab active-th" id="btn-th" onclick="switchBrand('th')">
+    <div class="bt-label" style="color:#00d4aa">Teletherapeutics Inc.</div>
+    <div class="bt-name">Teletherapeutics Health</div>
+    <div class="bt-sub">TH · Telehealth · Primary Brand</div>
+  </button>
+  <button class="brand-tab" id="btn-wa" onclick="switchBrand('wa')">
+    <div class="bt-label" style="color:#0091ff">Teletherapeutics Inc.</div>
+    <div class="bt-name">Well-America</div>
+    <div class="bt-sub">WA · Telehealth · Commercial</div>
+  </button>
+  <button class="brand-tab" id="btn-tc" onclick="switchBrand('tc')">
+    <div class="bt-label" style="color:#f5a623">Teletherapeutics Inc.</div>
+    <div class="bt-name">Therapy Central</div>
+    <div class="bt-sub">TC · Telehealth · Specialty</div>
+  </button>
+</div>
+
+<main>
+
+<!-- ═══════════════════════════════════════ TH BRAND VIEW ═══════════════════════════════════════ -->
+<div class="brand-view active" id="bv-th">
+  <div class="alert-banner" id="alert-th">
+    <div class="alert-banner-head" onclick="toggleAlert('th')">
+      <span style="font-size:13px">⚠</span>
+      <span class="alert-banner-title" id="alert-th-title"></span>
+      <span class="alert-toggle" id="alert-th-tog">▾</span>
+    </div>
+    <div class="alert-body" id="alert-th-body">
+      <div class="alert-list" id="alert-th-list"></div>
+    </div>
+  </div>
+  <div class="hero hero-th fi fi1">
+    <div>
+      <div class="hero-title">Teletherapeutics Health</div>
+      <div class="hero-sub">TH · TELEHEALTH · PRIMARY BRAND</div>
+    </div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#00d4aa" data-target="94" data-prefix="$" data-suffix="K" class="kpi-val">$94K</div><div class="hero-stat-label">Revenue MTD</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#34d399" data-target="81" data-suffix="%" class="kpi-val">81%</div><div class="hero-stat-label">Collections</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#00d4aa" data-target="4" class="kpi-val">4</div><div class="hero-stat-label">Providers</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#fbbf24" data-target="9" data-suffix="%" class="kpi-val">9%</div><div class="hero-stat-label">Denial Rate</div></div>
+  </div>
+  <div class="tabs" id="tabs-th">
+    <button class="tab active" id="tab-th-overview" onclick="switchInner('th','overview',this)">Overview</button>
+    <button class="tab" id="tab-th-collections" onclick="switchInner('th','collections',this)">Collections</button>
+    <button class="tab" id="tab-th-providers" onclick="switchInner('th','providers',this)">Providers</button>
+    <button class="tab" id="tab-th-compliance" onclick="switchInner('th','compliance',this)">Compliance</button>
+    <button class="tab" id="tab-th-referrals" onclick="switchInner('th','referrals',this)">Referrals</button>
+  </div>
+
+  <!-- TH Overview -->
+  <div class="inner-view active" id="iv-th-overview">
+    <div class="sh"><span class="sh-title">Key Performance Indicators</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-5">
+      <div class="kpi fi1" style="--k-c:#00d4aa"><div class="kpi-label">Revenue MTD</div><div class="kpi-val" data-target="94" data-prefix="$" data-suffix="K">$94K</div><div class="kpi-sub">Total collections</div><canvas class="sparkline" data-series="68,72,61,78,85,94" data-color="#00d4aa"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#34d399"><div class="kpi-label">Collections Rate</div><div class="kpi-val" data-target="81" data-suffix="%">81%</div><div class="kpi-sub">Revenue captured</div><canvas class="sparkline" data-series="79,80,78,81,81,81" data-color="#34d399"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#00d4aa"><div class="kpi-label">Active Providers</div><div class="kpi-val" data-target="4">4</div><div class="kpi-sub">Clinical staff</div><canvas class="sparkline" data-series="3,4,3,4,4,4" data-color="#00d4aa"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#00d4aa"><div class="kpi-label">Referrals MTD</div><div class="kpi-val" data-target="14">14</div><div class="kpi-sub">Inbound</div><canvas class="sparkline" data-series="8,10,7,11,13,14" data-color="#00d4aa"></canvas></div>
+      <div class="kpi fi5" style="--k-c:#fbbf24"><div class="kpi-label">Denial Rate</div><div class="kpi-val" data-target="9" data-suffix="%">9%</div><div class="kpi-sub">Claims denied</div><canvas class="sparkline" data-series="10,9,11,9,9,9" data-color="#fbbf24"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Revenue Trend</div><div class="cc-sub">Submitted vs collected</div><canvas id="th-revTrend" height="220"></canvas></div>
+      <div class="cc"><div class="cc-title">Payer Mix</div><div class="cc-sub">Revenue breakdown</div><canvas id="th-payerMix" height="220"></canvas></div>
+    </div>
+    <div class="ch3">
+      <div class="cc"><div class="cc-title">Patients by State</div><div class="cc-sub">Geographic distribution</div><canvas id="th-stateChart" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="th-refSrc" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Monthly Referrals</div><div class="cc-sub">Trend (6 months)</div><canvas id="th-refMonthly" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TH Collections -->
+  <div class="inner-view" id="iv-th-collections">
+    <div class="sh"><span class="sh-title">Payer Performance</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Claims by Payer</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">5 payers</span></div>
+      <table><thead><tr><th>Payer</th><th>Submitted</th><th>Collected</th><th>Denied</th><th>Pending</th><th>Collection Rate</th><th>Avg Days to Pay</th></tr></thead>
+      <tbody id="th-payerBody"></tbody></table>
+    </div>
+    <div class="ch2b">
+      <div class="cc"><div class="cc-title">Monthly Claims Volume</div><div class="cc-sub">Submitted vs collected</div><canvas id="th-claims" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Denial Breakdown</div><div class="cc-sub">Denial reasons</div><canvas id="th-denials" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TH Providers -->
+  <div class="inner-view" id="iv-th-providers">
+    <div class="sh"><span class="sh-title">Provider Roster & Utilization</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Active Providers</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">4 on staff</span></div>
+      <div id="th-provList"></div>
+    </div>
+  </div>
+
+  <!-- TH Compliance -->
+  <div class="inner-view" id="iv-th-compliance">
+    <div class="sh"><span class="sh-title">Compliance Checklist</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">All Items Current</span><span class="sp sp-g">0 alerts</span></div>
+      <div id="th-compList"></div>
+    </div>
+  </div>
+
+  <!-- TH Referrals -->
+  <div class="inner-view" id="iv-th-referrals">
+    <div class="sh"><span class="sh-title">Referral Management</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-4">
+      <div class="kpi fi1" style="--k-c:#00d4aa"><div class="kpi-label">Total MTD</div><div class="kpi-val" data-target="14">14</div><div class="kpi-sub">Inbound referrals</div><canvas class="sparkline" data-series="8,10,7,11,13,14" data-color="#00d4aa"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#fbbf24"><div class="kpi-label">Pending</div><div class="kpi-val" data-target="5">5</div><div class="kpi-sub">Awaiting conversion</div><canvas class="sparkline" data-series="3,4,3,5,5,5" data-color="#fbbf24"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#34d399"><div class="kpi-label">Converted</div><div class="kpi-val" data-target="7">7</div><div class="kpi-sub">Active patients</div><canvas class="sparkline" data-series="4,5,3,5,6,7" data-color="#34d399"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#00d4aa"><div class="kpi-label">Conversion Rate</div><div class="kpi-val" data-target="50" data-suffix="%">50%</div><div class="kpi-sub">Conversion ratio</div><canvas class="sparkline" data-series="50,50,43,45,46,50" data-color="#00d4aa"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Monthly Referral Trend</div><div class="cc-sub">6-month history</div><canvas id="th-refTrend" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="th-refBreak" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ WA BRAND VIEW ═══════════════════════════════════════ -->
+<div class="brand-view" id="bv-wa">
+  <div class="alert-banner" id="alert-wa">
+    <div class="alert-banner-head" onclick="toggleAlert('wa')">
+      <span style="font-size:13px">⚠</span>
+      <span class="alert-banner-title" id="alert-wa-title"></span>
+      <span class="alert-toggle" id="alert-wa-tog">▾</span>
+    </div>
+    <div class="alert-body" id="alert-wa-body">
+      <div class="alert-list" id="alert-wa-list"></div>
+    </div>
+  </div>
+  <div class="hero hero-wa fi fi1">
+    <div>
+      <div class="hero-title">Well-America</div>
+      <div class="hero-sub">WA · TELEHEALTH · COMMERCIAL</div>
+    </div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#0091ff" data-target="112" data-prefix="$" data-suffix="K" class="kpi-val">$112K</div><div class="hero-stat-label">Revenue MTD</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#34d399" data-target="83" data-suffix="%" class="kpi-val">83%</div><div class="hero-stat-label">Collections</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#0091ff" data-target="5" class="kpi-val">5</div><div class="hero-stat-label">Providers</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#fbbf24" data-target="10" data-suffix="%" class="kpi-val">10%</div><div class="hero-stat-label">Denial Rate</div></div>
+  </div>
+  <div class="tabs" id="tabs-wa">
+    <button class="tab active" id="tab-wa-overview" onclick="switchInner('wa','overview',this)">Overview</button>
+    <button class="tab" id="tab-wa-collections" onclick="switchInner('wa','collections',this)">Collections</button>
+    <button class="tab" id="tab-wa-providers" onclick="switchInner('wa','providers',this)">Providers</button>
+    <button class="tab" id="tab-wa-compliance" onclick="switchInner('wa','compliance',this)">Compliance</button>
+    <button class="tab" id="tab-wa-referrals" onclick="switchInner('wa','referrals',this)">Referrals</button>
+  </div>
+
+  <!-- WA Overview -->
+  <div class="inner-view active" id="iv-wa-overview">
+    <div class="sh"><span class="sh-title">Key Performance Indicators</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-5">
+      <div class="kpi fi1" style="--k-c:#0091ff"><div class="kpi-label">Revenue MTD</div><div class="kpi-val" data-target="112" data-prefix="$" data-suffix="K">$112K</div><div class="kpi-sub">Total collections</div><canvas class="sparkline" data-series="88,95,82,98,105,112" data-color="#0091ff"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#34d399"><div class="kpi-label">Collections Rate</div><div class="kpi-val" data-target="83" data-suffix="%">83%</div><div class="kpi-sub">Revenue captured</div><canvas class="sparkline" data-series="81,82,80,83,83,83" data-color="#34d399"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#0091ff"><div class="kpi-label">Active Providers</div><div class="kpi-val" data-target="5">5</div><div class="kpi-sub">Clinical staff</div><canvas class="sparkline" data-series="4,5,4,5,5,5" data-color="#0091ff"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#0091ff"><div class="kpi-label">Referrals MTD</div><div class="kpi-val" data-target="16">16</div><div class="kpi-sub">Inbound</div><canvas class="sparkline" data-series="11,13,9,14,15,16" data-color="#0091ff"></canvas></div>
+      <div class="kpi fi5" style="--k-c:#fbbf24"><div class="kpi-label">Denial Rate</div><div class="kpi-val" data-target="10" data-suffix="%">10%</div><div class="kpi-sub">Claims denied</div><canvas class="sparkline" data-series="11,10,12,10,10,10" data-color="#fbbf24"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Revenue Trend</div><div class="cc-sub">Submitted vs collected</div><canvas id="wa-revTrend" height="220"></canvas></div>
+      <div class="cc"><div class="cc-title">Payer Mix</div><div class="cc-sub">Revenue breakdown</div><canvas id="wa-payerMix" height="220"></canvas></div>
+    </div>
+    <div class="ch3">
+      <div class="cc"><div class="cc-title">Patients by State</div><div class="cc-sub">Geographic distribution</div><canvas id="wa-stateChart" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="wa-refSrc" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Monthly Referrals</div><div class="cc-sub">Trend (6 months)</div><canvas id="wa-refMonthly" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- WA Collections -->
+  <div class="inner-view" id="iv-wa-collections">
+    <div class="sh"><span class="sh-title">Payer Performance</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Claims by Payer</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">5 payers</span></div>
+      <table><thead><tr><th>Payer</th><th>Submitted</th><th>Collected</th><th>Denied</th><th>Pending</th><th>Collection Rate</th><th>Avg Days to Pay</th></tr></thead>
+      <tbody id="wa-payerBody"></tbody></table>
+    </div>
+    <div class="ch2b">
+      <div class="cc"><div class="cc-title">Monthly Claims Volume</div><div class="cc-sub">Submitted vs collected</div><canvas id="wa-claims" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Denial Breakdown</div><div class="cc-sub">Denial reasons</div><canvas id="wa-denials" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <!-- WA Providers -->
+  <div class="inner-view" id="iv-wa-providers">
+    <div class="sh"><span class="sh-title">Provider Roster & Utilization</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Active Providers</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">5 on staff</span></div>
+      <div id="wa-provList"></div>
+    </div>
+  </div>
+
+  <!-- WA Compliance -->
+  <div class="inner-view" id="iv-wa-compliance">
+    <div class="sh"><span class="sh-title">Compliance Checklist</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">1 item needs review</span><span class="sp sp-w">1 review</span></div>
+      <div id="wa-compList"></div>
+    </div>
+  </div>
+
+  <!-- WA Referrals -->
+  <div class="inner-view" id="iv-wa-referrals">
+    <div class="sh"><span class="sh-title">Referral Management</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-4">
+      <div class="kpi fi1" style="--k-c:#0091ff"><div class="kpi-label">Total MTD</div><div class="kpi-val" data-target="16">16</div><div class="kpi-sub">Inbound referrals</div><canvas class="sparkline" data-series="11,13,9,14,15,16" data-color="#0091ff"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#fbbf24"><div class="kpi-label">Pending</div><div class="kpi-val" data-target="6">6</div><div class="kpi-sub">Awaiting conversion</div><canvas class="sparkline" data-series="4,5,3,5,6,6" data-color="#fbbf24"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#34d399"><div class="kpi-label">Converted</div><div class="kpi-val" data-target="8">8</div><div class="kpi-sub">Active patients</div><canvas class="sparkline" data-series="5,6,4,7,7,8" data-color="#34d399"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#0091ff"><div class="kpi-label">Conversion Rate</div><div class="kpi-val" data-target="50" data-suffix="%">50%</div><div class="kpi-sub">Conversion ratio</div><canvas class="sparkline" data-series="45,46,44,50,47,50" data-color="#0091ff"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Monthly Referral Trend</div><div class="cc-sub">6-month history</div><canvas id="wa-refTrend" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="wa-refBreak" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ TC BRAND VIEW ═══════════════════════════════════════ -->
+<div class="brand-view" id="bv-tc">
+  <div class="alert-banner" id="alert-tc">
+    <div class="alert-banner-head" onclick="toggleAlert('tc')">
+      <span style="font-size:13px">⚠</span>
+      <span class="alert-banner-title" id="alert-tc-title"></span>
+      <span class="alert-toggle" id="alert-tc-tog">▾</span>
+    </div>
+    <div class="alert-body" id="alert-tc-body">
+      <div class="alert-list" id="alert-tc-list"></div>
+    </div>
+  </div>
+  <div class="hero hero-tc fi fi1">
+    <div>
+      <div class="hero-title">Therapy Central</div>
+      <div class="hero-sub">TC · TELEHEALTH · SPECIALTY</div>
+    </div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#f5a623" data-target="48" data-prefix="$" data-suffix="K" class="kpi-val">$48K</div><div class="hero-stat-label">Revenue MTD</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#34d399" data-target="71" data-suffix="%" class="kpi-val">71%</div><div class="hero-stat-label">Collections</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#f5a623" data-target="3" class="kpi-val">3</div><div class="hero-stat-label">Providers</div></div>
+    <div class="hero-stat"><div class="hero-stat-val" style="color:#f87171" data-target="17" data-suffix="%" class="kpi-val">17%</div><div class="hero-stat-label">Denial Rate</div></div>
+  </div>
+  <div class="tabs" id="tabs-tc">
+    <button class="tab active" id="tab-tc-overview" onclick="switchInner('tc','overview',this)">Overview</button>
+    <button class="tab" id="tab-tc-collections" onclick="switchInner('tc','collections',this)">Collections</button>
+    <button class="tab" id="tab-tc-providers" onclick="switchInner('tc','providers',this)">Providers</button>
+    <button class="tab" id="tab-tc-compliance" onclick="switchInner('tc','compliance',this)">Compliance</button>
+    <button class="tab" id="tab-tc-referrals" onclick="switchInner('tc','referrals',this)">Referrals</button>
+  </div>
+
+  <!-- TC Overview -->
+  <div class="inner-view active" id="iv-tc-overview">
+    <div class="sh"><span class="sh-title">Key Performance Indicators</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-5">
+      <div class="kpi fi1" style="--k-c:#f5a623"><div class="kpi-label">Revenue MTD</div><div class="kpi-val" data-target="48" data-prefix="$" data-suffix="K">$48K</div><div class="kpi-sub">Total collections</div><canvas class="sparkline" data-series="32,38,29,41,44,48" data-color="#f5a623"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#fbbf24"><div class="kpi-label">Collections Rate</div><div class="kpi-val" data-target="71" data-suffix="%">71%</div><div class="kpi-sub">Revenue captured</div><canvas class="sparkline" data-series="72,71,70,72,71,71" data-color="#fbbf24"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#f5a623"><div class="kpi-label">Active Providers</div><div class="kpi-val" data-target="3">3</div><div class="kpi-sub">Clinical staff</div><canvas class="sparkline" data-series="3,3,3,3,3,3" data-color="#f5a623"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#f5a623"><div class="kpi-label">Referrals MTD</div><div class="kpi-val" data-target="8">8</div><div class="kpi-sub">Inbound</div><canvas class="sparkline" data-series="4,5,3,6,7,8" data-color="#f5a623"></canvas></div>
+      <div class="kpi fi5" style="--k-c:#f87171"><div class="kpi-label">Denial Rate</div><div class="kpi-val" data-target="17" data-suffix="%">17%</div><div class="kpi-sub">Claims denied</div><canvas class="sparkline" data-series="14,13,15,14,15,17" data-color="#f87171"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Revenue Trend</div><div class="cc-sub">Submitted vs collected</div><canvas id="tc-revTrend" height="220"></canvas></div>
+      <div class="cc"><div class="cc-title">Payer Mix</div><div class="cc-sub">Revenue breakdown</div><canvas id="tc-payerMix" height="220"></canvas></div>
+    </div>
+    <div class="ch3">
+      <div class="cc"><div class="cc-title">Patients by State</div><div class="cc-sub">Geographic distribution</div><canvas id="tc-stateChart" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="tc-refSrc" height="160"></canvas></div>
+      <div class="cc"><div class="cc-title">Monthly Referrals</div><div class="cc-sub">Trend (6 months)</div><canvas id="tc-refMonthly" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TC Collections -->
+  <div class="inner-view" id="iv-tc-collections">
+    <div class="sh"><span class="sh-title">Payer Performance</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Claims by Payer</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">5 payers</span></div>
+      <table><thead><tr><th>Payer</th><th>Submitted</th><th>Collected</th><th>Denied</th><th>Pending</th><th>Collection Rate</th><th>Avg Days to Pay</th></tr></thead>
+      <tbody id="tc-payerBody"></tbody></table>
+    </div>
+    <div class="ch2b">
+      <div class="cc"><div class="cc-title">Monthly Claims Volume</div><div class="cc-sub">Submitted vs collected</div><canvas id="tc-claims" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Denial Breakdown</div><div class="cc-sub">Denial reasons</div><canvas id="tc-denials" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TC Providers -->
+  <div class="inner-view" id="iv-tc-providers">
+    <div class="sh"><span class="sh-title">Provider Roster & Utilization</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">Active Providers</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">3 on staff</span></div>
+      <div id="tc-provList"></div>
+    </div>
+  </div>
+
+  <!-- TC Compliance -->
+  <div class="inner-view" id="iv-tc-compliance">
+    <div class="sh"><span class="sh-title">Compliance Checklist</span><div class="sh-line"></div></div>
+    <div class="tw">
+      <div class="th-row"><span class="th-title">3 items need attention</span><span class="sp sp-r">3 alerts</span></div>
+      <div id="tc-compList"></div>
+    </div>
+  </div>
+
+  <!-- TC Referrals -->
+  <div class="inner-view" id="iv-tc-referrals">
+    <div class="sh"><span class="sh-title">Referral Management</span><div class="sh-line"></div></div>
+    <div class="kpi-grid kpi-4">
+      <div class="kpi fi1" style="--k-c:#f5a623"><div class="kpi-label">Total MTD</div><div class="kpi-val" data-target="8">8</div><div class="kpi-sub">Inbound referrals</div><canvas class="sparkline" data-series="4,5,3,6,7,8" data-color="#f5a623"></canvas></div>
+      <div class="kpi fi2" style="--k-c:#fbbf24"><div class="kpi-label">Pending</div><div class="kpi-val" data-target="3">3</div><div class="kpi-sub">Awaiting conversion</div><canvas class="sparkline" data-series="2,2,2,3,3,3" data-color="#fbbf24"></canvas></div>
+      <div class="kpi fi3" style="--k-c:#34d399"><div class="kpi-label">Converted</div><div class="kpi-val" data-target="3">3</div><div class="kpi-sub">Active patients</div><canvas class="sparkline" data-series="2,3,1,3,4,3" data-color="#34d399"></canvas></div>
+      <div class="kpi fi4" style="--k-c:#f5a623"><div class="kpi-label">Conversion Rate</div><div class="kpi-val" data-target="38" data-suffix="%">38%</div><div class="kpi-sub">Conversion ratio</div><canvas class="sparkline" data-series="50,60,33,50,57,38" data-color="#f5a623"></canvas></div>
+    </div>
+    <div class="ch2">
+      <div class="cc"><div class="cc-title">Monthly Referral Trend</div><div class="cc-sub">6-month history</div><canvas id="tc-refTrend" height="180"></canvas></div>
+      <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound channels</div><canvas id="tc-refBreak" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">Settings</div>
+    <div class="modal-sub">Configure external data sources for this OpsCenter.</div>
+    <div class="modal-field">
+      <label class="modal-label">TH Brand Financials URL</label>
+      <input class="modal-input" id="url-th-financials" type="text" placeholder="https://...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">WA Brand Financials URL</label>
+      <input class="modal-input" id="url-wa-financials" type="text" placeholder="https://...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">TC Brand Financials URL</label>
+      <input class="modal-input" id="url-tc-financials" type="text" placeholder="https://...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Provider Roster URL (All Brands)</label>
+      <input class="modal-input" id="url-providers" type="text" placeholder="https://...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Shared Compliance Checklist URL</label>
+      <input class="modal-input" id="url-compliance" type="text" placeholder="https://...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+Chart.defaults.color='#3d4260';
+Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+Chart.defaults.font.family="'DM Mono',monospace";
+Chart.defaults.font.size=10;
+
+const MONTHS = ['Oct','Nov','Dec','Jan','Feb','Mar'];
+
+// BRAND DATA
+const thProviders = [
+  {name:'Dr. Ahmed S.',role:'Psychiatrist',util:88},
+  {name:'Lisa T. LCSW',role:'Therapist',util:79},
+  {name:'Dr. Nora B.',role:'Psychiatrist',util:84},
+  {name:'Kevin M. LPC',role:'Therapist',util:76}
+];
+
+const waProviders = [
+  {name:'Dr. Maya R.',role:'Psychiatrist',util:92},
+  {name:'James W. LPC',role:'Therapist',util:85},
+  {name:'Dr. Preet S.',role:'Psychiatrist',util:88},
+  {name:'Angela T. LMFT',role:'Therapist',util:79},
+  {name:'Chris D. LSW',role:'Social Worker',util:71}
+];
+
+const tcProviders = [
+  {name:'Dr. Priya K.',role:'Psychiatrist',util:71},
+  {name:'Marcus D. LMFT',role:'Therapist',util:68},
+  {name:'Sandra W. LPC',role:'Therapist',util:58}
+];
+
+const compItems = [
+  {item:'HIPAA Training',th:'ok',wa:'ok',tc:'review',due:'Apr 1 2026'},
+  {item:'Malpractice Insurance',th:'ok',wa:'ok',tc:'ok',due:'Jun 15 2026'},
+  {item:'Provider Credentialing',th:'ok',wa:'review',tc:'ok',due:'Mar 31 2026'},
+  {item:'CAQH Updates',th:'ok',wa:'ok',tc:'overdue',due:'Overdue'},
+  {item:'DEA Registration',th:'ok',wa:'ok',tc:'ok',due:'Dec 2026'},
+  {item:'State Licensure',th:'ok',wa:'ok',tc:'ok',due:'Jan 2027'},
+  {item:'NPI Attestation',th:'ok',wa:'ok',tc:'review',due:'Apr 15 2026'}
+];
+
+let activeBrand = 'th';
+
+function switchBrand(brand) {
+  activeBrand = brand;
+  document.querySelectorAll('.brand-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.brand-tab').forEach(b=>b.classList.remove('active-th','active-wa','active-tc'));
+  document.getElementById('bv-'+brand).classList.add('active');
+  document.getElementById('btn-'+brand).classList.add('active-'+brand);
+  const accMap={th:'#00d4aa',wa:'#0091ff',tc:'#f5a623'};
+  const tagMap={th:'TH · Teletherapeutics Health',wa:'WA · Well-America',tc:'TC · Therapy Central'};
+  const acc=accMap[brand];
+  document.getElementById('hdr-accent').style.color=acc;
+  document.getElementById('hdr-tag').textContent=tagMap[brand];
+  const dot=document.getElementById('live-dot');
+  dot.style.background=acc;dot.style.boxShadow='0 0 8px '+acc;
+  if(brand==='wa'&&!window._waChartsDrawn){drawWaCharts();window._waChartsDrawn=true;}
+  if(brand==='tc'&&!window._tcChartsDrawn){drawTcCharts();window._tcChartsDrawn=true;}
+}
+
+function switchInner(brand,view,btn){
+  document.querySelectorAll(`#bv-${brand} .inner-view`).forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll(`#tabs-${brand} .tab`).forEach(t=>t.classList.remove('active'));
+  const iv=document.getElementById(`iv-${brand}-${view}`);
+  iv.classList.add('active'); btn.classList.add('active');
+  requestAnimationFrame(()=>{ animateKpis(iv); initSparklines(iv); });
+}
+
+function animateKpis(container) {
+  (container||document).querySelectorAll('.kpi-val[data-target]').forEach(el=>{
+    const target=parseFloat(el.dataset.target);
+    const prefix=el.dataset.prefix||''; const suffix=el.dataset.suffix||'';
+    const dur=700; const start=performance.now();
+    function step(now){
+      const t=Math.min((now-start)/dur,1);
+      const ease=1-Math.pow(1-t,3);
+      const val=target*ease;
+      el.textContent=prefix+(Number.isInteger(target)?Math.round(val):val.toFixed(1))+suffix;
+      if(t<1)requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function drawSparkline(canvas, data, color) {
+  const W = canvas.width = Math.max(canvas.offsetWidth||150, 60);
+  const H = canvas.height = 36;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const min=Math.min(...data), max=Math.max(...data), range=max-min||1, pad=4;
+  const pts=data.map((v,i)=>({x:pad+i/(data.length-1)*(W-pad*2),y:H-pad-(v-min)/range*(H-pad*2)}));
+  const gr=ctx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,color+'50'); gr.addColorStop(1,color+'08');
+  ctx.beginPath(); ctx.moveTo(pts[0].x,H);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x,H); ctx.closePath();
+  ctx.fillStyle=gr; ctx.fill();
+  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+  const last=pts[pts.length-1];
+  ctx.beginPath(); ctx.arc(last.x,last.y,2.5,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
+}
+
+function initSparklines(container) {
+  (container||document).querySelectorAll('canvas.sparkline').forEach(c=>{
+    const data=c.dataset.series.split(',').map(Number);
+    const color=c.dataset.color||'#00d4aa';
+    requestAnimationFrame(()=>drawSparkline(c,data,color));
+  });
+}
+
+function renderThProviders(){
+  const html = thProviders.map(p=>{
+    const util=p.util;
+    const bar=util>=80?'#34d399':util>=70?'#fbbf24':'#f87171';
+    return `<div class="prow"><div class="pav" style="background:${bar}33;color:${bar}">${p.name[0]}</div><div class="pinfo"><div class="pname">${p.name}</div><div class="prole">${p.role}</div></div><div class="util-w"><div class="util-pct">${util}%</div><div class="util-bar"><div class="util-fill" style="background:${bar};width:${util}%"></div></div></div></div>`;
+  }).join('');
+  const c=document.getElementById('th-provList');if(c)c.innerHTML=html;
+}
+
+function renderWaProviders(){
+  const html = waProviders.map(p=>{
+    const util=p.util;
+    const bar=util>=80?'#34d399':util>=70?'#fbbf24':'#f87171';
+    return `<div class="prow"><div class="pav" style="background:${bar}33;color:${bar}">${p.name[0]}</div><div class="pinfo"><div class="pname">${p.name}</div><div class="prole">${p.role}</div></div><div class="util-w"><div class="util-pct">${util}%</div><div class="util-bar"><div class="util-fill" style="background:${bar};width:${util}%"></div></div></div></div>`;
+  }).join('');
+  const c=document.getElementById('wa-provList');if(c)c.innerHTML=html;
+}
+
+function renderTcProviders(){
+  const html = tcProviders.map(p=>{
+    const util=p.util;
+    const bar=util>=80?'#34d399':util>=70?'#fbbf24':'#f87171';
+    return `<div class="prow"><div class="pav" style="background:${bar}33;color:${bar}">${p.name[0]}</div><div class="pinfo"><div class="pname">${p.name}</div><div class="prole">${p.role}</div></div><div class="util-w"><div class="util-pct">${util}%</div><div class="util-bar"><div class="util-fill" style="background:${bar};width:${util}%"></div></div></div></div>`;
+  }).join('');
+  const c=document.getElementById('tc-provList');if(c)c.innerHTML=html;
+}
+
+function renderThCompliance(){
+  const html = compItems.map(i=>{
+    const st=i.th;
+    let dot,color;
+    if(st==='ok'){dot='ig';color='#34d399';}
+    else if(st==='review'){dot='iw';color='#fbbf24';}
+    else {dot='ir';color='#f87171';}
+    return `<div class="ci"><div class="ci-dot ${dot}"></div><div class="ci-name">${i.item}</div><div class="ci-due">${i.due}</div></div>`;
+  }).join('');
+  const c=document.getElementById('th-compList');if(c)c.innerHTML=html;
+}
+
+function renderWaCompliance(){
+  const html = compItems.map(i=>{
+    const st=i.wa;
+    let dot;
+    if(st==='ok'){dot='ig';}
+    else if(st==='review'){dot='iw';}
+    else {dot='ir';}
+    return `<div class="ci"><div class="ci-dot ${dot}"></div><div class="ci-name">${i.item}</div><div class="ci-due">${i.due}</div></div>`;
+  }).join('');
+  const c=document.getElementById('wa-compList');if(c)c.innerHTML=html;
+}
+
+function renderTcCompliance(){
+  const html = compItems.map(i=>{
+    const st=i.tc;
+    let dot;
+    if(st==='ok'){dot='ig';}
+    else if(st==='review'){dot='iw';}
+    else {dot='ir';}
+    return `<div class="ci"><div class="ci-dot ${dot}"></div><div class="ci-name">${i.item}</div><div class="ci-due">${i.due}</div></div>`;
+  }).join('');
+  const c=document.getElementById('tc-compList');if(c)c.innerHTML=html;
+}
+
+function renderAlertBanner(brand, alerts) {
+  const banner=document.getElementById('alert-'+brand);
+  const title=document.getElementById('alert-'+brand+'-title');
+  const list=document.getElementById('alert-'+brand+'-list');
+  if(!alerts.length){banner.classList.remove('has-alerts');return;}
+  banner.classList.add('has-alerts');
+  title.textContent=alerts.length+' alert'+(alerts.length>1?'s':'')+' require attention';
+  list.innerHTML=alerts.map(a=>`<div class="alert-item"><span class="alert-dot"></span><span class="alert-text">${a}</span></div>`).join('');
+  document.getElementById('alert-'+brand+'-body').classList.add('open');
+  document.getElementById('alert-'+brand+'-tog').classList.add('rotated');
+}
+
+function toggleAlert(brand){
+  document.getElementById('alert-'+brand+'-body').classList.toggle('open');
+  document.getElementById('alert-'+brand+'-tog').classList.toggle('rotated');
+}
+
+function scanAlerts() {
+  const alerts = {th:[], wa:[], tc:[]};
+  const badges = {};
+
+  const tcLowUtil = tcProviders.filter(p=>p.util<60);
+  if(tcLowUtil.length){ alerts.tc.push(tcLowUtil.length+' provider(s) below 60% utilization'); badges['tab-tc-providers']=tcLowUtil.length; }
+  alerts.tc.push('Denial rate 17% exceeds 15% threshold — review billing');
+  badges['tab-tc-collections'] = 1;
+  alerts.tc.push('1 compliance item overdue: CAQH Updates');
+  badges['tab-tc-compliance'] = 1;
+
+  ['th','wa','tc'].forEach(brand => renderAlertBanner(brand, alerts[brand]));
+  document.querySelectorAll('.tab-badge').forEach(b=>b.remove());
+  Object.entries(badges).forEach(([id,count])=>{
+    const tab=document.getElementById(id);
+    if(tab) tab.insertAdjacentHTML('beforeend','<span class="tab-badge">'+count+'</span>');
+  });
+}
+
+function openSettings(){document.getElementById('settingsModal').classList.add('open');}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('open');}
+
+function saveSettings(){
+  const s={
+    'url-th-financials':document.getElementById('url-th-financials').value,
+    'url-wa-financials':document.getElementById('url-wa-financials').value,
+    'url-tc-financials':document.getElementById('url-tc-financials').value,
+    'url-providers':document.getElementById('url-providers').value,
+    'url-compliance':document.getElementById('url-compliance').value
+  };
+  localStorage.setItem('teleops_settings',JSON.stringify(s));
+  closeSettings();
+}
+
+function loadSettings(){
+  const s=localStorage.getItem('teleops_settings');
+  return s?JSON.parse(s):{};
+}
+
+function updateDataBadge(s){
+  const badge=document.getElementById('dataBadge');
+  const urls=Object.values(s).filter(u=>u);
+  if(!urls.length){return;}
+  if(urls.length===5){badge.textContent='LIVE';badge.className='data-badge badge-live';}
+}
+
+// PAYER TABLES
+const thPayers = [
+  {payer:'Aetna',submitted:42,collected:34,denied:3,pending:4,rate:81,days:18},
+  {payer:'BCBS',submitted:28,collected:23,denied:2,pending:3,rate:82,days:16},
+  {payer:'Cigna',submitted:22,collected:18,denied:2,pending:2,rate:82,days:20},
+  {payer:'UnitedHealth',submitted:14,collected:11,denied:1,pending:1,rate:79,days:22},
+  {payer:'Other',submitted:10,collected:8,denied:1,pending:1,rate:80,days:19}
+];
+
+const waPayers = [
+  {payer:'Aetna',submitted:52,collected:43,denied:4,pending:5,rate:83,days:15},
+  {payer:'BCBS',submitted:34,collected:28,denied:3,pending:3,rate:82,days:17},
+  {payer:'Cigna',submitted:26,collected:22,denied:2,pending:2,rate:85,days:14},
+  {payer:'UnitedHealth',submitted:15,collected:13,denied:1,pending:2,rate:87,days:16},
+  {payer:'Other',submitted:8,collected:6,denied:1,pending:1,rate:75,days:21}
+];
+
+const tcPayers = [
+  {payer:'Aetna',submitted:26,collected:18,denied:4,pending:4,rate:69,days:28},
+  {payer:'BCBS',submitted:18,collected:13,denied:3,pending:3,rate:72,days:24},
+  {payer:'Cigna',submitted:14,collected:10,denied:2,pending:2,rate:71,days:26},
+  {payer:'UnitedHealth',submitted:6,collected:4,denied:2,pending:1,rate:67,days:30},
+  {payer:'Other',submitted:4,collected:3,denied:1,pending:1,rate:75,days:22}
+];
+
+function renderPayerTable(tbody,payers){
+  const html=payers.map(p=>`<tr><td>${p.payer}</td><td class="mono">$${p.submitted}K</td><td class="mono">$${p.collected}K</td><td class="mono">${p.denied}</td><td class="mono">${p.pending}</td><td><span class="sp sp-g">${p.rate}%</span></td><td class="mono">${p.days}d</td></tr>`).join('');
+  document.getElementById(tbody).innerHTML=html;
+}
+
+function drawThCharts(){
+  renderPayerTable('th-payerBody',thPayers);
+
+  // Revenue Trend
+  new Chart(document.getElementById('th-revTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[84,89,75,96,104,116],borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,0.1)',tension:0.4,fill:true},{label:'Collected',data:[68,72,61,78,85,94],borderColor:'#34d399',backgroundColor:'rgba(52,211,153,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  // Payer Mix
+  new Chart(document.getElementById('th-payerMix'),{type:'doughnut',data:{labels:['Aetna','BCBS','Cigna','UnitedHealth','Other'],datasets:[{data:[34,23,18,11,8],backgroundColor:['#00d4aa','#0091ff','#f5a623','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  // State Chart
+  new Chart(document.getElementById('th-stateChart'),{type:'doughnut',data:{labels:['NJ','NY','PA'],datasets:[{data:[42,18,8],backgroundColor:['#00d4aa','#0091ff','#f5a623']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  // Referral Sources
+  new Chart(document.getElementById('th-refSrc'),{type:'bar',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{label:'Referrals',data:[4,3,2,3,2],backgroundColor:'#00d4aa'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Monthly Referrals
+  new Chart(document.getElementById('th-refMonthly'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Referrals',data:[8,10,7,11,13,14],borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Claims
+  new Chart(document.getElementById('th-claims'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[84,89,75,96,104,116],backgroundColor:'#00d4aa'},{label:'Collected',data:[68,72,61,78,85,94],backgroundColor:'#34d399'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  // Denials
+  new Chart(document.getElementById('th-denials'),{type:'bar',data:{labels:['Incomplete','Not Covered','Timing','Other'],datasets:[{label:'Count',data:[8,5,3,2],backgroundColor:'#f87171'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Referral trend
+  new Chart(document.getElementById('th-refTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Total',data:[8,10,7,11,13,14],borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Referral break
+  new Chart(document.getElementById('th-refBreak'),{type:'doughnut',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{data:[4,3,2,3,2],backgroundColor:['#00d4aa','#0091ff','#f5a623','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+}
+
+function drawWaCharts(){
+  renderPayerTable('wa-payerBody',waPayers);
+
+  new Chart(document.getElementById('wa-revTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[106,114,99,118,127,135],borderColor:'#0091ff',backgroundColor:'rgba(0,145,255,0.1)',tension:0.4,fill:true},{label:'Collected',data:[88,95,82,98,105,112],borderColor:'#34d399',backgroundColor:'rgba(52,211,153,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('wa-payerMix'),{type:'doughnut',data:{labels:['Aetna','BCBS','Cigna','UnitedHealth','Other'],datasets:[{data:[43,28,22,13,6],backgroundColor:['#00d4aa','#0091ff','#f5a623','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('wa-stateChart'),{type:'doughnut',data:{labels:['NJ','NY','PA'],datasets:[{data:[55,24,10],backgroundColor:['#0091ff','#00d4aa','#f5a623']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('wa-refSrc'),{type:'bar',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{label:'Referrals',data:[5,4,3,2,2],backgroundColor:'#0091ff'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('wa-refMonthly'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Referrals',data:[11,13,9,14,15,16],borderColor:'#0091ff',backgroundColor:'rgba(0,145,255,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('wa-claims'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[106,114,99,118,127,135],backgroundColor:'#0091ff'},{label:'Collected',data:[88,95,82,98,105,112],backgroundColor:'#34d399'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('wa-denials'),{type:'bar',data:{labels:['Incomplete','Not Covered','Timing','Other'],datasets:[{label:'Count',data:[9,5,3,2],backgroundColor:'#f87171'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('wa-refTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Total',data:[11,13,9,14,15,16],borderColor:'#0091ff',backgroundColor:'rgba(0,145,255,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('wa-refBreak'),{type:'doughnut',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{data:[5,4,3,2,2],backgroundColor:['#0091ff','#00d4aa','#f5a623','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+}
+
+function drawTcCharts(){
+  renderPayerTable('tc-payerBody',tcPayers);
+
+  new Chart(document.getElementById('tc-revTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[45,53,41,58,62,68],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.1)',tension:0.4,fill:true},{label:'Collected',data:[32,38,29,41,44,48],borderColor:'#34d399',backgroundColor:'rgba(52,211,153,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('tc-payerMix'),{type:'doughnut',data:{labels:['Aetna','BCBS','Cigna','UnitedHealth','Other'],datasets:[{data:[18,13,10,4,3],backgroundColor:['#00d4aa','#0091ff','#f5a623','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('tc-stateChart'),{type:'doughnut',data:{labels:['NJ','NY','PA'],datasets:[{data:[22,8,4],backgroundColor:['#f5a623','#00d4aa','#0091ff']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('tc-refSrc'),{type:'bar',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{label:'Referrals',data:[2,2,1,2,1],backgroundColor:'#f5a623'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('tc-refMonthly'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Referrals',data:[4,5,3,6,7,8],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('tc-claims'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'Submitted',data:[45,53,41,58,62,68],backgroundColor:'#f5a623'},{label:'Collected',data:[32,38,29,41,44,48],backgroundColor:'#34d399'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+
+  new Chart(document.getElementById('tc-denials'),{type:'bar',data:{labels:['Incomplete','Not Covered','Timing','Other'],datasets:[{label:'Count',data:[12,7,4,3],backgroundColor:'#f87171'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('tc-refTrend'),{type:'line',data:{labels:MONTHS,datasets:[{label:'Total',data:[4,5,3,6,7,8],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.1)',tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  new Chart(document.getElementById('tc-refBreak'),{type:'doughnut',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{data:[2,2,1,2,1],backgroundColor:['#f5a623','#00d4aa','#0091ff','#a855f7','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}}}});
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  drawThCharts();
+  renderThProviders();
+  renderThCompliance();
+  renderWaProviders();
+  renderWaCompliance();
+  renderTcProviders();
+  renderTcCompliance();
+  animateKpis();
+  initSparklines();
+  const s=loadSettings();
+  updateDataBadge(s);
+  scanAlerts();
+  setInterval(()=>document.getElementById('liveTime').textContent=new Date().toLocaleTimeString(),1000);
+  document.getElementById('liveTime').textContent=new Date().toLocaleTimeString();
+});
+</script>
+</body>
+</html>
