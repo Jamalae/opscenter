@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpsCenter — Teletherapeutics Health</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&amp;family=Syne:wght@400;600;700;800&amp;family=DM+Sans:wght@300;400;500&amp;display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#0a0c10;--bg2:#0f1218;--bg3:#151922;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
@@ -203,7 +201,28 @@ input::placeholder{color:var(--text3);}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 </style>
-</head>
+<style id="claude-agent-animation-styles">
+      @keyframes claude-pulse {
+        0% {
+          box-shadow: 
+            inset 0 0 10px rgba(217, 119, 87, 0.5),
+            inset 0 0 20px rgba(217, 119, 87, 0.3),
+            inset 0 0 30px rgba(217, 119, 87, 0.1);
+        }
+        50% {
+          box-shadow: 
+            inset 0 0 15px rgba(217, 119, 87, 0.7),
+            inset 0 0 25px rgba(217, 119, 87, 0.5),
+            inset 0 0 35px rgba(217, 119, 87, 0.2);
+        }
+        100% {
+          box-shadow: 
+            inset 0 0 10px rgba(217, 119, 87, 0.5),
+            inset 0 0 20px rgba(217, 119, 87, 0.3),
+            inset 0 0 30px rgba(217, 119, 87, 0.1);
+        }
+      }
+    </style></head>
 <body>
 
 <!-- MODAL -->
@@ -211,14 +230,14 @@ input::placeholder{color:var(--text3);}
   <div class="modal">
     <div class="modal-title">Data Source Configuration</div>
     <div class="modal-sub">Paste your published Google Sheets CSV URLs.<br>File → Share → Publish to web → select tab → CSV</div>
-    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tt)"></span>Teletherapeutics Health — Ads</div><input type="url" id="url-tt" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
-    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-wa)"></span>Well-America — Ads</div><input type="url" id="url-wa" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
-    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-hb)"></span>Hamilton Behavioral MD PA — Ads</div><input type="url" id="url-hb" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
-    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tc)"></span>Therapy Central — Ads</div><input type="url" id="url-tc" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
-    <div class="field-group"><div class="field-label">Staff Metrics Sheet</div><input type="url" id="url-staff" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tt)"></span>Teletherapeutics Health — Ads</div><input type="url" id="url-tt" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-wa)"></span>Well-America — Ads</div><input type="url" id="url-wa" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-hb)"></span>Hamilton Behavioral MD PA — Ads</div><input type="url" id="url-hb" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
+    <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tc)"></span>Therapy Central — Ads</div><input type="url" id="url-tc" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
+    <div class="field-group"><div class="field-label">Staff Metrics Sheet</div><input type="url" id="url-staff" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveAndLoad()">Save & Load Data</button>
+      <button class="btn-primary" onclick="saveAndLoad()">Save &amp; Load Data</button>
     </div>
   </div>
 </div>
@@ -241,7 +260,7 @@ input::placeholder{color:var(--text3);}
     <button class="tab" onclick="switchView('brand',this)">Brand Performance</button>
     <button class="tab" onclick="switchView('content',this)">Content Pipeline</button>
     <button class="tab" onclick="switchView('staff',this)">Staff Metrics</button>
-  </div>
+  <button class="tab" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button></div>
 
   <!-- MARKETING -->
   <div class="view active" id="view-marketing">
@@ -253,10 +272,40 @@ input::placeholder{color:var(--text3);}
       <button class="brand-pill" data-brand="hb" onclick="filterKPI('hb',this)">Hamilton Behavioral</button>
       <button class="brand-pill" data-brand="tc" onclick="filterKPI('tc',this)">Therapy Central</button>
     </div>
-    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card fade-in fade-in-1" style="--card-accent:#00d4aa">
+      <div class="kpi-label">Ad Spend</div>
+      <div class="kpi-value">$16.8K</div>
+      <div class="kpi-sub">Budget deployed</div>
+    </div>
+    <div class="kpi-card fade-in fade-in-2" style="--card-accent:#0091ff">
+      <div class="kpi-label">Impressions</div>
+      <div class="kpi-value">556K</div>
+      <div class="kpi-sub">Total reach</div>
+    </div>
+    <div class="kpi-card fade-in fade-in-3" style="--card-accent:#a855f7">
+      <div class="kpi-label">Clicks</div>
+      <div class="kpi-value">13K</div>
+      <div class="kpi-sub">Link clicks</div>
+    </div>
+    <div class="kpi-card fade-in fade-in-4" style="--card-accent:#f5a623">
+      <div class="kpi-label">CTR</div>
+      <div class="kpi-value">2.32%</div>
+      <div class="kpi-sub">Click-through rate</div>
+    </div>
+    <div class="kpi-card fade-in fade-in-5" style="--card-accent:#00d4aa">
+      <div class="kpi-label">Conversions</div>
+      <div class="kpi-value">190</div>
+      <div class="kpi-sub">Intake leads</div>
+    </div>
+    <div class="kpi-card fade-in fade-in-6" style="--card-accent:#ff6b6b">
+      <div class="kpi-label">Cost Per Lead</div>
+      <div class="kpi-value">$88</div>
+      <div class="kpi-sub">Spend ÷ conversions</div>
+    </div></div>
     <div class="charts-row">
-      <div class="chart-card"><div class="chart-title">Spend vs Conversions</div><div class="chart-sub">Monthly trend — all active brands</div><canvas id="trendChart" height="200"></canvas></div>
-      <div class="chart-card"><div class="chart-title">Budget Allocation</div><div class="chart-sub">Ad spend by brand</div><canvas id="donutChart" height="200"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Spend vs Conversions</div><div class="chart-sub">Monthly trend — all active brands</div><canvas id="trendChart" height="1117" width="1676" style="display: block; box-sizing: border-box; height: 558px; width: 838px;"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Budget Allocation</div><div class="chart-sub">Ad spend by brand</div><canvas id="donutChart" height="796" width="796" style="display: block; box-sizing: border-box; height: 398px; width: 398px;"></canvas></div>
     </div>
   </div>
 
@@ -266,11 +315,23 @@ input::placeholder{color:var(--text3);}
     <div class="brand-table-wrap">
       <div class="brand-table-header"><span class="brand-table-title">All Brands — Current Period</span><span class="last-updated">Demo data — connect sheets via ⚙</span></div>
       <table><thead><tr><th>Brand</th><th>Spend</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Conversions</th><th>CPL</th><th>ROAS</th></tr></thead>
-      <tbody id="brandTableBody"></tbody></table>
+      <tbody id="brandTableBody"><tr><td><div class="brand-name-cell"><span class="brand-dot" style="background:#00d4aa"></span><div><div class="brand-name-text">Teletherapeutics Health</div><div class="brand-abbr">TH</div></div></div></td>
+    <td><div class="num">$4.8K</div><div class="mini-bar"><div class="mini-bar-fill" style="width:76.02523659305994%;background:#00d4aa"></div></div></td>
+    <td class="num">142K</td><td class="num">3K</td>
+    <td class="num">2.26%</td><td class="num">48</td><td class="num">$100</td><td class="num">3.98x</td></tr><tr><td><div class="brand-name-cell"><span class="brand-dot" style="background:#0091ff"></span><div><div class="brand-name-text">Well-America</div><div class="brand-abbr">WA</div></div></div></td>
+    <td><div class="num">$6.3K</div><div class="mini-bar"><div class="mini-bar-fill" style="width:100%;background:#0091ff"></div></div></td>
+    <td class="num">218K</td><td class="num">5K</td>
+    <td class="num">2.38%</td><td class="num">72</td><td class="num">$88</td><td class="num">5.68x</td></tr><tr><td><div class="brand-name-cell"><span class="brand-dot" style="background:#a855f7"></span><div><div class="brand-name-text">Hamilton Behavioral MD PA</div><div class="brand-abbr">HB</div></div></div></td>
+    <td><div class="num">$2.2K</div><div class="mini-bar"><div class="mini-bar-fill" style="width:34.542586750788644%;background:#a855f7"></div></div></td>
+    <td class="num">87K</td><td class="num">2K</td>
+    <td class="num">1.89%</td><td class="num">29</td><td class="num">$76</td><td class="num">5.30x</td></tr><tr><td><div class="brand-name-cell"><span class="brand-dot" style="background:#f5a623"></span><div><div class="brand-name-text">Therapy Central</div><div class="brand-abbr">TC</div></div></div></td>
+    <td><div class="num">$3.5K</div><div class="mini-bar"><div class="mini-bar-fill" style="width:54.41640378548895%;background:#f5a623"></div></div></td>
+    <td class="num">109K</td><td class="num">3K</td>
+    <td class="num">2.63%</td><td class="num">41</td><td class="num">$84</td><td class="num">4.75x</td></tr></tbody></table>
     </div>
     <div class="charts-row">
-      <div class="chart-card"><div class="chart-title">CPL by Brand</div><div class="chart-sub">Cost per lead comparison</div><canvas id="cplChart" height="180"></canvas></div>
-      <div class="chart-card"><div class="chart-title">CTR by Brand</div><div class="chart-sub">Click-through rate %</div><canvas id="ctrChart" height="180"></canvas></div>
+      <div class="chart-card"><div class="chart-title">CPL by Brand</div><div class="chart-sub">Cost per lead comparison</div><canvas id="cplChart" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div>
+      <div class="chart-card"><div class="chart-title">CTR by Brand</div><div class="chart-sub">Click-through rate %</div><canvas id="ctrChart" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div>
     </div>
   </div>
 
@@ -312,12 +373,12 @@ input::placeholder{color:var(--text3);}
       <div class="chart-card">
         <div class="chart-title">Reels by Brand</div>
         <div class="chart-sub">Total volume per account</div>
-        <canvas id="reelsByBrandChart" height="160"></canvas>
+        <canvas id="reelsByBrandChart" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas>
       </div>
       <div class="chart-card">
         <div class="chart-title">Status Breakdown</div>
         <div class="chart-sub">Uploaded vs Done</div>
-        <canvas id="statusChart" height="160"></canvas>
+        <canvas id="statusChart" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas>
       </div>
     </div>
 
@@ -332,12 +393,528 @@ input::placeholder{color:var(--text3);}
       </div>
       <div class="pipeline-cols">
         <div class="pipeline-col">
-          <div class="pipeline-col-head"><span class="p-dot" style="background:#0091ff"></span><span style="color:#0091ff">Uploaded</span><span style="color:var(--text3);margin-left:4px" id="uploaded-count"></span></div>
-          <div id="pipeline-uploaded"></div>
+          <div class="pipeline-col-head"><span class="p-dot" style="background:#0091ff"></span><span style="color:#0091ff">Uploaded</span><span style="color:var(--text3);margin-left:4px" id="uploaded-count">(63)</span></div>
+          <div id="pipeline-uploaded"><div class="reel-card">
+      <div class="reel-topic">Mental Health Motivation When You Feel Empty</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The silent health crisis nobody talks about. How chronic stress is quietly reshaping our brains, immunity, and lifespan.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Mental Health Motivation When You Feel Empty</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">20+ Min Power Sessions for Mental Fitness (Men's Edge): 2025 report shows men practicing longer sessions report 83% mental fitness gains. Add walking meditation combining mindful steps and breath. Beat distractions—level up now! Practical progression for frequent practitioners with data-driven encouragement.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">3 Breathing Hacks to Cut Stress in 1 Min (Science-Backed)</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">How 5 Min Daily Rewires Your Brain Against AI Anxiety</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Your Phone Is Sabotaging Your Mental Health: Digital Boundaries You Need Now</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The 60-Second Attention Reset That Actually Works to Reduce Anxiety and Overthinking</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">You're Resting Wrong (And Here's Why Real Rest Matters for Your Nervous System)</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Replace These 3 Self-Critical Phrases with Compassionate Alternatives Today</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The 10-Minute Anxiety Reset (Backed by Research) — Teach a specific mindfulness or breathing technique proven to reduce depression symptoms by nearly 20%. A quick mental reset to manage daily stress effectively.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why You're Burned Out (And It's Not Your Fault) — Understand high-functioning burnout as a legitimate mental health condition and learn how to shift to a preventive care mindset to recover without guilt.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">3 Stress Management Hacks Your Doctor Wishes You Knew — Scientifically backed tips including better sleep, movement, and mindfulness exercises for immediate stress relief.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Stop Waiting for Crisis: Your Mental Health Check-In Guide — Embrace proactive mental health care by recognizing early emotional signs before burnout hits to maintain balance and well-being.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Workplace Stress Is a Mental Health Emergency (Here's Why) — Explore why 31% of workers experience frequent stress and learn when and how to take mental health leave effectively.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Stress Relief Nobody Talks About: Digital Detox — Discover how reducing your digital consumption can drastically lower stress, improve mindfulness, and boost mental health.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">High-Functioning Anxiety: The Silent Killer — Learn about this invisible stress condition affecting high-performers and how to manage it effectively to avoid burnout.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Your Sleep Schedule Is Sabotaging Your Mental Health — Understand the critical link between sleep hygiene and stress levels, and tips for an anxiety-friendly bedtime routine.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">ADHD &amp; Burnout: Why You're Stressed Differently — Highlight unique stress challenges faced by neurodivergent individuals and tailored stress management strategies.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Free Stress Management Tools (That Actually Work) — Showcase top telehealth apps and digital tools that provide affordable and accessible anxiety and stress relief.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Mindfulness as Preventive Medicine — Explain how daily mindfulness practice acts as preventive care to reduce anxiety and promote long-term stress resilience.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Truth About Stress Management Nobody Tells You — Debunk common myths around stress relief and share effective strategies backed by science.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Spot the Sneaky SAD symptoms Hiding in Your 2026 Indoor Life – Beat the Winter Blues Now! Think mornings feel heavier despite your best intentions? Discover 5 evolved signs of seasonal affective disorder like lagging motivation and screen-induced fatigue that hit even sunny climates—then claim your power with one quick morning light hack to reset your mood today.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Unlock Light therapy for SAD That Actually Rewires Your Brain – Ditch Fatigue in 2026 Winters! Tired of artificial lights failing you? Learn why 10,000-lux therapy lamps mimic missing sunlight to fix circadian chaos, backed by doctors' top recs—plus a 60-second setup routine to surge energy and crush hopelessness before it peaks in Feb.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">How Your 2026 Lifestyle Fuels Winter blues – Transform It to Thrive Through SAD Season! Remote days, late nights, and New Year pressure amplifying low energy? Expose the hidden lifestyle hits like disrupted sleep and isolation driving 5% of adults to SAD symptoms, then flip it with 3 simple swaps for unstoppable daily wins.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Prevent SAD symptoms Before They Strike: 2026's Game-Changing Strategies for Winter Warriors! Searches spiking 125% as fall hits—don't wait for Dec-Jan crashes! Arm yourself with preventive power moves like dawn-simulating routines, social boosts, and sleep hygiene to outsmart light deprivation and own your vibrant season from day one.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">5 Casual Hellos That End Daily Loneliness - Demonstrate simple, everyday greetings like in a grocery line that help build social recognition and instantly boost mood by tapping into empathy traits.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Weekly Group Hack: Connect Deeper Without Awkwardness - Step-by-step tips for organizing themed meetups that ease nervousness and foster deeper social connections through inward reflection.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Combat Holiday Isolation: 3 Quick Connection Rituals - Expert-backed tips to overcome loneliness during holidays with easy rituals that create meaningful social bonds.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Short Videos Are Stealing Your Real Friends - Myth-busting youth data that shows how excessive short video watching can displace real-life friendships; challenge viewers to cut 30 minutes daily for better connections.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Digital Play Truth: Games Friend or Loneliness Foe? - Insights from WHO on how video games impact social bonds, discussing benefits and risks with a "screen swap for real bonds" hook.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">AI Care Hype: Why Human Chats Still Win for Mental Health - A quick pros and cons comparison highlighting why human interaction remains crucial despite AI care trends forecasted for 2026.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Youth Loneliness Fix: Build Mentorship in 60 Seconds - Based on JED Foundation trends, this video provides a quick script for teens to reach out to adult allies and build supportive mentorships.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">LGBTQ+ Teens: Online Tribes to Offline Power - Encourages LGBTQ+ youth to leverage their online communities to build real-world support, highlighting hope and empowerment.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Tech Traps Teens Face: 4 Signs &amp; Escape Routes - Educates teens on recognizing digital addiction signs and provides actionable swaps for face-to-face interactions.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Paralysis Proof: How Community Crushes Isolation - Story-driven video with nurse/psychologist personal anecdotes showing how community support breaks isolation even in paralysis.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Empath Secret: Thrive in Small Circles Without Burnout - Reveal how empaths can thrive by focusing on a small, trusted social circle to protect mental health and maintain energy.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">2026 Mental Reset: From News Doom to Real Bonds - Motivational angle addressing news overload and stress, encouraging viewers to reset mental habits and build meaningful connections through a breathing and connect challenge.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">5 Micro-Habits to Boost Competence &amp; Crush Life Challenges - Tie to DBT skills for resilient 2026</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">3 Signs Low Confidence is Sabotaging You + Instant Fix to Build Self-Belief Like Entrepreneurs</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Build Real Connection in 60s to End Loneliness - Foster Belonging Amid Psychological Safety Trends</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Unlock Character Strength: Integrity Hacks for Daily Wins to Create a Burnout-Proof Mindset</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Self-Caring Isn't Selfish: 1-Minute Empathy Reset for Better Workplace Empathy</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">From Overwhelmed to Capable: Competence Blueprint for Stress Management and Control Regain</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">AI Anxiety? Build Unshakable Confidence in 2026 to Overcome Tech Fears</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Regain Control When Life Feels Chaotic with 5 Cs Hack for Lower Stress and Autonomy</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Character Building: Show Up Strong Without Burning Out by Balancing Responsibility and Self-Care</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Empathy for Others Starts Here: Quick Caring Routine to Reduce Mental Health Stigma</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Master the 5 Cs: Your 60-Second Mental Health Glow-Up Challenge for 2026</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Your Anxiety Might Actually Be ADHD - Educational myth-busting video explaining how 50% of adults with ADHD also experience anxiety, leading to common misdiagnosis. Highlights how symptoms overlap but require different treatments.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The 25% Statistic Nobody's Talking About - Eye-opening awareness video revealing that 1 in 4 adults suspect they have undiagnosed ADHD but very few have discussed it with healthcare providers, stressing the importance of professional diagnosis.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Women's ADHD Looks Nothing Like You Think - Educational empowerment video highlighting how adult women's ADHD symptoms differ and are often mistaken for depression, explaining the 344% rise in female diagnoses and masking behaviors.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Comorbidity Trap: Why You Feel Broken - Validating educational video explaining that adults with ADHD often have multiple disorders including depression, leading to misdiagnosis and the need for proper evaluation and treatment.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">5 Signs Your ADHD Is Being Missed (Not Anxiety) - Quick educational checklist of ADHD symptoms often confused with anxiety, including memory issues, emotional regulation, and time blindness, helping viewers identify missed signs.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why TikTok Made ADHD Diagnosis Explode (And Why That's Complicated) - Trend analysis video exploring how viral ADHD videos increased awareness and stimulant prescriptions during COVID-19, highlighting the risks of self-diagnosis without professional evaluation.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Pandemic Blurred Everything: ADHD vs. Anxiety vs. Depression - Contextual education on how the pandemic exacerbated symptoms and increased telehealth stimulant prescriptions, complicating diagnosis between ADHD, anxiety, and depression.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">What Happens When You Treat Anxiety But Have ADHD - Cautionary educational video showing consequences of misdiagnosis and wrong medication, emphasizing the critical need for differential diagnosis and proper treatment.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Gender Bias in ADHD Diagnosis (Still Happening in 2026) - Social justice and education angle addressing how Black and Brown men are often misdiagnosed and women are mistaken for depression cases, calling attention to systemic inequities.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Over Half of ADHD Diagnoses Happen in Adulthood—Here's Why - Educational validation explaining why many adults receive ADHD diagnosis later in life due to masking and symptom differences, emphasizing genetic factors.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">The Critical Difference: Self-Diagnosis vs. Professional Evaluation - Practical guidance on how to properly get evaluated for ADHD, risks of self-diagnosis, and the importance of formal diagnosis and treatment.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Hidden PTSD Triggers in Everyday Life: Explore 3 common reintegration triggers like crowds or finances that spike symptoms, backed by VA data on trauma-exposed vets. End with a quick grounding technique: "Breathe in resilience—you've got this."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Telehealth Hacks for Rural Vets Battling Reintegration: Spotlight VA's digital platforms ending travel barriers for PTSD therapy. Demo a 20-second app signup + first-session tip: "Access help from your couch—start healing today."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Family Reunions Gone Wrong: Reintegration Shock: Address social readjustment gaps causing depression spikes. Offer 3 family convo starters: "Rebuild bonds stronger than before—start tonight."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div></div>
         </div>
         <div class="pipeline-col">
-          <div class="pipeline-col-head"><span class="p-dot" style="background:#00d4aa"></span><span style="color:#00d4aa">Done</span><span style="color:var(--text3);margin-left:4px" id="done-count"></span></div>
-          <div id="pipeline-done"></div>
+          <div class="pipeline-col-head"><span class="p-dot" style="background:#00d4aa"></span><span style="color:#00d4aa">Done</span><span style="color:var(--text3);margin-left:4px" id="done-count">(23)</span></div>
+          <div id="pipeline-done"><div class="reel-card">
+      <div class="reel-topic">Quiet Burnout Fix: 3 Ways to Strengthen Connections at Work for Psychological Safety</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Anxiety Meds Can Make ADHD Worse (A Doctor Explains) - Expert-backed educational video explaining why stimulants calm ADHD brains but may worsen anxiety, highlighting the importance of correct diagnosis for effective treatment.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Your Body Remembers Deployment Trauma: Break down how health challenges amplify PTSD and depression post-deployment. Share a 30-second body scan exercise to reclaim control and build daily functionality.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">From Battlefield to Boardroom: PTSD at Work: Reveal how vocational readjustment struggles link to poor mental health. Motivate with "1 job hack that changed my life" for seamless civilian transitions.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Breaking the Stigma: Why Vets Hide Reintegration Pain: Tackle military culture shame masking depression and anxiety. Use real stats on wait times and a bold call: "Admit it, get help—your squad would approve."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Virtual Therapy Wins: Real Stories from Deployed Vets: Feature anonymized successes via telehealth for trauma, linking to better functionality. Hook: "Skip the drive, crush reintegration stress in one call."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Suicide Warning Signs Post-Deployment No One Talks About: Highlight 17+ daily vet suicides and linked isolation. Empower with "Spot it, stop it: 1 call that saves lives" via VA crisis lines.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Spouse Survival Guide: Supporting Your Vet's Reintegration: Guide families on handling PTSD moods and financial stress. Motivational twist: "You're their anchor—unlock these 2 support moves."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Build Reintegration Resilience: Beat Depression's Grip: Draw from studies showing early financial/social help prevents long-term issues. Share "Daily win ritual" for trauma-exposed vets.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">From Homeless to Hopeful: Resilience After Deployment: Connect housing instability, PTSD, and recovery cycles. Inspire: "3 steps to stable sleep and mental strength—your comeback starts now."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">2026 Reintegration Roadmap: Thrive, Don't Just Survive: Synthesize smooth transitions via proactive outreach and health focus. End with viewer challenge: "Pick one action today—tag a battle buddy."</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">27.5% of Deployments End in Mental Evacuations - 3 Coping Strategies That Work: Highlight the sharp rise in mental health evacuations from military deployments, featuring breathing exercises and telehealth tips to help active duty personnel manage stress effectively.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Veteran Suicide Prevention Urgency: Present the critical statistics on veteran suicides, explaining delays in access to care and promoting steps individuals can take to break the cycle with crisis line support visuals to increase awareness.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Drone Pilots' Silent PTSD: 2026 Study Reveals All: Explore mental health challenges faced by drone pilots including PTSD and moral injury, encouraging viewers to seek peer support and acknowledging their invisible struggles.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#00d4aa22;color:#00d4aa">Account 1</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Why Rural Veterans Wait 90 Days for Help (And Telehealth Fixes It): Address wait times and geographic barriers that rural veterans face, showcasing telehealth as a practical breakthrough improving timely access to mental health care.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">High-Rank Stigma: Why Officers Skip Mental Health (And How to Fix It): Discuss reluctance among higher-ranking military members to seek mental health care due to stigma, presenting anonymous support options and quick practical coping tips.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">TBI and Long-Term Injury Struggles in Veterans: Highlight the prevalence of traumatic brain injuries among veterans, emphasizing delayed symptoms and the importance of seeking disability support and ongoing care.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#0091ff22;color:#0091ff">Account 2</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Mental Health Evacuations Now Outpace Battle Injuries: Share compelling statistics about how mental health reasons have become the leading cause for military evacuations, using urgent visuals to stress the importance of readiness and wellness.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Beating Stigma: Quick Coping for High-Ranking Service Members: Empower service members to overcome stigma with actionable mental health tips, focusing on telehealth apps and peer support networks to encourage help-seeking.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">VA Workforce Shortages Threaten Mental Health Services: Discuss the impact of psychologist shortages in the VA, breaking myths about mental health care availability and stressing the urgency for reforms to protect veteran support systems.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#a855f722;color:#a855f7">Account 3</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">2026 Policy Shifts Boost Telehealth for Veterans: Explain recent 2026 healthcare policy changes improving telehealth access for veterans, emphasizing benefits like reduced wait times and easier mental health support delivery.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Moral Injury in Armed Forces: Identifying Signs and Seeking Help: Cover signs of moral injury among armed forces personnel and the importance of early intervention, including peer discussion and mental health resources tailored for military members.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">flux-pro</span>
+      </div>
+    </div><div class="reel-card">
+      <div class="reel-topic">Breaking Barriers: How Telehealth is Closing Gaps for Rural Veterans: Focus on how telehealth services are overcoming isolation and long wait times for rural veterans, making mental health care more accessible and reducing treatment drop-offs.</div>
+      <div class="reel-meta">
+        <span class="reel-acct" style="background:#f5a62322;color:#f5a623">Account 4</span>
+        <span class="reel-model">nano-banana</span>
+      </div>
+    </div></div>
         </div>
       </div>
     </div>
@@ -346,10 +923,126 @@ input::placeholder{color:var(--text3);}
   <!-- STAFF -->
   <div class="view" id="view-staff">
     <div class="section-header"><span class="section-title">Staff Metrics</span><div class="section-line"></div></div>
-    <div class="staff-grid" id="staffGrid"></div>
+    <div class="staff-grid" id="staffGrid"><div class="staff-card fade-in fade-in-1">
+      <div class="staff-card-header"><span class="staff-card-title">Teletherapeutics Health</span><span class="staff-badge" style="background:rgba(0,212,170,0.12);color:#00d4aa">TH</span></div>
+      
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">DK</div>
+          <div class="staff-info"><div class="staff-name">Dr. Kazmi</div><div class="staff-role">Physician</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">94%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:94%;background:#00d4aa"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">94%</div><div class="staff-metric-label">utilization</div></div>
+        </div>
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">R</div>
+          <div class="staff-info"><div class="staff-name">Rina</div><div class="staff-role">Scheduling</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">82%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:82%;background:#00d4aa"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">247</div><div class="staff-metric-label">appts/mo</div></div>
+        </div>
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">M</div>
+          <div class="staff-info"><div class="staff-name">Maricel</div><div class="staff-role">Billing</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">88%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:88%;background:#00d4aa"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">$91K</div><div class="staff-metric-label">collected</div></div>
+        </div>
+    </div><div class="staff-card fade-in fade-in-1">
+      <div class="staff-card-header"><span class="staff-card-title">Well-America</span><span class="staff-badge" style="background:rgba(0,145,255,0.12);color:#0091ff">WA</span></div>
+      
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">C</div>
+          <div class="staff-info"><div class="staff-name">Chris</div><div class="staff-role">VA Collections</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">73%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:73%;background:#0091ff"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">$44K</div><div class="staff-metric-label">collected</div></div>
+        </div>
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">FA</div>
+          <div class="staff-info"><div class="staff-name">Fathy Abdalla</div><div class="staff-role">Dir. of Operations</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">97%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:97%;background:#0091ff"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">97%</div><div class="staff-metric-label">compliance</div></div>
+        </div>
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">S</div>
+          <div class="staff-info"><div class="staff-name">Shavonda</div><div class="staff-role">School Referrals</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">60%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:60%;background:#0091ff"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">18</div><div class="staff-metric-label">referrals</div></div>
+        </div>
+    </div><div class="staff-card fade-in fade-in-1">
+      <div class="staff-card-header"><span class="staff-card-title">Hamilton Behavioral MD PA</span><span class="staff-badge" style="background:rgba(168,85,247,0.12);color:#a855f7">HB</span></div>
+      
+        <div class="staff-row">
+          <div class="staff-avatar" style="background:rgba(168,85,247,0.12);color:#a855f7">FD</div>
+          <div class="staff-info"><div class="staff-name">Front Desk</div><div class="staff-role">Reception</div></div>
+          <div class="progress-wrap">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">96%</div>
+            <div class="progress-track"><div class="progress-fill" style="width:96%;background:#a855f7"></div></div>
+          </div>
+          <div class="staff-metric"><div class="staff-metric-val">96%</div><div class="staff-metric-label">ans. rate</div></div>
+        </div>
+    </div></div>
   </div>
 
-</main>
+
+<div id="view-intake" class="view">
+  <div class="section-header" style="margin-bottom:20px">
+    <div>
+      <div class="section-title">2026 INTAKE REPORT</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Live referral data · Weekly by state</div>
+    </div>
+    <div class="section-line"></div>
+  </div>
+  <div class="tabs" id="intake-state-tabs" style="margin-bottom:24px;flex-wrap:wrap;gap:6px">
+    <button class="tab active" onclick="loadIntakeTab('weekly',this)">Weekly</button>
+    <button class="tab" onclick="loadIntakeTab('summary',this)">Summary</button>
+    <button class="tab" onclick="loadIntakeTab('ca',this)">CA</button>
+    <button class="tab" onclick="loadIntakeTab('pa',this)">PA</button>
+    <button class="tab" onclick="loadIntakeTab('ny',this)">NY</button>
+    <button class="tab" onclick="loadIntakeTab('wa',this)">WA</button>
+    <button class="tab" onclick="loadIntakeTab('fl',this)">FL</button>
+    <button class="tab" onclick="loadIntakeTab('az',this)">AZ</button>
+    <button class="tab" onclick="loadIntakeTab('or',this)">OR</button>
+  </div>
+  <div id="intake-kpi-row" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px">
+      <div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Total Referrals</div>
+      <div id="kpi-referrals" style="font-size:28px;font-weight:700;color:var(--accent)">—</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px">
+      <div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Scheduled Intakes</div>
+      <div id="kpi-intakes" style="font-size:28px;font-weight:700;color:var(--accent2)">—</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px">
+      <div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Declined</div>
+      <div id="kpi-declined" style="font-size:28px;font-weight:700;color:var(--accent3)">—</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px">
+      <div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Pending Referrals</div>
+      <div id="kpi-pending" style="font-size:28px;font-weight:700;color:var(--accent4)">—</div>
+    </div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    <div id="intake-status" style="text-align:center;padding:32px;color:var(--text3);font-family:'DM Mono',monospace;font-size:12px">
+      Select a tab above to load intake data
+    </div>
+    <div id="intake-table-wrap" style="overflow-x:auto;max-height:520px;overflow-y:auto"></div>
+  </div>
+</div></main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -685,5 +1378,56 @@ function switchView(view,btn){
 function fmt(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return n.toString();}
 function fmtK(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(0)+'K';return n.toString();}
 </script>
-</body>
-</html>
+
+
+<div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 0; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div><script>
+var _intakeInit = false;
+var _intakeGIDs = {weekly:'20687550',summary:'1777885816',ca:'609065481',pa:'677302496',ny:'295308524',wa:'117730870',fl:'1724905027',az:'592882409',or:'50299915'};
+var _intakeSID = '1pGeYq13sxhx1az5VQj_ZJmz8sI9ShoWx32zcuQ-4oIc';
+var _intakeLabels = {weekly:'Weekly Intake Report',summary:'Summary',ca:'California',pa:'Pennsylvania',ny:'New York',wa:'Washington',fl:'Florida',az:'Arizona',or:'Oregon'};
+function initIntake(){if(!_intakeInit){_intakeInit=true;loadIntakeTab('weekly',document.querySelector('#intake-state-tabs .tab'));}}
+function loadIntakeTab(key,btn){
+  document.querySelectorAll('#intake-state-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  var st=document.getElementById('intake-status'),tw=document.getElementById('intake-table-wrap');
+  st.style.display='block';st.innerHTML='Loading '+(_intakeLabels[key]||key)+'...';tw.innerHTML='';
+  var base='https://docs.google.com/spreadsheets/d/';
+  var url=base+_intakeSID+'/export?format=csv&gid='+_intakeGIDs[key];
+  fetch(url).then(function(r){return r.text();}).then(function(csv){
+    st.style.display='none';
+    var rows=csv.split('\n').map(function(r){return parseICSV(r);});
+    updateKPIs(rows,key);
+    var h='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    rows.forEach(function(row,i){
+      if(row.every(function(c){return!c.trim();}))return;
+      h+='<tr>';
+      row.forEach(function(cell){
+        var tag=i===0?'th':'td';
+        var st2=i===0?'padding:10px 14px;text-align:left;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:#8892a4;border-bottom:1px solid rgba(255,255,255,.07);white-space:nowrap;background:#151922;position:sticky;top:0':'padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top';
+        h+='<'+tag+' style="'+st2+'">'+(cell||'').replace(/^"|"$/g,'').replace(/""/g,'"')+'</'+tag+'>';
+      });
+      h+='</tr>';
+    });
+    h+='</table>';tw.innerHTML=h;
+  }).catch(function(){
+    st.style.display='none';
+    tw.innerHTML='<div style="padding:24px;color:#ff6b6b;text-align:center;font-size:12px">Could not load data. Make sure the 2026 Intake Report sheet is published to web.<br><small style="opacity:.7">File &rarr; Share &rarr; Publish to web &rarr; Publish</small></div>';
+  });
+}
+function parseICSV(row){var res=[],inQ=false,cur='';for(var i=0;i<row.length;i++){var c=row[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){res.push(cur);cur='';}else{cur+=c;}}res.push(cur);return res;}
+function updateKPIs(rows,key){
+  var kr=document.getElementById('intake-kpi-row');if(!kr)return;
+  var hi=-1;
+  for(var i=0;i<Math.min(10,rows.length);i++){var l=rows[i].join(' ').toLowerCase();if(l.includes('referral')||l.includes('total')||l.includes('scheduled')){hi=i;break;}}
+  if(hi<0){kr.style.display='none';return;}
+  var hs=rows[hi].map(function(h){return h.toLowerCase();});
+  var tr=0,sc=0,dc=0,pn=0;
+  for(var r=hi+1;r<rows.length;r++){var row=rows[r];hs.forEach(function(h,ci){var v=parseInt((row[ci]||'').replace(/[^0-9]/g,''))||0;if((h.includes('total')&&h.includes('referral'))||h.includes('total number'))tr+=v;else if(h.includes('scheduled')||h.includes('intake'))sc+=v;else if(h.includes('declin'))dc+=v;else if(h.includes('pending'))pn+=v;});}
+  if(tr+sc+dc+pn>0){
+    document.getElementById('kpi-referrals').textContent=tr||'—';
+    document.getElementById('kpi-intakes').textContent=sc||'—';
+    document.getElementById('kpi-declined').textContent=dc||'—';
+    document.getElementById('kpi-pending').textContent=pn||'—';
+    kr.style.display='grid';
+  }else{kr.style.display='none';}
+}</script></body></html>
