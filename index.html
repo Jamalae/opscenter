@@ -1024,33 +1024,7 @@ input::placeholder{color:var(--text3);}
     </div>
     <div class="section-line"></div>
   </div>
-    <div class="view" id="view-referral">
-      <div class="section-header">
-        <div>
-          <div class="section-title">CA REFERRAL TRACKER</div>
-          <div class="section-line"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Live partner directory · California</div>
-      </div>
-      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
-        <input type="text" id="ref-search" placeholder="Search institutions, contacts..." oninput="renderReferralTable()">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="ref-pill active" onclick="setRefFilter(this,'all')">All</button>
-          <button class="ref-pill" onclick="setRefFilter(this,'Sutter')">Sutter</button>
-          <button class="ref-pill" onclick="setRefFilter(this,'Bariatric')">Bariatric</button>
-          <button class="ref-pill" onclick="setRefFilter(this,'LTC')">LTC</button>
-        </div>
-      </div>
-      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
-        <table id="ref-table">
-          <thead><tr>
-            <th>Institution</th><th>Type</th><th>Contact</th><th>Role</th><th>Phone</th><th>Email</th>
-          </tr></thead>
-          <tbody id="ref-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">Configure the Referral Tracker URL in Settings ⚙</td></tr></tbody>
-        </table>
-      </div>
-      <div id="ref-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">No matching entries found.</div>
-    </div>
+    
   <div class="tabs" id="intake-state-tabs" style="margin-bottom:24px;flex-wrap:wrap;gap:6px">
     <button class="tab active" onclick="loadIntakeTab('weekly',this)">Weekly</button>
     <button class="tab" onclick="loadIntakeTab('summary',this)">Summary</button>
@@ -1332,7 +1306,34 @@ input::placeholder{color:var(--text3);}
 </td></tr><tr><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">Care solace - 1</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">(1) - Waiting for pt's call/email</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">
 </td></tr><tr><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">Mar 16-20, 2026</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">0</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">0</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">0</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top">0</td><td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e8eaf0;vertical-align:top"></td></tr></tbody></table></div>
   </div>
-</div></main>
+</div>
+    <div class="view" id="view-referral">
+      <div class="section-header">
+        <div>
+          <div class="section-title">CA REFERRAL TRACKER</div>
+          <div class="section-line"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Live partner directory · California</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="ref-search" placeholder="Search institutions, contacts..." oninput="renderReferralTable()">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="ref-pill active" onclick="setRefFilter(this,'all')">All</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'Sutter')">Sutter</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'Bariatric')">Bariatric</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'LTC')">LTC</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+        <table id="ref-table">
+          <thead><tr>
+            <th>Institution</th><th>Type</th><th>Contact</th><th>Role</th><th>Phone</th><th>Email</th>
+          </tr></thead>
+          <tbody id="ref-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">Configure the Referral Tracker URL in Settings ⚙</td></tr></tbody>
+        </table>
+      </div>
+      <div id="ref-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">No matching entries found.</div>
+    </div></main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
