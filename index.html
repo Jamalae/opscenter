@@ -200,6 +200,21 @@ input::placeholder{color:var(--text3);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* REFERRAL TRACKER */
+.ref-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 14px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);transition:all 0.2s;}
+.ref-pill.active{background:var(--bg3);color:var(--text);border-color:var(--border2);}
+.ref-pill:hover:not(.active){color:var(--text2);}
+#ref-search{font-family:'DM Mono',monospace;font-size:11px;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;width:260px;outline:none;}
+#ref-search:focus{border-color:var(--border2);}
+#ref-table{width:100%;border-collapse:collapse;font-size:12px;}
+#ref-table th{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+#ref-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text2);vertical-align:top;}
+#ref-table tr:hover td{background:rgba(255,255,255,0.02);}
+.rt-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.rt-sutter{background:rgba(0,212,170,0.12);color:#00d4aa;}
+.rt-bariatric{background:rgba(0,145,255,0.12);color:#0091ff;}
+.rt-ltc{background:rgba(245,166,35,0.12);color:#f5a623;}
 </style>
 <style id="claude-agent-animation-styles">
       @keyframes claude-pulse {
@@ -235,7 +250,8 @@ input::placeholder{color:var(--text3);}
     <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-hb)"></span>Hamilton Behavioral MD PA — Ads</div><input type="url" id="url-hb" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
     <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tc)"></span>Therapy Central — Ads</div><input type="url" id="url-tc" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
     <div class="field-group"><div class="field-label">Staff Metrics Sheet</div><input type="url" id="url-staff" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
-    <div class="modal-footer">
+    
+      <div class="field-group"><div class="field-label">CA Referral Tracker Sheet</div><input type="url" id="url-referral" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" onchange="localStorage.setItem('url-referral',this.value)"></div><div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn-primary" onclick="saveAndLoad()">Save &amp; Load Data</button>
     </div>
@@ -260,7 +276,8 @@ input::placeholder{color:var(--text3);}
     <button class="tab" onclick="switchView('brand',this)">Brand Performance</button>
     <button class="tab" onclick="switchView('content',this)">Content Pipeline</button>
     <button class="tab" onclick="switchView('staff',this)">Staff Metrics</button>
-  <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button></div>
+  <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button>
+      <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button></div>
 
   <!-- MARKETING -->
   <div class="view" id="view-marketing">
@@ -1007,6 +1024,33 @@ input::placeholder{color:var(--text3);}
     </div>
     <div class="section-line"></div>
   </div>
+    <div class="view" id="view-referral">
+      <div class="section-header">
+        <div>
+          <div class="section-title">CA REFERRAL TRACKER</div>
+          <div class="section-line"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Live partner directory · California</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="ref-search" placeholder="Search institutions, contacts..." oninput="renderReferralTable()">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="ref-pill active" onclick="setRefFilter(this,'all')">All</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'Sutter')">Sutter</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'Bariatric')">Bariatric</button>
+          <button class="ref-pill" onclick="setRefFilter(this,'LTC')">LTC</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+        <table id="ref-table">
+          <thead><tr>
+            <th>Institution</th><th>Type</th><th>Contact</th><th>Role</th><th>Phone</th><th>Email</th>
+          </tr></thead>
+          <tbody id="ref-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">Configure the Referral Tracker URL in Settings ⚙</td></tr></tbody>
+        </table>
+      </div>
+      <div id="ref-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">No matching entries found.</div>
+    </div>
   <div class="tabs" id="intake-state-tabs" style="margin-bottom:24px;flex-wrap:wrap;gap:6px">
     <button class="tab active" onclick="loadIntakeTab('weekly',this)">Weekly</button>
     <button class="tab" onclick="loadIntakeTab('summary',this)">Summary</button>
@@ -1695,4 +1739,89 @@ function updateKPIs(rows,key){
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">'+c+'</div><div style="font-size:24px;font-weight:700;color:var(--accent1);margin-top:4px;">'+vals[i]+'</div></div>';
   }).join('');
 }
+
+// ── CA REFERRAL TRACKER ──────────────────────────────
+let _refData = [], _refType = 'all';
+
+async function loadReferralTab() {
+  const url = localStorage.getItem('url-referral') ||
+              (document.getElementById('url-referral') && document.getElementById('url-referral').value);
+  if (!url) return;
+  const tbody = document.getElementById('ref-tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);font-family:DM Mono,monospace;font-size:11px;">Loading...</td></tr>';
+  try {
+    const r = await fetch(url + (url.includes('?') ? '&cachebust=' : '?cachebust=') + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const csv = await r.text();
+    const rows = csv.trim().split('\n');
+    const dataRows = rows.slice(1).filter(r => r.trim());
+    _refData = dataRows.map(row => {
+      const cols = []; let cur = '', inQ = false;
+      for (const ch of row) {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      cols.push(cur.trim());
+      return {
+        institution: cols[0] || '',
+        type: cols[1] || '',
+        contact: cols[2] || '',
+        role: cols[3] || '',
+        phone: (cols[4] || '').replace(/['"]/g,''),
+        email: (cols[5] || '').replace(/['"]/g,'')
+      };
+    });
+    renderReferralTable();
+  } catch(e) {
+    const tb = document.getElementById('ref-tbody');
+    if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#ff6b6b;font-family:DM Mono,monospace;font-size:11px;">Error loading data. Ensure the sheet is published as CSV (File → Share → Publish to web → CSV).</td></tr>';
+  }
+}
+
+function setRefFilter(btn, type) {
+  document.querySelectorAll('.ref-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _refType = type;
+  renderReferralTable();
+}
+
+function renderReferralTable() {
+  const tbody = document.getElementById('ref-tbody');
+  const empty = document.getElementById('ref-empty');
+  if (!tbody) return;
+  const search = (document.getElementById('ref-search') ? document.getElementById('ref-search').value : '').toLowerCase();
+  let filtered = _refType === 'all' ? _refData : _refData.filter(r => r.type === _refType);
+  if (search) filtered = filtered.filter(r =>
+    r.institution.toLowerCase().includes(search) ||
+    r.contact.toLowerCase().includes(search) ||
+    r.role.toLowerCase().includes(search)
+  );
+  if (!filtered.length && _refData.length > 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  const typeClass = t => ({ Sutter:'rt-sutter', Bariatric:'rt-bariatric', LTC:'rt-ltc' }[t] || '');
+  tbody.innerHTML = filtered.map(r =>
+    '<tr>' +
+    '<td style="font-weight:500;color:var(--text)">' + (r.institution||'—') + '</td>' +
+    '<td><span class="rt-badge ' + typeClass(r.type) + '">' + (r.type||'—') + '</span></td>' +
+    '<td>' + (r.contact||'—') + '</td>' +
+    '<td style="color:var(--text3);font-size:11px">' + (r.role||'—') + '</td>' +
+    '<td>' + (r.phone ? '<a href="tel:' + r.phone + '" style="color:var(--accent);text-decoration:none">' + r.phone + '</a>' : '—') + '</td>' +
+    '<td>' + (r.email ? '<a href="mailto:' + r.email + '" style="color:var(--accent2);text-decoration:none">' + r.email + '</a>' : '—') + '</td>' +
+    '</tr>'
+  ).join('');
+}
+
+// Load saved referral URL into input on page load
+(function() {
+  const saved = localStorage.getItem('url-referral');
+  if (saved) {
+    const el = document.getElementById('url-referral');
+    if (el) el.value = saved;
+  }
+})();
 </script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
