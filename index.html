@@ -2021,8 +2021,9 @@ async function _hsGetToken(){
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(pat)
     });
-    if(!r.ok)return null;
+    if(!r.ok)return 'INVALID';
     const d=await r.json();
+    if(d.error)return 'INVALID';
     if(d.refresh_token){localStorage.setItem('hs-pat',d.refresh_token);const el=document.getElementById('hs-pat');if(el)el.value=d.refresh_token;}
     return d.access_token||null;
   }catch(e){return 'CORS';}
@@ -2044,9 +2045,13 @@ async function loadHubstaffData(){
   if(lblEl)lblEl.textContent=range.label;
   const token=await _hsGetToken();
   if(!token||token==='CORS'){
-    if(corsEl)corsEl.style.display='block';
-    if(gridEl)gridEl.innerHTML='';
-    if(kpiEl)kpiEl.innerHTML='';
+    if(corsEl){corsEl.style.display='block';corsEl.innerHTML='<strong>&#9888; CORS Restriction</strong> &#8212; Hubstaff blocks direct browser requests. Open Hubstaff directly: <a href="https://app.hubstaff.com" target="_blank" style="color:var(--accent)">app.hubstaff.com &#8599;</a>';}
+    if(gridEl)gridEl.innerHTML='';if(kpiEl)kpiEl.innerHTML='';
+    return;
+  }
+  if(token==='INVALID'){
+    if(corsEl){corsEl.style.display='block';corsEl.innerHTML='<strong>&#128274; Token Expired</strong> &#8212; Go to <a href="https://app.hubstaff.com" target="_blank" style="color:var(--accent)">app.hubstaff.com</a> &#8594; Profile &#8594; Personal Access Tokens &#8594; Generate new token, then paste it in <strong>Settings &#9881;</strong>.';}
+    if(gridEl)gridEl.innerHTML='';if(kpiEl)kpiEl.innerHTML='';
     return;
   }
   const hdrs={'Authorization':'Bearer '+token};
