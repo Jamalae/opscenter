@@ -2016,13 +2016,15 @@ async function _hsGetToken(){
   const pat=localStorage.getItem('hs-pat')||document.getElementById('hs-pat')?.value||'';
   if(!pat)return null;
   try{
-    const r=await fetch('https://account.hubstaff.com/oauth/token',{
+    const r=await fetch('https://account.hubstaff.com/access_tokens',{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(pat)+'&client_id=hubstaff_default&client_secret=0'
+      body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(pat)
     });
     if(!r.ok)return null;
-    const d=await r.json();return d.access_token||null;
+    const d=await r.json();
+    if(d.refresh_token){localStorage.setItem('hs-pat',d.refresh_token);const el=document.getElementById('hs-pat');if(el)el.value=d.refresh_token;}
+    return d.access_token||null;
   }catch(e){return 'CORS';}
 }
 function hsChangeWeek(dir){_hsWeekOffset+=dir;loadHubstaffData();}
@@ -2051,12 +2053,13 @@ async function loadHubstaffData(){
   const fmtH=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?h+'h '+m+'m':m+'m';};
   try{
     if(!_hsOrgId){
-      const me=await(await fetch('https://api.hubstaff.com/v2/users/me',{headers:hdrs})).json();
-      _hsOrgId=(me.user?.organizations||me.organizations||[])[0]?.id;
+      const orgData=await(await fetch('https://api.hubstaff.com/v2/organizations',{headers:hdrs})).json();
+      _hsOrgId=(orgData.organizations||[])[0]?.id;
     }
     if(!_hsOrgId){if(gridEl)gridEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No organization found. Check PAT permissions.</div>';return;}
-    const memData=await(await fetch('https://api.hubstaff.com/v2/organizations/'+_hsOrgId+'/members?status=active',{headers:hdrs})).json();
+    const memData=await(await fetch('https://api.hubstaff.com/v2/organizations/'+_hsOrgId+'/members?include=users',{headers:hdrs})).json();
     const members=memData.members||[];
+    const userMap={};for(const u of(memData.users||[])){userMap[u.id]=u;}
     const actData=await(await fetch('https://api.hubstaff.com/v2/organizations/'+_hsOrgId+'/activities/daily?date[start]='+range.start+'&date[stop]='+range.stop,{headers:hdrs})).json();
     const acts=actData.daily_activities||[];
     const totals={},actPct={};
@@ -2075,14 +2078,17 @@ async function loadHubstaffData(){
     const cols=['#00d4aa','#667eea','#f5a623','#e74c3c','#9b59b6','#3498db','#e67e22','#1abc9c'];
     const cards=members.map(m=>{
       const secs=totals[m.user_id]||0,act=Math.min(100,Math.round(actPct[m.user_id]||0));
-      const init=(m.name||'?').split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase();
+      const user=userMap[m.user_id]||{};
+      const displayName=user.name||'Member '+m.user_id;
+      const init=displayName.split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase();
       const col=cols[(m.user_id||0)%cols.length];
       const barCol=act>70?'#00d4aa':act>40?'#f5a623':'#e74c3c';
+      const role=m.membership_role==='owner'?'Owner':m.membership_role==='admin'?'Admin':'Employee';
       return '<div class="hs-emp-card">'+
         '<div class="hs-emp-header">'+
           '<div class="hs-emp-avatar" style="background:'+col+'">'+init+'</div>'+
-          '<div style="flex:1;min-width:0"><div class="hs-emp-name">'+(m.name||'Unknown')+'</div>'+
-          '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+(m.role||'Employee')+'</div></div>'+
+          '<div style="flex:1;min-width:0"><div class="hs-emp-name">'+displayName+'</div>'+
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+role+'</div></div>'+
           '<div class="hs-status-dot '+(secs>0?'online':'offline')+'"></div>'+
         '</div>'+
         '<div class="hs-metrics-row">'+
