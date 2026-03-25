@@ -295,7 +295,7 @@ input::placeholder{color:var(--text3);}
     <button class="tab" onclick="switchView('marketing',this)">Marketing KPIs</button>
     <button class="tab" onclick="switchView('brand',this)">Brand Performance</button>
     <button class="tab" onclick="switchView('content',this)">Content Pipeline</button>
-    <button class="tab" onclick="switchView('staff',this)">Staff Metrics</button>
+    <button class="tab" onclick="switchView('staff',this);loadStaffFromSheet()">Staff Metrics</button>
   <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button>
       <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button>
           <button class="tab" onclick="switchView('weeklydash',this);loadWeeklyDash()">&#128202; WEEKLY DASH</button>
@@ -962,79 +962,16 @@ input::placeholder{color:var(--text3);}
   <!-- STAFF -->
   <div class="view" id="view-staff">
     <div class="section-header"><span class="section-title">Staff Metrics</span><div class="section-line"></div></div>
-    <div class="staff-grid" id="staffGrid"><div class="staff-card fade-in fade-in-1">
-      <div class="staff-card-header"><span class="staff-card-title">Teletherapeutics Health</span><span class="staff-badge" style="background:rgba(0,212,170,0.12);color:#00d4aa">TH</span></div>
-      
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">DK</div>
-          <div class="staff-info"><div class="staff-name">Dr. Kazmi</div><div class="staff-role">Physician</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">94%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:94%;background:#00d4aa"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">94%</div><div class="staff-metric-label">utilization</div></div>
-        </div>
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">R</div>
-          <div class="staff-info"><div class="staff-name">Rina</div><div class="staff-role">Scheduling</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">82%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:82%;background:#00d4aa"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">247</div><div class="staff-metric-label">appts/mo</div></div>
-        </div>
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,212,170,0.12);color:#00d4aa">M</div>
-          <div class="staff-info"><div class="staff-name">Maricel</div><div class="staff-role">Billing</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">88%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:88%;background:#00d4aa"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">$91K</div><div class="staff-metric-label">collected</div></div>
-        </div>
-    </div><div class="staff-card fade-in fade-in-1">
-      <div class="staff-card-header"><span class="staff-card-title">Well-America</span><span class="staff-badge" style="background:rgba(0,145,255,0.12);color:#0091ff">WA</span></div>
-      
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">C</div>
-          <div class="staff-info"><div class="staff-name">Chris</div><div class="staff-role">VA Collections</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">73%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:73%;background:#0091ff"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">$44K</div><div class="staff-metric-label">collected</div></div>
-        </div>
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">FA</div>
-          <div class="staff-info"><div class="staff-name">Fathy Abdalla</div><div class="staff-role">Dir. of Operations</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">97%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:97%;background:#0091ff"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">97%</div><div class="staff-metric-label">compliance</div></div>
-        </div>
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(0,145,255,0.12);color:#0091ff">S</div>
-          <div class="staff-info"><div class="staff-name">Shavonda</div><div class="staff-role">School Referrals</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">60%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:60%;background:#0091ff"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">18</div><div class="staff-metric-label">referrals</div></div>
-        </div>
-    </div><div class="staff-card fade-in fade-in-1">
-      <div class="staff-card-header"><span class="staff-card-title">Hamilton Behavioral MD PA</span><span class="staff-badge" style="background:rgba(168,85,247,0.12);color:#a855f7">HB</span></div>
-      
-        <div class="staff-row">
-          <div class="staff-avatar" style="background:rgba(168,85,247,0.12);color:#a855f7">FD</div>
-          <div class="staff-info"><div class="staff-name">Front Desk</div><div class="staff-role">Reception</div></div>
-          <div class="progress-wrap">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:4px">96%</div>
-            <div class="progress-track"><div class="progress-fill" style="width:96%;background:#a855f7"></div></div>
-          </div>
-          <div class="staff-metric"><div class="staff-metric-val">96%</div><div class="staff-metric-label">ans. rate</div></div>
-        </div>
-    </div></div>
+    <div id="staff-kpi-row" class="wdash-kpi-row" style="margin-bottom:16px;"></div>
+    <input type="text" id="staff-search" placeholder="&#128269; Search by name or specialty..." style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;margin-bottom:12px;outline:none;" oninput="renderStaffGrid()">
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="ref-pill active staff-filter-pill" onclick="setStaffFilter(this,'all')">All</button>
+      <button class="ref-pill staff-filter-pill" onclick="setStaffFilter(this,'signed')">&#10003; Signed</button>
+      <button class="ref-pill staff-filter-pill" onclick="setStaffFilter(this,'sent')">&#128233; Sent</button>
+      <button class="ref-pill staff-filter-pill" onclick="setStaffFilter(this,'other')">Prospects</button>
+    </div>
+    <div class="staff-grid" id="staffGrid"></div>
+    <div id="staff-empty" style="text-align:center;padding:60px 20px;color:var(--text2);font-size:13px;">Configure the Staff Metrics Sheet URL in Settings &#9881;</div>
   </div>
 
 
@@ -1986,4 +1923,48 @@ async function loadIntakeDash(){
   const wd=localStorage.getItem('url-weeklydash');if(wd){const el=document.getElementById('url-weeklydash');if(el)el.value=wd;}
   const id=localStorage.getItem('url-intakedash');if(id){const el=document.getElementById('url-intakedash');if(el)el.value=id;}
 })();
+
+/* ===== STAFF ROSTER FROM SHEET ===== */
+let _staffData=[],_staffFilter2='all',_staffSheetLoaded=false;
+async function loadStaffFromSheet(){
+  if(_staffSheetLoaded)return;
+  const url=localStorage.getItem('url-staff')||document.getElementById('url-staff')?.value;
+  if(!url)return;
+  try{
+    const resp=await fetch(url);const text=await resp.text();
+    _staffData=_wdParseCsv(text).filter(r=>r['Name']&&r['Name'].trim());
+    _staffSheetLoaded=true;renderStaffGrid();
+  }catch(e){const el=document.getElementById('staff-empty');if(el){el.textContent='Error loading. Check URL in Settings.';el.style.display='';}}
+}
+function setStaffFilter(btn,filter){
+  document.querySelectorAll('.staff-filter-pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');_staffFilter2=filter;renderStaffGrid();
+}
+function renderStaffGrid(){
+  const sv=(document.getElementById('staff-search')?.value||'').toLowerCase();
+  let rows=[..._staffData];
+  if(_staffFilter2==='signed')rows=rows.filter(r=>/contract signed/i.test(r['Comments']));
+  else if(_staffFilter2==='sent')rows=rows.filter(r=>/contract sent/i.test(r['Comments'])&&!/contract signed/i.test(r['Comments']));
+  else if(_staffFilter2==='other')rows=rows.filter(r=>!/contract signed|contract sent/i.test(r['Comments']));
+  if(sv)rows=rows.filter(r=>(r['Name']||'').toLowerCase().includes(sv)||(r['Title']||'').toLowerCase().includes(sv)||(r['Address']||'').toLowerCase().includes(sv));
+  const total=_staffData.length,signed=_staffData.filter(r=>/contract signed/i.test(r['Comments'])).length,sent=_staffData.filter(r=>/contract sent/i.test(r['Comments'])&&!/contract signed/i.test(r['Comments'])).length;
+  const kpiRow=document.getElementById('staff-kpi-row');
+  if(kpiRow)kpiRow.innerHTML=[{v:total,l:'Total Clinicians',c:'var(--accent)'},{v:signed,l:'Contracts Signed',c:'#00d4aa'},{v:sent,l:'Contracts Sent',c:'#0091ff'},{v:total-signed-sent,l:'Prospects',c:'#f5a623'}].map(k=>'<div class="wdash-kpi"><div class="wdash-kpi-val" style="color:'+k.c+'">'+k.v+'</div><div class="wdash-kpi-label">'+k.l+'</div></div>').join('');
+  const grid=document.getElementById('staffGrid'),empty=document.getElementById('staff-empty');
+  if(!rows.length){if(grid)grid.innerHTML='';if(empty)empty.style.display='';return;}
+  if(empty)empty.style.display='none';
+  if(grid)grid.innerHTML=rows.map(r=>{
+    const name=(r['Name']||'Unknown').replace(/,?\s*(LCSW|LMFT|LPC|ACSW|MSW|NP-C|NP|RN|MD|APRN|FNP-BC|FNP-C|FNP|BCBA|LMHC|CADC|PsyD|PhD|ASW|ACSN)[^,]*/i,'').trim();
+    const title=(r['Title']||'').trim().slice(0,28)||'Clinician';
+    const addr=r['Address']||'',comments=r['Comments']||'',stateLic=r['state license']||'';
+    const initials=name.split(/[\s,]+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+    const isSigned=/contract signed/i.test(comments),isSent=/contract sent/i.test(comments)&&!isSigned;
+    const statusText=isSigned?'SIGNED':isSent?'SENT':'PROSPECT';
+    const statusBg=isSigned?'rgba(0,212,170,0.12)':isSent?'rgba(0,145,255,0.12)':'rgba(245,166,35,0.12)';
+    const statusColor=isSigned?'#00d4aa':isSent?'#0091ff':'#f5a623';
+    const stateMatch=addr.match(/,\s*([A-Z]{2})\s*\d{5}/);
+    const stateCode=stateMatch?stateMatch[1]:(addr.split(',').pop()||'').trim().slice(0,20);
+    return '<div class="staff-card fade-in"><div class="staff-card-header"><span class="staff-card-title">'+title+'</span><span class="staff-badge" style="background:'+statusBg+';color:'+statusColor+'">'+statusText+'</span></div><div class="staff-row"><div class="staff-avatar" style="background:rgba(0,212,170,0.15);color:var(--accent);font-size:14px;font-weight:700;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+initials+'</div><div class="staff-info"><div class="staff-name">'+name.slice(0,32)+'</div><div class="staff-role">'+stateCode+'</div></div></div>'+(stateLic?'<div style="font-size:10px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">License: '+stateLic+'</div>':'')+'</div>';
+  }).join('');
+}
 </script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
