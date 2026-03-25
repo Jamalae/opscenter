@@ -215,6 +215,24 @@ input::placeholder{color:var(--text3);}
 .rt-sutter{background:rgba(0,212,170,0.12);color:#00d4aa;}
 .rt-bariatric{background:rgba(0,145,255,0.12);color:#0091ff;}
 .rt-ltc{background:rgba(245,166,35,0.12);color:#f5a623;}
+
+/* WEEKLY DASHBOARDS */
+.wdash-kpi-row{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.wdash-kpi{background:var(--bg2);border-radius:12px;padding:20px 24px;flex:1;min-width:150px;}
+.wdash-kpi-val{font-size:42px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace;line-height:1;}
+.wdash-kpi-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-top:6px;}
+.wdash-kpi-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.wdash-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.wdash-chart-card{background:var(--bg2);border-radius:12px;padding:20px;}
+.wdash-chart-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;}
+.wdash-state-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+.wdash-state-card{background:var(--bg2);border-radius:10px;padding:14px 16px;}
+.wdash-state-name{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;}
+.wdash-state-val{font-size:26px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;margin-top:4px;}
+.wdash-state-bar{height:3px;background:var(--accent);border-radius:2px;margin-top:6px;transition:width .5s;}
+.wdash-empty{text-align:center;padding:60px 20px;color:var(--text2);font-size:13px;}
+@media(max-width:600px){.wdash-charts-row{grid-template-columns:1fr;}}
+
 </style>
 <style id="claude-agent-animation-styles">
       @keyframes claude-pulse {
@@ -251,7 +269,9 @@ input::placeholder{color:var(--text3);}
     <div class="field-group"><div class="field-label"><span class="field-dot" style="background:var(--brand-tc)"></span>Therapy Central — Ads</div><input type="url" id="url-tc" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
     <div class="field-group"><div class="field-label">Staff Metrics Sheet</div><input type="url" id="url-staff" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></div>
     
-      <div class="field-group"><div class="field-label">CA Referral Tracker Sheet</div><input type="url" id="url-referral" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" onchange="localStorage.setItem('url-referral',this.value)"></div><div class="modal-footer">
+      <div class="field-group"><div class="field-label">CA Referral Tracker Sheet</div><input type="url" id="url-referral" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" onchange="localStorage.setItem('url-referral',this.value)"></div>
+            <div class="field-group"><div class="field-label">Weekly Dashboard Sheet</div><input type="url" id="url-weeklydash" placeholder="Paste published CSV URL" onchange="localStorage.setItem('url-weeklydash',this.value)"></div>
+            <div class="field-group"><div class="field-label">Weekly Intake Dashboard Sheet</div><input type="url" id="url-intakedash" placeholder="Paste published CSV URL" onchange="localStorage.setItem('url-intakedash',this.value)"></div><div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn-primary" onclick="saveAndLoad()">Save &amp; Load Data</button>
     </div>
@@ -277,7 +297,9 @@ input::placeholder{color:var(--text3);}
     <button class="tab" onclick="switchView('content',this)">Content Pipeline</button>
     <button class="tab" onclick="switchView('staff',this)">Staff Metrics</button>
   <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button>
-      <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button></div>
+      <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button>
+          <button class="tab" onclick="switchView('weeklydash',this);loadWeeklyDash()">&#128202; WEEKLY DASH</button>
+          <button class="tab" onclick="switchView('intakedash',this);loadIntakeDash()">&#128203; INTAKE DASH</button></div>
 
   <!-- MARKETING -->
   <div class="view" id="view-marketing">
@@ -1315,6 +1337,28 @@ input::placeholder{color:var(--text3);}
         </div>
         <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Live partner directory · California</div>
       </div>
+
+      <div class="view" id="view-weeklydash">
+        <div class="section-header"><span class="sh-title">&#128202; Weekly Dashboard</span></div>
+        <div id="wd-kpi-row" class="wdash-kpi-row"></div>
+        <div id="wd-state-grid" class="wdash-state-grid"></div>
+        <div class="wdash-charts-row">
+          <div class="wdash-chart-card"><div class="wdash-chart-title">New Patient by Clinician</div><canvas id="wd-pie-chart" height="220"></canvas></div>
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Patient Seen by Clinician</div><canvas id="wd-bar-chart" height="220"></canvas></div>
+        </div>
+        <div id="wd-empty" class="wdash-empty">Configure the Weekly Dashboard Sheet URL in Settings &#9881;</div>
+      </div>
+
+      <div class="view" id="view-intakedash">
+        <div class="section-header"><span class="sh-title">&#128203; Weekly Intake Dashboard</span></div>
+        <div id="id-kpi-row" class="wdash-kpi-row"></div>
+        <div id="id-state-grid" class="wdash-state-grid"></div>
+        <div class="wdash-charts-row">
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Referral Status Breakdown</div><canvas id="id-donut-chart" height="220"></canvas></div>
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Referrals by Insurance Source</div><canvas id="id-bar-chart" height="220"></canvas></div>
+        </div>
+        <div id="id-empty" class="wdash-empty">Configure the Weekly Intake Dashboard Sheet URL in Settings &#9881;</div>
+      </div>
       <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
         <input type="text" id="ref-search" placeholder="Search institutions, contacts..." oninput="renderReferralTable()">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -1824,5 +1868,120 @@ function renderReferralTable() {
     const el = document.getElementById('url-referral');
     if (el) el.value = saved;
   }
+})();
+
+/* ===== WEEKLY DASHBOARDS ===== */
+const WDASH_PALETTE=['#00d4aa','#0091ff','#f5a623','#ff6b6b','#a29bfe','#fd79a8','#55efc4','#fdcb6e','#74b9ff','#e17055'];
+function _wdParseCsv(text){
+  const lines=text.trim().split('\n');
+  if(!lines.length)return[];
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=[];let cur='',inQ=false;
+    for(const ch of line){if(ch==='"'){inQ=!inQ;continue;}if(ch===','&&!inQ){vals.push(cur.trim());cur='';}else cur+=ch;}
+    vals.push(cur.trim());
+    const obj={};headers.forEach((h,i)=>obj[h]=vals[i]??'');return obj;
+  }).filter(r=>Object.values(r).some(v=>v));
+}
+function _wdFindCol(headers,candidates){
+  for(const c of candidates){const f=headers.find(h=>h.toLowerCase().includes(c.toLowerCase()));if(f)return f;}
+  return null;
+}
+function _wdDestroyChart(id){const e=Chart.getChart(id);if(e)e.destroy();}
+
+let _wdLoaded=false;
+async function loadWeeklyDash(){
+  if(_wdLoaded)return;
+  const url=localStorage.getItem('url-weeklydash')||document.getElementById('url-weeklydash')?.value;
+  const emptyEl=document.getElementById('wd-empty');
+  if(!url){if(emptyEl)emptyEl.style.display='';return;}
+  try{
+    const resp=await fetch(url);const text=await resp.text();
+    const rows=_wdParseCsv(text);
+    if(!rows.length){if(emptyEl)emptyEl.style.display='';return;}
+    if(emptyEl)emptyEl.style.display='none';
+    const headers=Object.keys(rows[0]);
+    const clinCol=_wdFindCol(headers,['clinician','provider','therapist','doctor']);
+    const stateCol=_wdFindCol(headers,['state','location','region']);
+    const statusCol=_wdFindCol(headers,['status','type','visit type','patient type']);
+    const totalSeen=rows.length;
+    const newPts=statusCol?rows.filter(r=>/new/i.test(r[statusCol])).length:0;
+    const kpiRow=document.getElementById('wd-kpi-row');
+    if(kpiRow){
+      const kpis=[{val:totalSeen,label:'Patients Seen',sub:'this period'},{val:newPts,label:'New Patients',sub:''}];
+      if(clinCol)kpis.push({val:[...new Set(rows.map(r=>r[clinCol]).filter(Boolean))].length,label:'Clinicians Active',sub:''});
+      if(stateCol)kpis.push({val:[...new Set(rows.map(r=>r[stateCol]).filter(Boolean))].length,label:'States',sub:''});
+      kpiRow.innerHTML=kpis.map(k=>'<div class="wdash-kpi"><div class="wdash-kpi-val">'+k.val+'</div><div class="wdash-kpi-label">'+k.label+'</div>'+(k.sub?'<div class="wdash-kpi-sub">'+k.sub+'</div>':'')+'</div>').join('');
+    }
+    if(stateCol){
+      const sc={};rows.forEach(r=>{const s=r[stateCol]||'Unknown';sc[s]=(sc[s]||0)+1;});
+      const mx=Math.max(...Object.values(sc));
+      const sg=document.getElementById('wd-state-grid');
+      if(sg)sg.innerHTML=Object.entries(sc).sort((a,b)=>b[1]-a[1]).map(([s,n])=>'<div class="wdash-state-card"><div class="wdash-state-name">'+s+'</div><div class="wdash-state-val">'+n+'</div><div class="wdash-state-bar" style="width:'+Math.round(n/mx*100)+'%"></div></div>').join('');
+    }
+    _wdDestroyChart('wd-pie-chart');
+    if(clinCol){
+      const src2=statusCol?rows.filter(r=>/new/i.test(r[statusCol])):rows;
+      const bc={};src2.forEach(r=>{const c=r[clinCol]||'Unknown';bc[c]=(bc[c]||0)+1;});
+      new Chart(document.getElementById('wd-pie-chart'),{type:'doughnut',data:{labels:Object.keys(bc),datasets:[{data:Object.values(bc),backgroundColor:WDASH_PALETTE,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#9ca3af',font:{size:10},boxWidth:10}}}}});
+    }
+    _wdDestroyChart('wd-bar-chart');
+    if(clinCol){
+      const bc={};rows.forEach(r=>{const c=r[clinCol]||'Unknown';bc[c]=(bc[c]||0)+1;});
+      const sorted=Object.entries(bc).sort((a,b)=>b[1]-a[1]);
+      new Chart(document.getElementById('wd-bar-chart'),{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{label:'Patients',data:sorted.map(e=>e[1]),backgroundColor:'#0091ff',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}}});
+    }
+    _wdLoaded=true;
+  }catch(e){const el=document.getElementById('wd-empty');if(el){el.textContent='Error loading data. Check the Sheet URL in Settings.';el.style.display='';}}
+}
+
+let _idLoaded=false;
+async function loadIntakeDash(){
+  if(_idLoaded)return;
+  const url=localStorage.getItem('url-intakedash')||document.getElementById('url-intakedash')?.value;
+  const emptyEl=document.getElementById('id-empty');
+  if(!url){if(emptyEl)emptyEl.style.display='';return;}
+  try{
+    const resp=await fetch(url);const text=await resp.text();
+    const rows=_wdParseCsv(text);
+    if(!rows.length){if(emptyEl)emptyEl.style.display='';return;}
+    if(emptyEl)emptyEl.style.display='none';
+    const headers=Object.keys(rows[0]);
+    const insCol=_wdFindCol(headers,['insurance','payer','source','referral source','ins']);
+    const stateCol=_wdFindCol(headers,['state','location','region']);
+    const statusCol=_wdFindCol(headers,['status','disposition','outcome','result']);
+    const totalSR=rows.length;
+    const scheduled=statusCol?rows.filter(r=>/scheduled/i.test(r[statusCol])).length:0;
+    const declined=statusCol?rows.filter(r=>/declin|no show|cancel/i.test(r[statusCol])).length:0;
+    const kpiRow=document.getElementById('id-kpi-row');
+    if(kpiRow){
+      const kpis=[{val:totalSR,label:'Count of SR',sub:'total referrals',color:'var(--accent)'},{val:scheduled,label:'Scheduled',sub:'',color:'#0091ff'},{val:declined,label:'Declined',sub:'',color:'#ff6b6b'}];
+      if(stateCol)kpis.push({val:[...new Set(rows.map(r=>r[stateCol]).filter(Boolean))].length,label:'States',sub:'',color:'#f5a623'});
+      kpiRow.innerHTML=kpis.map(k=>'<div class="wdash-kpi"><div class="wdash-kpi-val" style="color:'+k.color+'">'+k.val+'</div><div class="wdash-kpi-label">'+k.label+'</div>'+(k.sub?'<div class="wdash-kpi-sub">'+k.sub+'</div>':'')+'</div>').join('');
+    }
+    if(stateCol){
+      const sc={};rows.forEach(r=>{const s=r[stateCol]||'Unknown';sc[s]=(sc[s]||0)+1;});
+      const mx=Math.max(...Object.values(sc));
+      const sg=document.getElementById('id-state-grid');
+      if(sg)sg.innerHTML=Object.entries(sc).sort((a,b)=>b[1]-a[1]).map(([s,n])=>'<div class="wdash-state-card"><div class="wdash-state-name">'+s+'</div><div class="wdash-state-val">'+n+'</div><div class="wdash-state-bar" style="width:'+Math.round(n/mx*100)+'%"></div></div>').join('');
+    }
+    _wdDestroyChart('id-donut-chart');
+    if(statusCol){
+      const sc={};rows.forEach(r=>{const s=r[statusCol]||'Unknown';sc[s]=(sc[s]||0)+1;});
+      new Chart(document.getElementById('id-donut-chart'),{type:'doughnut',data:{labels:Object.keys(sc),datasets:[{data:Object.values(sc),backgroundColor:['#00d4aa','#f5a623','#ff6b6b','#0091ff','#a29bfe'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#9ca3af',font:{size:10},boxWidth:10}}}}});
+    }
+    _wdDestroyChart('id-bar-chart');
+    if(insCol){
+      const ic={};rows.forEach(r=>{const s=r[insCol]||'Unknown';ic[s]=(ic[s]||0)+1;});
+      const sorted=Object.entries(ic).sort((a,b)=>b[1]-a[1]);
+      new Chart(document.getElementById('id-bar-chart'),{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{label:'Referrals',data:sorted.map(e=>e[1]),backgroundColor:'#00d4aa',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}}});
+    }
+    _idLoaded=true;
+  }catch(e){const el=document.getElementById('id-empty');if(el){el.textContent='Error loading data. Check the Sheet URL in Settings.';el.style.display='';}}
+}
+
+(function(){
+  const wd=localStorage.getItem('url-weeklydash');if(wd){const el=document.getElementById('url-weeklydash');if(el)el.value=wd;}
+  const id=localStorage.getItem('url-intakedash');if(id){const el=document.getElementById('url-intakedash');if(el)el.value=id;}
 })();
 </script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
