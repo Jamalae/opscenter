@@ -1338,27 +1338,7 @@ input::placeholder{color:var(--text3);}
         <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">Live partner directory · California</div>
       </div>
 
-      <div class="view" id="view-weeklydash">
-        <div class="section-header"><span class="sh-title">&#128202; Weekly Dashboard</span></div>
-        <div id="wd-kpi-row" class="wdash-kpi-row"></div>
-        <div id="wd-state-grid" class="wdash-state-grid"></div>
-        <div class="wdash-charts-row">
-          <div class="wdash-chart-card"><div class="wdash-chart-title">New Patient by Clinician</div><canvas id="wd-pie-chart" height="220"></canvas></div>
-          <div class="wdash-chart-card"><div class="wdash-chart-title">Patient Seen by Clinician</div><canvas id="wd-bar-chart" height="220"></canvas></div>
-        </div>
-        <div id="wd-empty" class="wdash-empty">Configure the Weekly Dashboard Sheet URL in Settings &#9881;</div>
-      </div>
-
-      <div class="view" id="view-intakedash">
-        <div class="section-header"><span class="sh-title">&#128203; Weekly Intake Dashboard</span></div>
-        <div id="id-kpi-row" class="wdash-kpi-row"></div>
-        <div id="id-state-grid" class="wdash-state-grid"></div>
-        <div class="wdash-charts-row">
-          <div class="wdash-chart-card"><div class="wdash-chart-title">Referral Status Breakdown</div><canvas id="id-donut-chart" height="220"></canvas></div>
-          <div class="wdash-chart-card"><div class="wdash-chart-title">Referrals by Insurance Source</div><canvas id="id-bar-chart" height="220"></canvas></div>
-        </div>
-        <div id="id-empty" class="wdash-empty">Configure the Weekly Intake Dashboard Sheet URL in Settings &#9881;</div>
-      </div>
+      
       <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
         <input type="text" id="ref-search" placeholder="Search institutions, contacts..." oninput="renderReferralTable()">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -1377,7 +1357,29 @@ input::placeholder{color:var(--text3);}
         </table>
       </div>
       <div id="ref-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;">No matching entries found.</div>
-    </div></main>
+    </div>
+
+<div class="view" id="view-weeklydash">
+        <div class="section-header"><span class="sh-title">&#128202; Weekly Dashboard</span></div>
+        <div id="wd-kpi-row" class="wdash-kpi-row"></div>
+        <div id="wd-state-grid" class="wdash-state-grid"></div>
+        <div class="wdash-charts-row">
+          <div class="wdash-chart-card"><div class="wdash-chart-title">New Patient by Clinician</div><canvas id="wd-pie-chart" height="220"></canvas></div>
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Patient Seen by Clinician</div><canvas id="wd-bar-chart" height="220"></canvas></div>
+        </div>
+        <div id="wd-empty" class="wdash-empty">Configure the Weekly Dashboard Sheet URL in Settings &#9881;</div>
+      </div>
+
+<div class="view" id="view-intakedash">
+        <div class="section-header"><span class="sh-title">&#128203; Weekly Intake Dashboard</span></div>
+        <div id="id-kpi-row" class="wdash-kpi-row"></div>
+        <div id="id-state-grid" class="wdash-state-grid"></div>
+        <div class="wdash-charts-row">
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Referral Status Breakdown</div><canvas id="id-donut-chart" height="220"></canvas></div>
+          <div class="wdash-chart-card"><div class="wdash-chart-title">Referrals by Insurance Source</div><canvas id="id-bar-chart" height="220"></canvas></div>
+        </div>
+        <div id="id-empty" class="wdash-empty">Configure the Weekly Intake Dashboard Sheet URL in Settings &#9881;</div>
+      </div></main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
