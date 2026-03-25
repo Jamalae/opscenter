@@ -233,7 +233,25 @@ input::placeholder{color:var(--text3);}
 .wdash-empty{text-align:center;padding:60px 20px;color:var(--text2);font-size:13px;}
 @media(max-width:600px){.wdash-charts-row{grid-template-columns:1fr;}}
 
-</style>
+
+/* HUBSTAFF */
+.hs-employee-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px;}
+.hs-emp-card{background:var(--bg2);border-radius:12px;padding:16px 18px;border:1px solid var(--border);transition:border-color .2s;}
+.hs-emp-card:hover{border-color:var(--accent);}
+.hs-emp-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.hs-emp-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;}
+.hs-emp-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hs-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.hs-status-dot.online{background:#00d4aa;box-shadow:0 0 6px rgba(0,212,170,.6);}
+.hs-status-dot.offline{background:#4a5568;}
+.hs-metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
+.hs-metric-val{font-size:18px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;}
+.hs-activity-bar{height:4px;background:var(--bg3);border-radius:2px;margin-top:10px;overflow:hidden;}
+.hs-activity-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+.hs-date-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.hs-date-btn{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'DM Mono',monospace;transition:border-color .2s;}
+.hs-date-btn:hover{border-color:var(--accent);}
+.hs-cors-notice{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.5;}</style>
 <style id="claude-agent-animation-styles">
       @keyframes claude-pulse {
         0% {
@@ -271,7 +289,7 @@ input::placeholder{color:var(--text3);}
     
       <div class="field-group"><div class="field-label">CA Referral Tracker Sheet</div><input type="url" id="url-referral" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" onchange="localStorage.setItem('url-referral',this.value)"></div>
             <div class="field-group"><div class="field-label">Weekly Dashboard Sheet</div><input type="url" id="url-weeklydash" placeholder="Paste published CSV URL" onchange="localStorage.setItem('url-weeklydash',this.value)"></div>
-            <div class="field-group"><div class="field-label">Weekly Intake Dashboard Sheet</div><input type="url" id="url-intakedash" placeholder="Paste published CSV URL" onchange="localStorage.setItem('url-intakedash',this.value)"></div><div class="modal-footer">
+            <div class="field-group"><div class="field-label">Weekly Intake Dashboard Sheet</div><input type="url" id="url-intakedash" placeholder="Paste published CSV URL" onchange="localStorage.setItem('url-intakedash',this.value)"><div class="field-group"><label>Hubstaff Personal Access Token</label><input type="password" id="hs-pat" placeholder="Paste your Hubstaff PAT here..." onchange="localStorage.setItem('hs-pat',this.value)"></div></div><div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn-primary" onclick="saveAndLoad()">Save &amp; Load Data</button>
     </div>
@@ -299,7 +317,7 @@ input::placeholder{color:var(--text3);}
   <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button>
       <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button>
           <button class="tab" onclick="switchView('weeklydash',this);loadWeeklyDash()">&#128202; WEEKLY DASH</button>
-          <button class="tab" onclick="switchView('intakedash',this);loadIntakeDash()">&#128203; INTAKE DASH</button></div>
+          <button class="tab" onclick="switchView('intakedash',this);loadIntakeDash()">&#128203; INTAKE DASH</button><button class="tab-btn" onclick="showView('hubstaff',this);loadHubstaffData()">&#128336; HUBSTAFF</button></div>
 
   <!-- MARKETING -->
   <div class="view" id="view-marketing">
@@ -1316,7 +1334,23 @@ input::placeholder{color:var(--text3);}
           <div class="wdash-chart-card"><div class="wdash-chart-title">Referrals by Insurance Source</div><canvas id="id-bar-chart" height="220"></canvas></div>
         </div>
         <div id="id-empty" class="wdash-empty">Configure the Weekly Intake Dashboard Sheet URL in Settings &#9881;</div>
-      </div></main>
+      </div>
+<div class="view" id="view-hubstaff">
+  <div class="section-header"><span class="sh-title">&#128336; Hubstaff Time Tracking</span></div>
+  <div id="hs-kpi-row" class="wdash-kpi-row" style="margin-bottom:16px;"></div>
+  <div class="hs-date-nav">
+    <button class="hs-date-btn" onclick="hsChangeWeek(-1)">&#8249; Prev</button>
+    <span id="hs-date-label" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);">This Week</span>
+    <button class="hs-date-btn" onclick="hsChangeWeek(1)">Next &#8250;</button>
+    <button class="hs-date-btn" onclick="hsGoToday()">Today</button>
+  </div>
+  <div id="hs-cors-notice" class="hs-cors-notice" style="display:none;">
+    <strong>&#9888; CORS Restriction</strong> &#8212; Hubstaff blocks direct browser requests. To use this tab, set up a small proxy or open Hubstaff directly: <a href="https://app.hubstaff.com" target="_blank" style="color:var(--accent)">Open Hubstaff &#8599;</a>
+  </div>
+  <div class="hs-employee-grid" id="hs-emp-grid"></div>
+  <div id="hs-empty" style="text-align:center;padding:60px 20px;color:var(--text2);display:block;">Configure your Hubstaff PAT in Settings &#9881;</div>
+</div>
+</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -1967,4 +2001,100 @@ function renderStaffGrid(){
     return '<div class="staff-card fade-in"><div class="staff-card-header"><span class="staff-card-title">'+title+'</span><span class="staff-badge" style="background:'+statusBg+';color:'+statusColor+'">'+statusText+'</span></div><div class="staff-row"><div class="staff-avatar" style="background:rgba(0,212,170,0.15);color:var(--accent);font-size:14px;font-weight:700;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+initials+'</div><div class="staff-info"><div class="staff-name">'+name.slice(0,32)+'</div><div class="staff-role">'+stateCode+'</div></div></div>'+(stateLic?'<div style="font-size:10px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">License: '+stateLic+'</div>':'')+'</div>';
   }).join('');
 }
-</script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
+
+// === HUBSTAFF ===
+let _hsWeekOffset=0,_hsOrgId=null;
+function _hsWeekRange(offset){
+  const now=new Date(),day=now.getDay();
+  const mon=new Date(now);mon.setDate(now.getDate()-((day+6)%7)+(offset*7));mon.setHours(0,0,0,0);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const lbl=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return{start:fmt(mon),stop:fmt(sun),label:lbl(mon)+' – '+lbl(sun)+', '+sun.getFullYear()};
+}
+async function _hsGetToken(){
+  const pat=localStorage.getItem('hs-pat')||document.getElementById('hs-pat')?.value||'';
+  if(!pat)return null;
+  try{
+    const r=await fetch('https://account.hubstaff.com/oauth/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(pat)+'&client_id=hubstaff_default&client_secret=0'
+    });
+    if(!r.ok)return null;
+    const d=await r.json();return d.access_token||null;
+  }catch(e){return 'CORS';}
+}
+function hsChangeWeek(dir){_hsWeekOffset+=dir;loadHubstaffData();}
+function hsGoToday(){_hsWeekOffset=0;loadHubstaffData();}
+async function loadHubstaffData(){
+  const pat=localStorage.getItem('hs-pat')||document.getElementById('hs-pat')?.value||'';
+  const emEl=document.getElementById('hs-empty');
+  const gridEl=document.getElementById('hs-emp-grid');
+  const kpiEl=document.getElementById('hs-kpi-row');
+  const corsEl=document.getElementById('hs-cors-notice');
+  const lblEl=document.getElementById('hs-date-label');
+  if(!pat){if(emEl)emEl.style.display='block';if(gridEl)gridEl.innerHTML='';if(kpiEl)kpiEl.innerHTML='';return;}
+  if(emEl)emEl.style.display='none';
+  if(corsEl)corsEl.style.display='none';
+  if(gridEl)gridEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Loading…</div>';
+  const range=_hsWeekRange(_hsWeekOffset);
+  if(lblEl)lblEl.textContent=range.label;
+  const token=await _hsGetToken();
+  if(!token||token==='CORS'){
+    if(corsEl)corsEl.style.display='block';
+    if(gridEl)gridEl.innerHTML='';
+    if(kpiEl)kpiEl.innerHTML='';
+    return;
+  }
+  const hdrs={'Authorization':'Bearer '+token};
+  const fmtH=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?h+'h '+m+'m':m+'m';};
+  try{
+    if(!_hsOrgId){
+      const me=await(await fetch('https://api.hubstaff.com/v2/users/me',{headers:hdrs})).json();
+      _hsOrgId=(me.user?.organizations||me.organizations||[])[0]?.id;
+    }
+    if(!_hsOrgId){if(gridEl)gridEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No organization found. Check PAT permissions.</div>';return;}
+    const memData=await(await fetch('https://api.hubstaff.com/v2/organizations/'+_hsOrgId+'/members?status=active',{headers:hdrs})).json();
+    const members=memData.members||[];
+    const actData=await(await fetch('https://api.hubstaff.com/v2/organizations/'+_hsOrgId+'/activities/daily?date[start]='+range.start+'&date[stop]='+range.stop,{headers:hdrs})).json();
+    const acts=actData.daily_activities||[];
+    const totals={},actPct={};
+    for(const a of acts){
+      const uid=a.user_id;
+      totals[uid]=(totals[uid]||0)+(a.tracked||0);
+      actPct[uid]=Math.max(actPct[uid]||0,a.overall||0);
+    }
+    const totalSecs=Object.values(totals).reduce((a,b)=>a+b,0);
+    const activeCount=Object.keys(totals).filter(id=>totals[id]>0).length;
+    if(kpiEl)kpiEl.innerHTML=
+      '<div class="wdash-kpi"><div class="wdash-kpi-val">'+members.length+'</div><div class="wdash-kpi-label">Members</div></div>'+
+      '<div class="wdash-kpi"><div class="wdash-kpi-val">'+activeCount+'</div><div class="wdash-kpi-label">Active</div></div>'+
+      '<div class="wdash-kpi"><div class="wdash-kpi-val">'+fmtH(totalSecs)+'</div><div class="wdash-kpi-label">Total Hours</div></div>'+
+      '<div class="wdash-kpi"><div class="wdash-kpi-val">'+(activeCount>0?fmtH(Math.round(totalSecs/activeCount)):'-')+'</div><div class="wdash-kpi-label">Avg / Active</div></div>';
+    const cols=['#00d4aa','#667eea','#f5a623','#e74c3c','#9b59b6','#3498db','#e67e22','#1abc9c'];
+    const cards=members.map(m=>{
+      const secs=totals[m.user_id]||0,act=Math.min(100,Math.round(actPct[m.user_id]||0));
+      const init=(m.name||'?').split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase();
+      const col=cols[(m.user_id||0)%cols.length];
+      const barCol=act>70?'#00d4aa':act>40?'#f5a623':'#e74c3c';
+      return '<div class="hs-emp-card">'+
+        '<div class="hs-emp-header">'+
+          '<div class="hs-emp-avatar" style="background:'+col+'">'+init+'</div>'+
+          '<div style="flex:1;min-width:0"><div class="hs-emp-name">'+(m.name||'Unknown')+'</div>'+
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+(m.role||'Employee')+'</div></div>'+
+          '<div class="hs-status-dot '+(secs>0?'online':'offline')+'"></div>'+
+        '</div>'+
+        '<div class="hs-metrics-row">'+
+          '<div><div style="font-size:10px;color:var(--text2);margin-bottom:4px">HOURS</div><div class="hs-metric-val">'+fmtH(secs)+'</div></div>'+
+          '<div><div style="font-size:10px;color:var(--text2);margin-bottom:4px">ACTIVITY</div><div class="hs-metric-val">'+act+'%</div></div>'+
+        '</div>'+
+        '<div class="hs-activity-bar"><div class="hs-activity-fill" style="width:'+act+'%;background:'+barCol+'"></div></div>'+
+      '</div>';
+    });
+    if(gridEl)gridEl.innerHTML=cards.join('');
+  }catch(e){
+    if(corsEl&&(e.name==='TypeError'||String(e).includes('CORS')))corsEl.style.display='block';
+    if(gridEl)gridEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Error: '+e.message+'</div>';
+  }
+}</script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
