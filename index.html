@@ -251,7 +251,60 @@ input::placeholder{color:var(--text3);}
 .hs-date-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .hs-date-btn{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'DM Mono',monospace;transition:border-color .2s;}
 .hs-date-btn:hover{border-color:var(--accent);}
-.hs-cors-notice{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.5;}</style>
+.hs-cors-notice{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.5;}
+/* ============ OPS CENTER STYLES ============ */
+.oc-toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.oc-toolbar select,.oc-toolbar input{background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:11px;min-width:120px;}
+.oc-toolbar input{flex:1;min-width:160px;}
+.oc-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;}
+.oc-panel-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.oc-panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px;text-transform:uppercase;}
+.oc-panel-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:3px;}
+.oc-two-col{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;margin-bottom:16px;}
+.oc-three-col{display:grid;grid-template-columns:1fr 1fr .8fr;gap:16px;margin-bottom:16px;}
+.oc-table-wrap{overflow-x:auto;border-radius:8px;}
+.oc-table{width:100%;border-collapse:collapse;}
+.oc-table th{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg3);position:sticky;top:0;text-align:left;}
+.oc-table td{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+.oc-table tbody tr:hover{background:rgba(0,212,170,.04);cursor:pointer;}
+.oc-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;}
+.oc-status-open{background:rgba(0,145,255,.12);color:#5bc0ff;border:1px solid rgba(0,145,255,.25);}
+.oc-status-in-progress{background:rgba(0,212,170,.12);color:#00d4aa;border:1px solid rgba(0,212,170,.25);}
+.oc-status-blocked{background:rgba(255,107,107,.12);color:#ff6b6b;border:1px solid rgba(255,107,107,.25);}
+.oc-status-resolved{background:rgba(0,212,170,.08);color:#00d4aa;border:1px solid rgba(0,212,170,.15);opacity:.7;}
+.oc-status-monitoring{background:rgba(245,166,35,.12);color:#f5a623;border:1px solid rgba(245,166,35,.25);}
+.oc-mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.oc-stat-box{padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;}
+.oc-stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;}
+.oc-stat-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);margin-top:4px;}
+.oc-bar-list{display:grid;gap:8px;}
+.oc-bar-row{display:grid;grid-template-columns:110px 1fr 80px;gap:8px;align-items:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);}
+.oc-bar-track{height:6px;border-radius:999px;background:var(--bg3);overflow:hidden;}
+.oc-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--accent));}
+.oc-list{display:grid;gap:10px;}
+.oc-list-item{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);display:grid;gap:6px;}
+.oc-list-top{display:flex;justify-content:space-between;gap:8px;align-items:start;}
+.oc-list-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);}
+.oc-list-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+.oc-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border2);border-radius:999px;padding:4px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);}
+.oc-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.oc-dot-red{background:var(--accent3);}
+.oc-dot-yellow{background:var(--accent4);}
+.oc-dot-green{background:var(--accent);}
+.oc-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px;}
+.oc-kpi-card{padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s,transform .15s;}
+.oc-kpi-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.oc-kpi-card.active{border-color:var(--accent2);}
+.oc-kpi-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+.oc-kpi-value{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);}
+.oc-kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:4px;}
+.oc-kpi-value.red{color:var(--accent3);}
+.oc-kpi-value.yellow{color:var(--accent4);}
+.oc-kpi-value.green{color:var(--accent);}
+.oc-money{font-variant-numeric:tabular-nums;white-space:nowrap;}
+@media(max-width:1200px){.oc-kpi-grid{grid-template-columns:repeat(3,1fr);}.oc-two-col,.oc-three-col{grid-template-columns:1fr;}}
+@media(max-width:700px){.oc-kpi-grid{grid-template-columns:repeat(2,1fr);}.oc-mini-grid{grid-template-columns:repeat(2,1fr);}.oc-bar-row{grid-template-columns:1fr;}}
+/* ========================================= */</style>
 <style id="claude-agent-animation-styles">
       @keyframes claude-pulse {
         0% {
@@ -317,7 +370,8 @@ input::placeholder{color:var(--text3);}
   <button class="tab active" onclick="switchView('intake',this);initIntake();">📊 Intake Report</button>
       <button class="tab" onclick="switchView('referral',this);loadReferralTab()">🗂 CA REFERRAL</button>
           <button class="tab" onclick="switchView('weeklydash',this);loadWeeklyDash()">&#128202; WEEKLY DASH</button>
-          <button class="tab" onclick="switchView('intakedash',this);loadIntakeDash()">&#128203; INTAKE DASH</button><button class="tab" onclick="switchView('hubstaff',this);loadHubstaffData()">&#128336; HUBSTAFF</button></div>
+          <button class="tab" onclick="switchView('intakedash',this);loadIntakeDash()">&#128203; INTAKE DASH</button><button class="tab" onclick="switchView('hubstaff',this);loadHubstaffData()">&#128336; HUBSTAFF</button>
+<button class="tab" onclick="switchView('opscenter',this);loadOpsCenter()">&#127919; OPS CENTER</button></div>
 
   <!-- MARKETING -->
   <div class="view" id="view-marketing">
@@ -1350,7 +1404,99 @@ input::placeholder{color:var(--text3);}
   <div class="hs-employee-grid" id="hs-emp-grid"></div>
   <div id="hs-empty" style="text-align:center;padding:60px 20px;color:var(--text2);display:block;">Configure your Hubstaff PAT in Settings &#9881;</div>
 </div>
-</main>
+
+<div id="view-opscenter" class="view">
+  <div class="section-header">
+    <span class="section-title">OPS CENTER</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="oc-toolbar">
+    <select id="oc-owner-filter" onchange="ocApplyFilters()"><option value="All">All Owners</option></select>
+    <select id="oc-status-filter" onchange="ocApplyFilters()"><option value="All">All Statuses</option></select>
+    <select id="oc-category-filter" onchange="ocApplyFilters()"><option value="All">All Categories</option></select>
+    <input id="oc-search" type="text" placeholder="Search issues, owners, notes…" oninput="ocApplyFilters()" />
+  </div>
+  <div class="oc-kpi-grid" id="oc-kpi-grid"></div>
+  <div class="oc-two-col">
+    <div class="oc-panel">
+      <div class="oc-panel-header">
+        <div>
+          <div class="oc-panel-title">Today’s Critical Actions</div>
+          <div class="oc-panel-sub">Priority 80+, overdue, or Blocked</div>
+        </div>
+        <div class="oc-pill"><span class="oc-dot oc-dot-red"></span><span id="oc-critical-count">0 critical</span></div>
+      </div>
+      <div class="oc-table-wrap" style="max-height:360px">
+        <table class="oc-table">
+          <thead><tr><th>Issue</th><th>Owner</th><th>Due</th><th>Impact</th><th>Status</th><th>Next Action</th></tr></thead>
+          <tbody id="oc-critical-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="oc-panel">
+      <div class="oc-panel-header">
+        <div>
+          <div class="oc-panel-title">Owner Accountability</div>
+          <div class="oc-panel-sub">Open issues and dollar exposure by owner</div>
+        </div>
+      </div>
+      <div class="oc-table-wrap" style="max-height:360px">
+        <table class="oc-table">
+          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Exposure</th><th>Stale 7d+</th></tr></thead>
+          <tbody id="oc-owner-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="oc-three-col">
+    <div class="oc-panel">
+      <div class="oc-panel-header">
+        <div><div class="oc-panel-title">Revenue Risk</div><div class="oc-panel-sub">Claims exposure by payer</div></div>
+      </div>
+      <div class="oc-mini-grid" id="oc-revenue-stats"></div>
+      <div class="oc-bar-list" id="oc-payer-bars"></div>
+    </div>
+    <div class="oc-panel">
+      <div class="oc-panel-header">
+        <div><div class="oc-panel-title">Patient Flow</div><div class="oc-panel-sub">Active patients, show rate, referrals</div></div>
+      </div>
+      <div class="oc-mini-grid" id="oc-patient-stats"></div>
+      <div class="oc-bar-list" id="oc-state-bars"></div>
+    </div>
+    <div class="oc-panel">
+      <div class="oc-panel-header">
+        <div><div class="oc-panel-title">System Health</div><div class="oc-panel-sub">Workflow failures and warnings</div></div>
+      </div>
+      <div class="oc-list" id="oc-system-list"></div>
+    </div>
+  </div>
+  <div class="oc-panel">
+    <div class="oc-panel-header">
+      <div>
+        <div class="oc-panel-title">Issues Queue</div>
+        <div class="oc-panel-sub">All tracked operational issues · click row for details</div>
+      </div>
+      <div class="oc-pill"><span class="oc-dot oc-dot-yellow"></span><span id="oc-issue-count">0 items</span></div>
+    </div>
+    <div class="oc-table-wrap" style="max-height:420px">
+      <table class="oc-table">
+        <thead><tr><th>Title</th><th>Category</th><th>Owner</th><th>Status</th><th>Priority</th><th>Due</th><th>Impact</th></tr></thead>
+        <tbody id="oc-issues-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="oc-overlay" onclick="ocCloseDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;"></div>
+  <aside id="oc-drawer" style="display:none;position:fixed;inset:0 0 0 auto;width:min(480px,100vw);background:var(--bg2);border-left:1px solid var(--border2);z-index:50;overflow-y:auto;padding:24px;box-shadow:-20px 0 60px rgba(0,0,0,.35);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div class="oc-panel-title" id="oc-drawer-title">Issue Detail</div>
+        <div class="oc-panel-sub" id="oc-drawer-sub"></div>
+      </div>
+      <button onclick="ocCloseDrawer()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px;">✕</button>
+    </div>
+    <div id="oc-drawer-body"></div>
+  </aside>
+</div></main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -2108,4 +2254,143 @@ async function loadHubstaffData(){
     if(corsEl&&(e.name==='TypeError'||String(e).includes('CORS')))corsEl.style.display='block';
     if(gridEl)gridEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Error: '+e.message+'</div>';
   }
-}</script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
+}
+// ============ OPS CENTER ============
+(function(){
+var OC={issues:[],filtered:[],kpiFilter:null,loaded:false,
+demo:{
+issues_queue:[
+{issue_id:'ISS001',category:'Credentialing',title:'Anthem provider not on file',payer_or_source:'Anthem',state:'NY',dollar_impact:42000,urgency:'High',status:'Blocked',owner:'Sarah',next_action:'Confirm roster and resend credentialing proof packet',due_date:'2026-03-27',last_updated:'2026-03-24',priority_score:94,days_open:16,notes:'NPI/TaxID mismatch — need proof for escalation.'},
+{issue_id:'ISS002',category:'Claims',title:'United claims held since 11/01/2025',payer_or_source:'United',state:'All',dollar_impact:60300,urgency:'Critical',status:'Open',owner:'Mike',next_action:'Reprocess batch and schedule payer call',due_date:'2026-03-28',last_updated:'2026-03-21',priority_score:97,days_open:25,notes:'Need tracking list by claim age and denial code.'},
+{issue_id:'ISS003',category:'Referrals',title:'CA referrals down after partner shifts',payer_or_source:'Quartet/Sutter',state:'CA',dollar_impact:18000,urgency:'Medium',status:'Open',owner:'Jess',next_action:'Build alternate outreach list and call 10 live partners',due_date:'2026-03-29',last_updated:'2026-03-25',priority_score:70,days_open:8,notes:'Single case agreements may partially offset.'},
+{issue_id:'ISS004',category:'System',title:'Meta token expired',payer_or_source:'Meta Ads',state:'All',dollar_impact:5000,urgency:'Medium',status:'In Progress',owner:'Dev',next_action:'Refresh token and test n8n workflow',due_date:'2026-03-26',last_updated:'2026-03-26',priority_score:66,days_open:2,notes:'Need stable token management and roles cleanup.'},
+{issue_id:'ISS005',category:'Staffing',title:'No-show policy rollout incomplete',payer_or_source:'Front Desk',state:'All',dollar_impact:12000,urgency:'High',status:'Open',owner:'Erin',next_action:'Train staff and update intake script',due_date:'2026-03-27',last_updated:'2026-03-23',priority_score:85,days_open:6,notes:'Card-on-file workflow not consistently offered.'},
+{issue_id:'ISS006',category:'Claims',title:'Aetna OON referral leakage',payer_or_source:'Aetna',state:'FL',dollar_impact:9000,urgency:'Medium',status:'Monitoring',owner:'Jess',next_action:'Review plan mix and carve-outs',due_date:'2026-03-31',last_updated:'2026-03-22',priority_score:54,days_open:14,notes:'Possible SCA opportunity.'},
+{issue_id:'ISS007',category:'Credentialing',title:'NY payer acceptance confusion',payer_or_source:'Intake Team',state:'NY',dollar_impact:7500,urgency:'High',status:'Blocked',owner:'Sarah',next_action:'Publish payer acceptance matrix for intake team',due_date:'2026-03-26',last_updated:'2026-03-19',priority_score:88,days_open:12,notes:'Repeated delays in patient callbacks.'}
+],
+claims_risk:[
+{payer:'Anthem',state:'NY',dollar_amount:42000,aging_0_30:8000,aging_31_60:12000,aging_61_90:10000,aging_90_plus:12000,root_cause:'Credentialing mismatch',owner:'Sarah',status:'Blocked'},
+{payer:'United',state:'All',dollar_amount:60300,aging_0_30:12000,aging_31_60:18000,aging_61_90:14500,aging_90_plus:15800,root_cause:'Claims hold',owner:'Mike',status:'Open'},
+{payer:'Aetna',state:'FL',dollar_amount:9000,aging_0_30:6000,aging_31_60:2000,aging_61_90:1000,aging_90_plus:0,root_cause:'OON referrals',owner:'Jess',status:'Monitoring'}
+],
+patient_flow:[
+{state:'CA',active_patients:79,new_intakes:8,followups:34,no_shows:5,show_rate:88.2,referral_source:'Quartet'},
+{state:'WA',active_patients:96,new_intakes:6,followups:41,no_shows:3,show_rate:91.7,referral_source:'Insurance'},
+{state:'NY',active_patients:18,new_intakes:2,followups:8,no_shows:1,show_rate:90.0,referral_source:'Insurance'},
+{state:'FL',active_patients:35,new_intakes:5,followups:16,no_shows:2,show_rate:89.5,referral_source:'Marketing'}
+],
+system_health:[
+{system:'n8n',workflow_name:'Meta - Well-America',severity:'High',status:'Failed',error_type:'Auth failure',owner:'Dev',fix_status:'In Progress',notes:'Expired token blocked sync',timestamp:'2026-03-26T09:12:00'},
+{system:'Google Ads',workflow_name:'Ads ingest',severity:'Medium',status:'Warning',error_type:'Customer ID mismatch',owner:'Dev',fix_status:'Monitoring',notes:'Retry succeeded but config suspect',timestamp:'2026-03-26T08:45:00'},
+{system:'Website',workflow_name:'Referral form',severity:'Low',status:'Healthy',error_type:'',owner:'Ops',fix_status:'Fixed',notes:'Patched field mapping',timestamp:'2026-03-25T18:30:00'}
+]}};
+function ocFmtMoney(n){var v=Number(n||0);if(v===0)return'$0';if(v>=1000)return'$'+(v/1000).toFixed(1)+'K';return'$'+v.toFixed(0);}
+function ocFmtDate(s){if(!s)return'—';var d=new Date(s.length===10?s+'T00:00:00':s);return isNaN(d)?s:d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function ocDaysDiff(s){if(!s)return 9999;var t=new Date(s+'T00:00:00');var n=new Date();n.setHours(0,0,0,0);return Math.floor((t-n)/86400000);}
+function ocStaleDays(s){if(!s)return 999;var t=new Date(s.includes('T')?s:s+'T00:00:00');return Math.floor((Date.now()-t)/86400000);}
+function ocStatusCss(s){return'oc-status oc-status-'+String(s||'').toLowerCase().replace(/[\s_]+/g,'-');}
+function ocNormalize(){OC.issues=OC.demo.issues_queue.map(function(r,idx){
+var dd=ocDaysDiff(r.due_date),imp=Number(r.dollar_impact||0),urg=String(r.urgency||'Low').toLowerCase(),sta=String(r.status||'Open'),sc=Number(r.priority_score||0);
+if(!sc){sc+=urg==='critical'?40:urg==='high'?30:urg==='medium'?20:10;sc+=imp>25000?25:imp>10000?15:imp>0?5:0;sc+=/blocked/i.test(sta)?20:/open/i.test(sta)?10:0;sc+=dd<0?15:0;sc+=(r.days_open||0)>14?10:0;}
+return{issue_id:r.issue_id||('ISS'+String(idx+1).padStart(3,'0')),title:r.title||'Untitled',category:r.category||'General',payer_or_source:r.payer_or_source||'—',state:r.state||'All',dollar_impact:imp,urgency:r.urgency||'Low',status:sta,owner:r.owner||'Unassigned',next_action:r.next_action||'—',due_date:r.due_date||'',last_updated:r.last_updated||'',priority_score:sc,days_open:r.days_open||0,notes:r.notes||'',due_days:dd,stale_days:ocStaleDays(r.last_updated)};
+});OC.issues.sort(function(a,b){return b.priority_score-a.priority_score||b.dollar_impact-a.dollar_impact;});OC.filtered=OC.issues.slice();}
+function ocBuildFilters(){var iss=OC.issues;function uniq(a){return Array.from(new Set(a.filter(Boolean))).sort();}
+function fill(id,vals,lbl){var el=document.getElementById(id);if(!el)return;var cur=el.value;el.innerHTML='<option value="All">'+lbl+'</option>';vals.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});if(Array.from(el.options).some(function(o){return o.value===cur;}))el.value=cur;}
+fill('oc-owner-filter',uniq(iss.map(function(i){return i.owner;})),'All Owners');fill('oc-status-filter',uniq(iss.map(function(i){return i.status;})),'All Statuses');fill('oc-category-filter',uniq(iss.map(function(i){return i.category;})),'All Categories');}
+window.ocApplyFilters=function(kf){if(kf!==undefined)OC.kpiFilter=(OC.kpiFilter===kf)?null:kf;
+var ow=(document.getElementById('oc-owner-filter')||{}).value||'All';var st=(document.getElementById('oc-status-filter')||{}).value||'All';var ca=(document.getElementById('oc-category-filter')||{}).value||'All';var q=((document.getElementById('oc-search')||{}).value||'').trim().toLowerCase();
+OC.filtered=OC.issues.filter(function(i){var h=[i.title,i.payer_or_source,i.notes,i.next_action,i.issue_id,i.category,i.owner].join(' ').toLowerCase();return(ow==='All'||i.owner===ow)&&(st==='All'||i.status===st)&&(ca==='All'||i.category===ca)&&(!q||h.includes(q))&&(!OC.kpiFilter||ocMatchKpi(i,OC.kpiFilter));});
+ocRenderAll();document.querySelectorAll('.oc-kpi-card').forEach(function(c){c.classList.toggle('active',c.dataset.filter===OC.kpiFilter);});};
+function ocMatchKpi(i,f){if(f==='critical')return i.priority_score>=80||/blocked/i.test(i.status);if(f==='claims')return i.category==='Claims'||i.category==='Credentialing';if(f==='referrals')return i.category==='Referrals';if(f==='system')return i.category==='System';return true;}
+function ocRenderKpis(){var grid=document.getElementById('oc-kpi-grid');if(!grid)return;
+var cl=OC.demo.claims_risk,fl=OC.demo.patient_flow,hl=OC.demo.system_health,iss=OC.issues;
+var clRisk=cl.reduce(function(s,r){return s+Number(r.dollar_amount||0);},0);
+var actPat=fl.reduce(function(s,r){return s+Number(r.active_patients||0);},0);
+var noSh=fl.reduce(function(s,r){return s+Number(r.no_shows||0);},0);
+var vis=fl.reduce(function(s,r){return s+Number(r.followups||0)+Number(r.new_intakes||0);},0)||1;
+var nsr=(noSh/vis*100).toFixed(1);
+var nRef=fl.reduce(function(s,r){return s+Number(r.new_intakes||0);},0);
+var crit=iss.filter(function(i){return i.priority_score>=80&&!/resolved/i.test(i.status);}).length;
+var sysFail=hl.filter(function(e){return/failed/i.test(e.status);}).length;
+var kpis=[
+{label:'Active Patients',val:actPat,fmt:'num',col:'green',filter:'patient',sub:'across all states'},
+{label:'Claims at Risk',val:clRisk,fmt:'money',col:clRisk>50000?'red':'yellow',filter:'claims',sub:'payers tracked'},
+{label:'No-Show Rate',val:nsr+'%',fmt:'raw',col:nsr>8?'red':'yellow',filter:null,sub:'this week'},
+{label:'New Referrals 7d',val:nRef,fmt:'num',col:'green',filter:'referrals',sub:'vs. 25 target'},
+{label:'Critical Issues',val:crit,fmt:'num',col:crit>3?'red':'yellow',filter:'critical',sub:'priority 80+'},
+{label:'Sys Failures 24h',val:sysFail,fmt:'num',col:sysFail?'red':'green',filter:'system',sub:'workflows checked'}
+];
+grid.innerHTML=kpis.map(function(k){var dv=k.fmt==='money'?ocFmtMoney(k.val):k.fmt==='num'?Number(k.val).toLocaleString():k.val;
+return'<div class="oc-kpi-card'+(OC.kpiFilter===k.filter?' active':'')+'"'+(k.filter?' data-filter="'+k.filter+'" onclick="ocApplyFilters(''+k.filter+'')"':'')+'>'+
+'<div class="oc-kpi-label">'+k.label+'</div>'+
+'<div class="oc-kpi-value '+k.col+'">'+dv+'</div>'+
+'<div class="oc-kpi-sub">'+k.sub+'</div></div>';}).join('');}
+function ocRenderCritical(){var tb=document.getElementById('oc-critical-tbody'),cnt=document.getElementById('oc-critical-count');if(!tb)return;
+var rows=OC.filtered.filter(function(i){return!/resolved/i.test(i.status)&&(i.priority_score>=80||i.due_days<=0||/blocked/i.test(i.status));});
+rows.sort(function(a,b){return b.priority_score-a.priority_score||a.due_days-b.due_days;});
+if(cnt)cnt.textContent=rows.length+' critical';
+tb.innerHTML=rows.length?rows.map(function(i){return'<tr onclick="ocShowIssue(''+i.issue_id+'')">'+
+'<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+i.category+(i.payer_or_source!=='—'?' · '+i.payer_or_source:'')+'</span></td>'+
+'<td>'+i.owner+'</td>'+
+'<td class="oc-money"'+(i.due_days<0?' style="color:var(--accent3)"':'')+'>'+ocFmtDate(i.due_date)+'</td>'+
+'<td class="oc-money">'+ocFmtMoney(i.dollar_impact)+'</td>'+
+'<td><span class="'+ocStatusCss(i.status)+'">'+i.status+'</span></td>'+
+'<td style="max-width:180px;word-break:break-word">'+i.next_action+'</td></tr>';}).join(''):
+'<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">No critical items under current filters</td></tr>';}
+function ocRenderOwners(){var tb=document.getElementById('oc-owner-tbody');if(!tb)return;
+var g={};OC.filtered.forEach(function(i){var r=g[i.owner]||(g[i.owner]={owner:i.owner,open:0,overdue:0,exposure:0,stale:0});if(!/resolved/i.test(i.status))r.open++;if(i.due_days<0&&!/resolved/i.test(i.status))r.overdue++;r.exposure+=i.dollar_impact;if(i.stale_days>=7&&!/resolved/i.test(i.status))r.stale++;});
+var rows=Object.values(g).sort(function(a,b){return b.exposure-a.exposure;});
+tb.innerHTML=rows.length?rows.map(function(r){return'<tr>'+
+'<td>'+r.owner+'</td><td>'+r.open+'</td>'+
+'<td style="color:'+(r.overdue>0?'var(--accent3)':'inherit')+'">'+r.overdue+'</td>'+
+'<td class="oc-money">'+ocFmtMoney(r.exposure)+'</td>'+
+'<td style="color:'+(r.stale>0?'var(--accent4)':'inherit')+'">'+r.stale+'</td></tr>';}).join(''):
+'<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">No data</td></tr>';}
+function ocRenderRevenue(){var se=document.getElementById('oc-revenue-stats'),be=document.getElementById('oc-payer-bars');if(!se||!be)return;
+var cl=OC.demo.claims_risk;
+var tot=cl.reduce(function(s,r){return s+Number(r.dollar_amount||0);},0);
+var a90=cl.reduce(function(s,r){return s+Number(r.aging_90_plus||0);},0);
+var blk=cl.filter(function(r){return/blocked/i.test(r.status);}).length;
+var top=cl.slice().sort(function(a,b){return Number(b.dollar_amount||0)-Number(a.dollar_amount||0);})[0];
+se.innerHTML=[['Total At Risk',ocFmtMoney(tot)],['90+ Days Aged',ocFmtMoney(a90)],['Top Payer',top?top.payer:'—'],['Blocked Lines',blk]].map(function(x){return'<div class="oc-stat-box"><div class="oc-stat-label">'+x[0]+'</div><div class="oc-stat-value">'+x[1]+'</div></div>';}).join('');
+var mx=Math.max.apply(null,cl.map(function(r){return Number(r.dollar_amount||0);}));
+be.innerHTML=cl.slice().sort(function(a,b){return Number(b.dollar_amount||0)-Number(a.dollar_amount||0);}).map(function(r){var pct=(Number(r.dollar_amount||0)/mx*100).toFixed(1);return'<div class="oc-bar-row"><div><strong>'+r.payer+'</strong></div><div class="oc-bar-track"><div class="oc-bar-fill" style="width:'+pct+'%"></div></div><div class="oc-money">'+ocFmtMoney(r.dollar_amount)+'</div></div>';}).join('');}
+function ocRenderPatient(){var se=document.getElementById('oc-patient-stats'),be=document.getElementById('oc-state-bars');if(!se||!be)return;
+var fl=OC.demo.patient_flow;
+var act=fl.reduce(function(s,r){return s+Number(r.active_patients||0);},0);
+var int=fl.reduce(function(s,r){return s+Number(r.new_intakes||0);},0);
+var avg=fl.reduce(function(s,r){return s+Number(r.show_rate||0);},0)/(fl.length||1);
+var ns=fl.reduce(function(s,r){return s+Number(r.no_shows||0);},0);
+se.innerHTML=[['Active Patients',act],['New Intakes',int],['Avg Show Rate',avg.toFixed(1)+'%'],['No-Shows',ns]].map(function(x){return'<div class="oc-stat-box"><div class="oc-stat-label">'+x[0]+'</div><div class="oc-stat-value">'+x[1]+'</div></div>';}).join('');
+var mx=Math.max.apply(null,fl.map(function(r){return Number(r.active_patients||0);}));
+be.innerHTML=fl.slice().sort(function(a,b){return Number(b.active_patients||0)-Number(a.active_patients||0);}).map(function(r){var pct=(Number(r.active_patients||0)/mx*100).toFixed(1);return'<div class="oc-bar-row"><div><strong>'+r.state+'</strong></div><div class="oc-bar-track"><div class="oc-bar-fill" style="width:'+pct+'%"></div></div><div>'+r.active_patients+' pts</div></div>';}).join('');}
+function ocRenderSystem(){var le=document.getElementById('oc-system-list');if(!le)return;
+var hl=OC.demo.system_health;
+le.innerHTML=hl.map(function(r){var sc=/failed/i.test(r.status)?'var(--accent3)':/warning/i.test(r.status)?'var(--accent4)':'var(--accent)';return'<div class="oc-list-item"><div class="oc-list-top"><div><div class="oc-list-title">'+r.system+' · '+(r.workflow_name||'Workflow')+'</div><div class="oc-list-sub">'+(r.error_type||'No error')+' · Owner: '+(r.owner||'—')+'</div></div><span style="color:'+sc+';font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap">'+r.status+'</span></div><div style="font-size:11px;color:var(--text2)">'+(r.notes||'—')+'</div><div class="oc-list-sub">'+ocFmtDate(r.timestamp)+' · '+(r.fix_status||'—')+'</div></div>';}).join('')||'<div style="color:var(--text3);padding:12px">No system events.</div>';}
+function ocRenderIssues(){var tb=document.getElementById('oc-issues-tbody'),ce=document.getElementById('oc-issue-count');if(!tb)return;
+if(ce)ce.textContent=OC.filtered.length+' items';
+tb.innerHTML=OC.filtered.length?OC.filtered.map(function(i){return'<tr onclick="ocShowIssue(''+i.issue_id+'')">'+
+'<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+(i.payer_or_source!=='—'?i.payer_or_source+' · ':'')+i.state+'</span></td>'+
+'<td>'+i.category+'</td><td>'+i.owner+'</td>'+
+'<td><span class="'+ocStatusCss(i.status)+'">'+i.status+'</span></td>'+
+'<td style="font-size:13px;font-weight:700;color:'+(i.priority_score>=85?'var(--accent3)':i.priority_score>=70?'var(--accent4)':'var(--text2)')+'">'+i.priority_score+'</td>'+
+'<td class="oc-money'+(i.due_days<0?'" style="color:var(--accent3)':'')+'">'+(i.due_days<0?'⚠ ':'')+ocFmtDate(i.due_date)+'</td>'+
+'<td class="oc-money">'+ocFmtMoney(i.dollar_impact)+'</td></tr>';}).join(''):
+'<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">No matching issues</td></tr>';}
+function ocRenderAll(){ocRenderKpis();ocRenderCritical();ocRenderOwners();ocRenderRevenue();ocRenderPatient();ocRenderSystem();ocRenderIssues();}
+window.ocShowIssue=function(id){var iss=OC.issues.find(function(i){return i.issue_id===id;});if(!iss)return;
+var dt=document.getElementById('oc-drawer-title'),ds=document.getElementById('oc-drawer-sub'),db=document.getElementById('oc-drawer-body'),dr=document.getElementById('oc-drawer'),ov=document.getElementById('oc-overlay');if(!dr)return;
+if(dt)dt.textContent=iss.title;if(ds)ds.textContent=iss.issue_id+' · '+iss.category+(iss.payer_or_source!=='—'?' · '+iss.payer_or_source:'');
+if(db)db.innerHTML='<div class="oc-mini-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+
+'<div class="oc-stat-box"><div class="oc-stat-label">Owner</div><div class="oc-stat-value" style="font-size:16px">'+iss.owner+'</div></div>'+
+'<div class="oc-stat-box"><div class="oc-stat-label">Priority Score</div><div class="oc-stat-value" style="font-size:16px;color:'+(iss.priority_score>=85?'var(--accent3)':'inherit')+'">'+iss.priority_score+'</div></div>'+
+'<div class="oc-stat-box"><div class="oc-stat-label">Dollar Impact</div><div class="oc-stat-value" style="font-size:16px">'+ocFmtMoney(iss.dollar_impact)+'</div></div>'+
+'<div class="oc-stat-box"><div class="oc-stat-label">Due Date</div><div class="oc-stat-value" style="font-size:16px;color:'+(iss.due_days<0?'var(--accent3)':'inherit')+'">'+ocFmtDate(iss.due_date)+'</div></div></div>'+
+'<div class="oc-list-item" style="margin-bottom:10px"><div class="oc-list-title">Status</div><div style="margin-top:6px"><span class="'+ocStatusCss(iss.status)+'">'+iss.status+'</span><span style="font-size:10px;color:var(--text3);margin-left:8px">'+iss.urgency+' urgency · '+iss.days_open+' days open</span></div></div>'+
+'<div class="oc-list-item" style="margin-bottom:10px"><div class="oc-list-title">Next Action</div><div style="margin-top:6px;font-size:12px;color:var(--text2)">'+(iss.next_action||'—')+'</div></div>'+
+'<div class="oc-list-item"><div class="oc-list-title">Notes</div><div style="margin-top:6px;font-size:12px;color:var(--text2)">'+(iss.notes||'—')+'</div><div class="oc-list-sub" style="margin-top:8px">Last updated: '+(iss.last_updated||'—')+'</div></div>';
+dr.style.display='block';if(ov)ov.style.display='block';};
+window.ocCloseDrawer=function(){var dr=document.getElementById('oc-drawer'),ov=document.getElementById('oc-overlay');if(dr)dr.style.display='none';if(ov)ov.style.display='none';};
+window.loadOpsCenter=function(){if(!OC.loaded){OC.loaded=true;ocNormalize();ocBuildFilters();}ocRenderAll();};
+})();
+// ============ END OPS CENTER ============</script><div id="claude-agent-glow-border" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483646; opacity: 1; transition: opacity 0.3s ease-in-out; animation: 2s ease-in-out 0s infinite normal none running claude-pulse; box-shadow: rgba(217, 119, 87, 0.5) 0px 0px 10px inset, rgba(217, 119, 87, 0.3) 0px 0px 20px inset, rgba(217, 119, 87, 0.1) 0px 0px 30px inset;"></div></body></html>
