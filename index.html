@@ -2335,7 +2335,7 @@ function ocRenderCritical(){var tb=document.getElementById('oc-critical-tbody'),
 var rows=OC.filtered.filter(function(i){return!/resolved/i.test(i.status)&&(i.priority_score>=80||i.due_days<=0||/blocked/i.test(i.status));});
 rows.sort(function(a,b){return b.priority_score-a.priority_score||a.due_days-b.due_days;});
 if(cnt)cnt.textContent=rows.length+' critical';
-tb.innerHTML=rows.length?rows.map(function(i){return'<tr onclick="ocShowIssue(''+i.issue_id+'')">'+
+tb.innerHTML=rows.length?rows.map(function(i){return'<tr onclick="ocShowIssue(\x27'+i.issue_id+'\x27)">'+
 '<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+i.category+(i.payer_or_source!=='—'?' · '+i.payer_or_source:'')+'</span></td>'+
 '<td>'+i.owner+'</td>'+
 '<td class="oc-money"'+(i.due_days<0?' style="color:var(--accent3)"':'')+'>'+ocFmtDate(i.due_date)+'</td>'+
@@ -2375,7 +2375,7 @@ var hl=OC.demo.system_health;
 le.innerHTML=hl.map(function(r){var sc=/failed/i.test(r.status)?'var(--accent3)':/warning/i.test(r.status)?'var(--accent4)':'var(--accent)';return'<div class="oc-list-item"><div class="oc-list-top"><div><div class="oc-list-title">'+r.system+' · '+(r.workflow_name||'Workflow')+'</div><div class="oc-list-sub">'+(r.error_type||'No error')+' · Owner: '+(r.owner||'—')+'</div></div><span style="color:'+sc+';font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap">'+r.status+'</span></div><div style="font-size:11px;color:var(--text2)">'+(r.notes||'—')+'</div><div class="oc-list-sub">'+ocFmtDate(r.timestamp)+' · '+(r.fix_status||'—')+'</div></div>';}).join('')||'<div style="color:var(--text3);padding:12px">No system events.</div>';}
 function ocRenderIssues(){var tb=document.getElementById('oc-issues-tbody'),ce=document.getElementById('oc-issue-count');if(!tb)return;
 if(ce)ce.textContent=OC.filtered.length+' items';
-tb.innerHTML=OC.filtered.length?OC.filtered.map(function(i){return'<tr onclick="ocShowIssue(''+i.issue_id+'')">'+
+tb.innerHTML=OC.filtered.length?OC.filtered.map(function(i){return'<tr onclick="ocShowIssue(\x27'+i.issue_id+'\x27)">'+
 '<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+(i.payer_or_source!=='—'?i.payer_or_source+' · ':'')+i.state+'</span></td>'+
 '<td>'+i.category+'</td><td>'+i.owner+'</td>'+
 '<td><span class="'+ocStatusCss(i.status)+'">'+i.status+'</span></td>'+
