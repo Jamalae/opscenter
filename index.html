@@ -291,24 +291,28 @@ input::placeholder{color:var(--text3);}
 .oc-dot-red{background:var(--accent3);}
 .oc-dot-yellow{background:var(--accent4);}
 .oc-dot-green{background:var(--accent);}
-.oc-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
-.oc-kpi-card{padding:20px 18px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s,transform .15s;display:flex;flex-direction:column;gap:6px;min-height:155px;}
-.oc-kpi-card:hover{border-color:var(--border2);transform:translateY(-2px);}
-.oc-kpi-card.active{border-color:var(--accent2);background:rgba(0,145,255,.06);}
-.oc-kpi-head{display:flex;justify-content:space-between;align-items:flex-start;}
-.oc-kpi-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;line-height:1.3;}
-.oc-kpi-value{font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:var(--text);line-height:1;}
-.oc-kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:2px;}
-.oc-kpi-trend{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;}
-.oc-kpi-trend.up{color:var(--accent);}
-.oc-kpi-trend.dn{color:var(--accent3);}
-.oc-kpi-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
-.oc-kpi-value.red{color:var(--accent3);}
-.oc-kpi-value.yellow{color:var(--accent4);}
-.oc-kpi-value.green{color:var(--accent);}
-.oc-money{font-variant-numeric:tabular-nums;white-space:nowrap;}
-@media(max-width:1200px){.oc-kpi-grid{grid-template-columns:repeat(3,1fr);}.oc-two-col,.oc-three-col{grid-template-columns:1fr;}}
-@media(max-width:700px){.oc-kpi-grid{grid-template-columns:repeat(2,1fr);}.oc-mini-grid{grid-template-columns:repeat(2,1fr);}.oc-bar-row{grid-template-columns:1fr;}}
+.ops-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:1200px){.ops-kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.ops-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+.ops-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden;}
+.ops-kpi:hover{border-color:var(--border2);transform:translateY(-1px);}
+.ops-kpi.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,170,.18) inset;}
+.ops-kpi::before{content:'';position:absolute;inset:0 auto auto 0;width:100%;height:2px;background:var(--ops-accent,var(--accent));opacity:.65;}
+.ops-kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.ops-kpi-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--text);margin-bottom:6px;}
+.ops-kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+.ops-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;}
+.ops-chip.red{background:rgba(255,107,107,.12);color:#ff6b6b;}
+.ops-chip.orange{background:rgba(245,166,35,.12);color:#f5a623;}
+.ops-chip.blue{background:rgba(0,145,255,.12);color:#0091ff;}
+.ops-chip.green{background:rgba(0,212,170,.12);color:#00d4aa;}
+.ops-chip.gray{background:rgba(136,146,164,.12);color:#a5afbf;}
+.ops-mini-stat-list{display:grid;gap:12px;padding:16px 18px 18px;}
+.ops-mini-stat{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ops-mini-stat-name{font-size:12px;color:var(--text2);}
+.ops-mini-stat-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);}
+.ops-mini-track{width:100%;height:4px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:6px;}
+.ops-mini-fill{height:100%;border-radius:999px;}
 /* ========================================= */</style>
 <style id="claude-agent-animation-styles">
       @keyframes claude-pulse {
@@ -2293,7 +2297,7 @@ function ocFmtMoney(n){var v=Number(n||0);if(v===0)return'$0';if(v>=1000)return'
 function ocFmtDate(s){if(!s)return'—';var d=new Date(s.length===10?s+'T00:00:00':s);return isNaN(d)?s:d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function ocDaysDiff(s){if(!s)return 9999;var t=new Date(s+'T00:00:00');var n=new Date();n.setHours(0,0,0,0);return Math.floor((t-n)/86400000);}
 function ocStaleDays(s){if(!s)return 999;var t=new Date(s.includes('T')?s:s+'T00:00:00');return Math.floor((Date.now()-t)/86400000);}
-function ocStatusCss(s){return'oc-status oc-status-'+String(s||'').toLowerCase().replace(/[\s_]+/g,'-');}
+function ocStatusCss(s){var m={Open:"blue",Blocked:"red","In Progress":"orange",Monitoring:"gray",Closed:"gray"};return "ops-chip "+(m[s]||"gray");}
 function ocNormalize(){OC.issues=OC.demo.issues_queue.map(function(r,idx){
 var dd=ocDaysDiff(r.due_date),imp=Number(r.dollar_impact||0),urg=String(r.urgency||'Low').toLowerCase(),sta=String(r.status||'Open'),sc=Number(r.priority_score||0);
 if(!sc){sc+=urg==='critical'?40:urg==='high'?30:urg==='medium'?20:10;sc+=imp>25000?25:imp>10000?15:imp>0?5:0;sc+=/blocked/i.test(sta)?20:/open/i.test(sta)?10:0;sc+=dd<0?15:0;sc+=(r.days_open||0)>14?10:0;}
@@ -2307,92 +2311,13 @@ var ow=(document.getElementById('oc-owner-filter')||{}).value||'All';var st=(doc
 OC.filtered=OC.issues.filter(function(i){var h=[i.title,i.payer_or_source,i.notes,i.next_action,i.issue_id,i.category,i.owner].join(' ').toLowerCase();return(ow==='All'||i.owner===ow)&&(st==='All'||i.status===st)&&(ca==='All'||i.category===ca)&&(!q||h.includes(q))&&(!OC.kpiFilter||ocMatchKpi(i,OC.kpiFilter));});
 ocRenderAll();document.querySelectorAll('.oc-kpi-card').forEach(function(c){c.classList.toggle('active',c.dataset.filter===OC.kpiFilter);});};
 function ocMatchKpi(i,f){if(f==='critical')return i.priority_score>=80||/blocked/i.test(i.status);if(f==='claims')return i.category==='Claims'||i.category==='Credentialing';if(f==='referrals')return i.category==='Referrals';if(f==='system')return i.category==='System';return true;}
-function ocRenderKpis(){
-var iss=OC.issues;
-var actPat=228;
-var clRisk=OC.demo.claims_risk.reduce(function(s,c){return s+c.dollar_amount;},0);
-var nsr=9.2;var nRef=21;
-var crit=iss.filter(function(i){return i.priority_score>80;}).length;
-var sysFail=OC.demo.system_health.filter(function(h){return /failed/i.test(h.status);}).length;
-var kpis=[
-{label:"Claims at Risk",val:clRisk,fmt:"money",col:"red",filter:"claims",trend:"+4.4%",trendUp:true,owner:"Billing",target:"$25,000",dot:"red"},
-{label:"Open Critical Issues",val:crit,fmt:"num",col:crit>3?"red":"yellow",filter:"critical",trend:"+20%",trendUp:true,owner:"Ops",target:"2",dot:"red"},
-{label:"No-Show Rate",val:nsr+"%",fmt:"raw",col:nsr>8?"red":"yellow",filter:null,trend:"+6.3%",trendUp:true,owner:"Clinical Ops",target:"5%",dot:"yellow"},
-{label:"New Referrals 7d",val:nRef,fmt:"num",col:"green",filter:"referrals",trend:"-11.1%",trendUp:false,owner:"Marketing",target:"25",dot:"yellow"},
-{label:"Workflow Failures 24h",val:sysFail,fmt:"num",col:sysFail?"red":"green",filter:"system",trend:"+200%",trendUp:true,owner:"Dev",target:"0",dot:"red"},
-{label:"Active Patients",val:actPat,fmt:"num",col:"green",filter:"patient",trend:"+3.2%",trendUp:true,owner:"Ops",target:"250",dot:"green"}
-];
-var grid=document.getElementById("oc-kpi-grid");
-if(!grid)return;
-grid.innerHTML=kpis.map(function(k){
-var active=OC.kpiFilter===k.filter&&k.filter?" active":"";
-var fa=k.filter?(" data-oc-filter=\""+k.filter+"\""):"";
-var cs=k.filter?"cursor:pointer":"cursor:default";
-var fv=k.fmt==="money"?"$"+(k.val>=1000?(k.val/1000).toFixed(1)+"K":k.val):k.val;
-var tc=k.trendUp?"oc-kpi-trend up":"oc-kpi-trend dn";
-var ta=k.trendUp?"↑":"↓";
-return "<div class=\"oc-kpi-card"+active+"\""+fa+" style=\""+cs+"\">"+
-"<div class=\"oc-kpi-head\"><span class=\"oc-kpi-label\">"+k.label+"</span>"+
-"<span class=\"oc-dot oc-dot-"+k.dot+"\"></span></div>"+
-"<div class=\"oc-kpi-value "+k.col+"\">"+fv+"</div>"+
-"<div class=\""+tc+"\">"+ta+" "+k.trend+"</div>"+
-"<div class=\"oc-kpi-meta\">Owner: "+k.owner+" &middot; Target: "+k.target+"</div>"+
-"</div>";
-}).join("");
-grid.onclick=function(e){var card=e.target.closest("[data-oc-filter]");if(card)ocApplyFilters(card.getAttribute("data-oc-filter"));};
-}
-function ocRenderCritical(){var tb=document.getElementById('oc-critical-tbody'),cnt=document.getElementById('oc-critical-count');if(!tb)return;
-var rows=OC.filtered.filter(function(i){return!/resolved/i.test(i.status)&&(i.priority_score>=80||i.due_days<=0||/blocked/i.test(i.status));});
-rows.sort(function(a,b){return b.priority_score-a.priority_score||a.due_days-b.due_days;});
-if(cnt)cnt.textContent=rows.length+' critical';
-tb.innerHTML=rows.length?rows.map(function(i){return'<tr onclick="ocShowIssue(\x27'+i.issue_id+'\x27)">'+
-'<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+i.category+(i.payer_or_source!=='—'?' · '+i.payer_or_source:'')+'</span></td>'+
-'<td>'+i.owner+'</td>'+
-'<td class="oc-money"'+(i.due_days<0?' style="color:var(--accent3)"':'')+'>'+ocFmtDate(i.due_date)+'</td>'+
-'<td class="oc-money">'+ocFmtMoney(i.dollar_impact)+'</td>'+
-'<td><span class="'+ocStatusCss(i.status)+'">'+i.status+'</span></td>'+
-'<td style="max-width:180px;word-break:break-word">'+i.next_action+'</td></tr>';}).join(''):
-'<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">No critical items under current filters</td></tr>';}
-function ocRenderOwners(){var tb=document.getElementById('oc-owner-tbody');if(!tb)return;
-var g={};OC.filtered.forEach(function(i){var r=g[i.owner]||(g[i.owner]={owner:i.owner,open:0,overdue:0,exposure:0,stale:0});if(!/resolved/i.test(i.status))r.open++;if(i.due_days<0&&!/resolved/i.test(i.status))r.overdue++;r.exposure+=i.dollar_impact;if(i.stale_days>=7&&!/resolved/i.test(i.status))r.stale++;});
-var rows=Object.values(g).sort(function(a,b){return b.exposure-a.exposure;});
-tb.innerHTML=rows.length?rows.map(function(r){return'<tr>'+
-'<td>'+r.owner+'</td><td>'+r.open+'</td>'+
-'<td style="color:'+(r.overdue>0?'var(--accent3)':'inherit')+'">'+r.overdue+'</td>'+
-'<td class="oc-money">'+ocFmtMoney(r.exposure)+'</td>'+
-'<td style="color:'+(r.stale>0?'var(--accent4)':'inherit')+'">'+r.stale+'</td></tr>';}).join(''):
-'<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">No data</td></tr>';}
-function ocRenderRevenue(){var se=document.getElementById('oc-revenue-stats'),be=document.getElementById('oc-payer-bars');if(!se||!be)return;
-var cl=OC.demo.claims_risk;
-var tot=cl.reduce(function(s,r){return s+Number(r.dollar_amount||0);},0);
-var a90=cl.reduce(function(s,r){return s+Number(r.aging_90_plus||0);},0);
-var blk=cl.filter(function(r){return/blocked/i.test(r.status);}).length;
-var top=cl.slice().sort(function(a,b){return Number(b.dollar_amount||0)-Number(a.dollar_amount||0);})[0];
-se.innerHTML=[['Total At Risk',ocFmtMoney(tot)],['90+ Days Aged',ocFmtMoney(a90)],['Top Payer',top?top.payer:'—'],['Blocked Lines',blk]].map(function(x){return'<div class="oc-stat-box"><div class="oc-stat-label">'+x[0]+'</div><div class="oc-stat-value">'+x[1]+'</div></div>';}).join('');
-var mx=Math.max.apply(null,cl.map(function(r){return Number(r.dollar_amount||0);}));
-be.innerHTML=cl.slice().sort(function(a,b){return Number(b.dollar_amount||0)-Number(a.dollar_amount||0);}).map(function(r){var pct=(Number(r.dollar_amount||0)/mx*100).toFixed(1);return'<div class="oc-bar-row"><div><strong>'+r.payer+'</strong></div><div class="oc-bar-track"><div class="oc-bar-fill" style="width:'+pct+'%"></div></div><div class="oc-money">'+ocFmtMoney(r.dollar_amount)+'</div></div>';}).join('');}
-function ocRenderPatient(){var se=document.getElementById('oc-patient-stats'),be=document.getElementById('oc-state-bars');if(!se||!be)return;
-var fl=OC.demo.patient_flow;
-var act=fl.reduce(function(s,r){return s+Number(r.active_patients||0);},0);
-var int=fl.reduce(function(s,r){return s+Number(r.new_intakes||0);},0);
-var avg=fl.reduce(function(s,r){return s+Number(r.show_rate||0);},0)/(fl.length||1);
-var ns=fl.reduce(function(s,r){return s+Number(r.no_shows||0);},0);
-se.innerHTML=[['Active Patients',act],['New Intakes',int],['Avg Show Rate',avg.toFixed(1)+'%'],['No-Shows',ns]].map(function(x){return'<div class="oc-stat-box"><div class="oc-stat-label">'+x[0]+'</div><div class="oc-stat-value">'+x[1]+'</div></div>';}).join('');
-var mx=Math.max.apply(null,fl.map(function(r){return Number(r.active_patients||0);}));
-be.innerHTML=fl.slice().sort(function(a,b){return Number(b.active_patients||0)-Number(a.active_patients||0);}).map(function(r){var pct=(Number(r.active_patients||0)/mx*100).toFixed(1);return'<div class="oc-bar-row"><div><strong>'+r.state+'</strong></div><div class="oc-bar-track"><div class="oc-bar-fill" style="width:'+pct+'%"></div></div><div>'+r.active_patients+' pts</div></div>';}).join('');}
-function ocRenderSystem(){var le=document.getElementById('oc-system-list');if(!le)return;
-var hl=OC.demo.system_health;
-le.innerHTML=hl.map(function(r){var sc=/failed/i.test(r.status)?'var(--accent3)':/warning/i.test(r.status)?'var(--accent4)':'var(--accent)';return'<div class="oc-list-item"><div class="oc-list-top"><div><div class="oc-list-title">'+r.system+' · '+(r.workflow_name||'Workflow')+'</div><div class="oc-list-sub">'+(r.error_type||'No error')+' · Owner: '+(r.owner||'—')+'</div></div><span style="color:'+sc+';font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap">'+r.status+'</span></div><div style="font-size:11px;color:var(--text2)">'+(r.notes||'—')+'</div><div class="oc-list-sub">'+ocFmtDate(r.timestamp)+' · '+(r.fix_status||'—')+'</div></div>';}).join('')||'<div style="color:var(--text3);padding:12px">No system events.</div>';}
-function ocRenderIssues(){var tb=document.getElementById('oc-issues-tbody'),ce=document.getElementById('oc-issue-count');if(!tb)return;
-if(ce)ce.textContent=OC.filtered.length+' items';
-tb.innerHTML=OC.filtered.length?OC.filtered.map(function(i){return'<tr onclick="ocShowIssue(\x27'+i.issue_id+'\x27)">'+
-'<td><strong>'+i.title+'</strong><br><span style="font-size:10px;color:var(--text3)">'+(i.payer_or_source!=='—'?i.payer_or_source+' · ':'')+i.state+'</span></td>'+
-'<td>'+i.category+'</td><td>'+i.owner+'</td>'+
-'<td><span class="'+ocStatusCss(i.status)+'">'+i.status+'</span></td>'+
-'<td style="font-size:13px;font-weight:700;color:'+(i.priority_score>=85?'var(--accent3)':i.priority_score>=70?'var(--accent4)':'var(--text2)')+'">'+i.priority_score+'</td>'+
-'<td class="oc-money'+(i.due_days<0?'" style="color:var(--accent3)':'')+'">'+(i.due_days<0?'⚠ ':'')+ocFmtDate(i.due_date)+'</td>'+
-'<td class="oc-money">'+ocFmtMoney(i.dollar_impact)+'</td></tr>';}).join(''):
-'<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">No matching issues</td></tr>';}
+function ocRenderKpis(){var iss=OC.issues;var clRisk=OC.demo.claims_risk.reduce(function(s,c){return s+c.dollar_amount;},0);var nsr=9.2;var nRef=21;var actPat=228;var crit=iss.filter(function(i){return i.priority_score>80;}).length;var kpis=[{label:"Claims at Risk",val:clRisk,fmt:"money",filter:"claims",trend:"+4.4%",up:true,sub:"vs last month",col:"--accent3"},{label:"Open Critical Issues",val:crit,fmt:"num",filter:"critical",trend:"+20%",up:true,sub:"priority > 80",col:"--accent3"},{label:"No-Show Rate",val:nsr+"%",fmt:"raw",filter:null,trend:"+6.3%",up:true,sub:"target: 5%",col:"--accent4"},{label:"New Referrals 7d",val:nRef,fmt:"num",filter:"referrals",trend:"-11.1%",up:false,sub:"target: 25",col:"--accent"},{label:"Active Patients",val:actPat,fmt:"num",filter:"patient",trend:"+3.2%",up:true,sub:"target: 250",col:"--accent2"}];var grid=document.getElementById("oc-kpi-grid");if(!grid)return;grid.className="ops-kpi-grid";grid.innerHTML=kpis.map(function(k){var active=OC.kpiFilter===k.filter&&k.filter?" active":"";var fa=k.filter?" data-oc-filter=\""+k.filter+"\"":"";var fv=k.fmt==="money"?"$"+(k.val>=1000?(k.val/1000).toFixed(1)+"K":k.val):k.val;var tc=k.up?"ops-chip green":"ops-chip red";var ta=k.up?"\u2191":"\u2193";return "<div class=\"ops-kpi"+active+"\""+fa+" style=\"--ops-accent:var("+k.col+")\">"+"<div class=\"ops-kpi-label\">"+k.label+"</div>"+"<div class=\"ops-kpi-value\">"+fv+"</div>"+"<div class=\"ops-kpi-sub\"><span class=\""+tc+"\">"+ta+" "+k.trend+"</span>\u00a0"+k.sub+"</div>"+"</div>";}).join("");grid.onclick=function(e){var c=e.target.closest("[data-oc-filter]");if(c)ocApplyFilters(c.getAttribute("data-oc-filter"));};}
+function ocRenderCritical(issues){var today=new Date();today.setHours(0,0,0,0);var crit=issues.filter(function(i){var d=new Date(i.due_date);d.setHours(0,0,0,0);return i.priority_score>80||d<=today||i.status==="Blocked"||(i.dollar_impact||0)>30000;});var cnt=document.getElementById("oc-critical-count");if(cnt)cnt.textContent=crit.length;var tb=document.getElementById("oc-critical-tbody");if(!tb)return;if(!crit.length){tb.innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);font-size:11px">No critical actions</td></tr>';return;}tb.innerHTML=crit.map(function(i){var d=new Date(i.due_date);d.setHours(0,0,0,0);var ov=d<today;var ds=i.due_date?i.due_date.slice(5).replace("-","/"):"—";var dstyle=ov?" style=\"color:var(--accent3);font-weight:600\"":"";var imp=i.dollar_impact?"$"+(i.dollar_impact>=1000?(i.dollar_impact/1000).toFixed(1)+"K":i.dollar_impact):"—";return "<tr>"+"<td><div style=\"font-weight:500;color:var(--text)\">"+i.title+"</div>"+"<div style=\"font-size:10px;color:var(--text3);margin-top:2px\">"+i.category+" \xb7 "+(i.payer||"")+"</div></td>"+"<td>"+i.owner+"</td>"+"<td"+dstyle+">"+ds+"</td>"+"<td class=\"num\">"+imp+"</td>"+"<td><span class=\""+ocStatusCss(i.status)+"\">"+i.status+"</span></td>"+"<td style=\"font-size:11px;color:var(--text2)\">"+(i.next_action||"—")+"</td></tr>";}).join("");}
+function ocRenderOwners(issues){var today=new Date();today.setHours(0,0,0,0);var map={};issues.forEach(function(i){var o=i.owner||"Unknown";if(!map[o])map[o]={open:0,overdue:0,exp:0,stale:0};map[o].open++;var d=new Date(i.due_date);d.setHours(0,0,0,0);if(d<today)map[o].overdue++;map[o].exp+=(i.dollar_impact||0);if(ocDaysDiff(i.created_date||i.due_date)>7)map[o].stale++;});var tb=document.getElementById("oc-owner-tbody");if(!tb)return;tb.innerHTML=Object.keys(map).sort().map(function(o){var r=map[o];var ov=r.overdue>0?"<span style=\"color:var(--accent3)\">"+r.overdue+"</span>":r.overdue;var st=r.stale>0?"<span style=\"color:var(--accent4)\">"+r.stale+"</span>":r.stale;var exp="$"+(r.exp>=1000?(r.exp/1000).toFixed(1)+"K":r.exp);return "<tr><td>"+o+"</td><td class=\"num\">"+r.open+"</td><td class=\"num\">"+ov+"</td><td class=\"num\">"+exp+"</td><td class=\"num\">"+st+"</td></tr>";}).join("");}
+function ocRenderRevenue(issues){var claims=OC.demo.claims_risk;var total=claims.reduce(function(s,c){return s+c.dollar_amount;},0);var aged=claims.filter(function(c){return c.aging_days>=90;}).reduce(function(s,c){return s+c.dollar_amount;},0);var blocked=claims.filter(function(c){return c.blocked;}).length;var payers={};claims.forEach(function(c){payers[c.payer]=(payers[c.payer]||0)+c.dollar_amount;});var topPayer=Object.keys(payers).sort(function(a,b){return payers[b]-payers[a];})[0]||"—";var fmt=function(v){return "$"+(v>=1000?(v/1000).toFixed(1)+"K":v);};var el=document.getElementById("oc-revenue-stats");if(!el)return;el.innerHTML="<div class=\"ops-mini-stat-list\">"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">Total at Risk</span><span class=\"ops-mini-stat-val\" style=\"color:var(--accent3)\">"+fmt(total)+"</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">90+ Days Aging</span><span class=\"ops-mini-stat-val\">"+fmt(aged)+"</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">Top Payer Exposure</span><span class=\"ops-mini-stat-val\">"+topPayer+"</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">Blocked Lines</span><span class=\"ops-mini-stat-val\">"+blocked+"</span></div>"+"</div>";var bars=document.getElementById("oc-payer-bars");if(!bars)return;var max=Math.max.apply(null,Object.keys(payers).map(function(k){return payers[k];}));bars.innerHTML=Object.keys(payers).sort(function(a,b){return payers[b]-payers[a];}).slice(0,4).map(function(p){var pct=Math.round(payers[p]/max*100);return "<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">"+p+"</span><span class=\"ops-mini-stat-val\">"+fmt(payers[p])+"</span></div>"+"<div class=\"ops-mini-track\"><div class=\"ops-mini-fill\" style=\"width:"+pct+"%;background:var(--accent2)\"></div></div>";}).join("");}
+function ocRenderPatient(){var el=document.getElementById("oc-patient-stats");if(!el)return;el.innerHTML="<div class=\"ops-mini-stat-list\">"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">Active Patients</span><span class=\"ops-mini-stat-val\" style=\"color:var(--accent2)\">228</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">New Intakes (7d)</span><span class=\"ops-mini-stat-val\">21</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">Avg Show Rate</span><span class=\"ops-mini-stat-val\" style=\"color:var(--accent)\">89.8%</span></div>"+"<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">No-Shows (7d)</span><span class=\"ops-mini-stat-val\" style=\"color:var(--accent4)\">11</span></div>"+"</div>";var bars=document.getElementById("oc-state-bars");if(!bars)return;var states=[{s:"WA",v:90},{s:"CA",v:79},{s:"FL",v:35},{s:"NY",v:15}];bars.innerHTML=states.map(function(x){return "<div class=\"ops-mini-stat\"><span class=\"ops-mini-stat-name\">"+x.s+"</span><span class=\"ops-mini-stat-val\">"+x.v+" pts</span></div>"+"<div class=\"ops-mini-track\"><div class=\"ops-mini-fill\" style=\"width:"+Math.round(x.v/90*100)+"%;background:var(--accent)\"></div></div>";}).join("");}
+function ocRenderSystem(){var el=document.getElementById("oc-system-list");if(!el)return;var items=OC.demo.system_health;el.innerHTML=items.map(function(h){var failed=/failed/i.test(h.status);var warning=/warn/i.test(h.status);var sc=failed?"red":warning?"orange":"green";return "<div style=\"padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.05)\">"+"<div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px\">"+"<div style=\"font-weight:500;color:var(--text);font-size:13px\">"+h.name+"</div>"+"<span class=\"ops-chip "+sc+"\">"+h.status+"</span></div>"+"<div style=\"font-size:11px;color:var(--text3);margin-bottom:2px\">"+h.category+" \xb7 Owner: "+(h.owner||"—")+"</div>"+"<div style=\"font-size:11px;color:var(--text2)\">"+h.last_note+"</div>"+"<div style=\"font-size:10px;color:var(--text3);margin-top:4px\">"+ocFmtDate(h.last_updated)+" \xb7 "+h.sub_status+"</div>"+"</div>";}).join("");}
+function ocRenderIssues(issues){var cnt=document.getElementById("oc-issue-count");if(cnt)cnt.textContent=issues.length;var tb=document.getElementById("oc-issues-tbody");if(!tb)return;if(!issues.length){tb.innerHTML="<tr><td colspan=\"7\" style=\"padding:24px;text-align:center;color:var(--text3);font-size:11px\">No issues match the current filters.</td></tr>";return;}var today=new Date();today.setHours(0,0,0,0);tb.innerHTML=issues.map(function(i){var d=new Date(i.due_date);d.setHours(0,0,0,0);var ov=d<today;var ds=i.due_date?i.due_date.slice(5).replace("-","/"):"—";var dstyle=ov?" style=\"color:var(--accent3);font-weight:600\"":"";var imp=i.dollar_impact?"$"+(i.dollar_impact>=1000?(i.dollar_impact/1000).toFixed(1)+"K":i.dollar_impact):"—";var ps=i.priority_score>=80?" style=\"color:var(--accent3);font-weight:600\"":i.priority_score>=60?" style=\"color:var(--accent4)\"":"";return "<tr style=\"cursor:pointer\" onclick=\"ocOpenDrawer('"+i.id+"')\">"+"<td><div style=\"font-weight:500;color:var(--text)\">"+i.title+"</div>"+"<div style=\"font-size:10px;color:var(--text3);margin-top:2px\">"+i.payer+" \xb7 "+i.intake_team+"</div></td>"+"<td>"+i.category+"</td><td>"+i.owner+"</td>"+"<td><span class=\""+ocStatusCss(i.status)+"\">"+i.status+"</span></td>"+"<td class=\"num\""+ps+">"+i.priority_score+"</td>"+"<td"+dstyle+">"+ds+"</td>"+"<td class=\"num\">"+imp+"</td></tr>";}).join("");}
 function ocRenderAll(){ocRenderKpis();ocRenderCritical();ocRenderOwners();ocRenderRevenue();ocRenderPatient();ocRenderSystem();ocRenderIssues();}
 window.ocShowIssue=function(id){var iss=OC.issues.find(function(i){return i.issue_id===id;});if(!iss)return;
 var dt=document.getElementById('oc-drawer-title'),ds=document.getElementById('oc-drawer-sub'),db=document.getElementById('oc-drawer-body'),dr=document.getElementById('oc-drawer'),ov=document.getElementById('oc-overlay');if(!dr)return;
