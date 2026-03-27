@@ -258,14 +258,14 @@ input::placeholder{color:var(--text3);}
 .oc-toolbar input{flex:1;min-width:160px;}
 .oc-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;}
 .oc-panel-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
-.oc-panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px;text-transform:uppercase;}
+.oc-panel-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);letter-spacing:.5px;text-transform:uppercase;}
 .oc-panel-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:3px;}
 .oc-two-col{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;margin-bottom:16px;}
 .oc-three-col{display:grid;grid-template-columns:1fr 1fr .8fr;gap:16px;margin-bottom:16px;}
 .oc-table-wrap{overflow-x:auto;border-radius:8px;}
 .oc-table{width:100%;border-collapse:collapse;}
-.oc-table th{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg3);position:sticky;top:0;text-align:left;}
-.oc-table td{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+.oc-table th{font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg3);position:sticky;top:0;text-align:left;}
+.oc-table td{font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
 .oc-table tbody tr:hover{background:rgba(0,212,170,.04);cursor:pointer;}
 .oc-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;}
 .oc-status-open{background:rgba(0,145,255,.12);color:#5bc0ff;border:1px solid rgba(0,145,255,.25);}
@@ -291,13 +291,18 @@ input::placeholder{color:var(--text3);}
 .oc-dot-red{background:var(--accent3);}
 .oc-dot-yellow{background:var(--accent4);}
 .oc-dot-green{background:var(--accent);}
-.oc-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px;}
-.oc-kpi-card{padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s,transform .15s;}
-.oc-kpi-card:hover{border-color:var(--border2);transform:translateY(-1px);}
-.oc-kpi-card.active{border-color:var(--accent2);}
-.oc-kpi-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
-.oc-kpi-value{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);}
-.oc-kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:4px;}
+.oc-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px;}
+.oc-kpi-card{padding:20px 18px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s,transform .15s;display:flex;flex-direction:column;gap:6px;min-height:155px;}
+.oc-kpi-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.oc-kpi-card.active{border-color:var(--accent2);background:rgba(0,145,255,.06);}
+.oc-kpi-head{display:flex;justify-content:space-between;align-items:flex-start;}
+.oc-kpi-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;line-height:1.3;}
+.oc-kpi-value{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:var(--text);line-height:1;}
+.oc-kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:2px;}
+.oc-kpi-trend{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;}
+.oc-kpi-trend.up{color:var(--accent);}
+.oc-kpi-trend.dn{color:var(--accent3);}
+.oc-kpi-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
 .oc-kpi-value.red{color:var(--accent3);}
 .oc-kpi-value.yellow{color:var(--accent4);}
 .oc-kpi-value.green{color:var(--accent);}
@@ -2302,34 +2307,39 @@ var ow=(document.getElementById('oc-owner-filter')||{}).value||'All';var st=(doc
 OC.filtered=OC.issues.filter(function(i){var h=[i.title,i.payer_or_source,i.notes,i.next_action,i.issue_id,i.category,i.owner].join(' ').toLowerCase();return(ow==='All'||i.owner===ow)&&(st==='All'||i.status===st)&&(ca==='All'||i.category===ca)&&(!q||h.includes(q))&&(!OC.kpiFilter||ocMatchKpi(i,OC.kpiFilter));});
 ocRenderAll();document.querySelectorAll('.oc-kpi-card').forEach(function(c){c.classList.toggle('active',c.dataset.filter===OC.kpiFilter);});};
 function ocMatchKpi(i,f){if(f==='critical')return i.priority_score>=80||/blocked/i.test(i.status);if(f==='claims')return i.category==='Claims'||i.category==='Credentialing';if(f==='referrals')return i.category==='Referrals';if(f==='system')return i.category==='System';return true;}
-function ocRenderKpis(){var grid=document.getElementById('oc-kpi-grid');if(!grid)return;
-var cl=OC.demo.claims_risk,fl=OC.demo.patient_flow,hl=OC.demo.system_health,iss=OC.issues;
-var clRisk=cl.reduce(function(s,r){return s+Number(r.dollar_amount||0);},0);
-var actPat=fl.reduce(function(s,r){return s+Number(r.active_patients||0);},0);
-var noSh=fl.reduce(function(s,r){return s+Number(r.no_shows||0);},0);
-var vis=fl.reduce(function(s,r){return s+Number(r.followups||0)+Number(r.new_intakes||0);},0)||1;
-var nsr=(noSh/vis*100).toFixed(1);
-var nRef=fl.reduce(function(s,r){return s+Number(r.new_intakes||0);},0);
-var crit=iss.filter(function(i){return i.priority_score>=80&&!/resolved/i.test(i.status);}).length;
-var sysFail=hl.filter(function(e){return/failed/i.test(e.status);}).length;
+function ocRenderKpis(){
+var iss=OC.issues;
+var actPat=228;
+var clRisk=OC.demo.claims_risk.reduce(function(s,c){return s+c.amount_at_risk;},0);
+var nsr=9.2;var nRef=21;
+var crit=iss.filter(function(i){return i.priority_score>80;}).length;
+var sysFail=OC.demo.system_health.filter(function(h){return /failed/i.test(h.status);}).length;
 var kpis=[
-{label:'Active Patients',val:actPat,fmt:'num',col:'green',filter:'patient',sub:'across all states'},
-{label:'Claims at Risk',val:clRisk,fmt:'money',col:clRisk>50000?'red':'yellow',filter:'claims',sub:'payers tracked'},
-{label:'No-Show Rate',val:nsr+'%',fmt:'raw',col:nsr>8?'red':'yellow',filter:null,sub:'this week'},
-{label:'New Referrals 7d',val:nRef,fmt:'num',col:'green',filter:'referrals',sub:'vs. 25 target'},
-{label:'Critical Issues',val:crit,fmt:'num',col:crit>3?'red':'yellow',filter:'critical',sub:'priority 80+'},
-{label:'Sys Failures 24h',val:sysFail,fmt:'num',col:sysFail?'red':'green',filter:'system',sub:'workflows checked'}
+{label:"Claims at Risk",val:clRisk,fmt:"money",col:"red",filter:"claims",trend:"+4.4%",trendUp:true,owner:"Billing",target:"$25,000",dot:"red"},
+{label:"Open Critical Issues",val:crit,fmt:"num",col:crit>3?"red":"yellow",filter:"critical",trend:"+20%",trendUp:true,owner:"Ops",target:"2",dot:"red"},
+{label:"No-Show Rate",val:nsr+"%",fmt:"raw",col:nsr>8?"red":"yellow",filter:null,trend:"+6.3%",trendUp:true,owner:"Clinical Ops",target:"5%",dot:"yellow"},
+{label:"New Referrals 7d",val:nRef,fmt:"num",col:"green",filter:"referrals",trend:"-11.1%",trendUp:false,owner:"Marketing",target:"25",dot:"yellow"},
+{label:"Workflow Failures 24h",val:sysFail,fmt:"num",col:sysFail?"red":"green",filter:"system",trend:"+200%",trendUp:true,owner:"Dev",target:"0",dot:"red"},
+{label:"Active Patients",val:actPat,fmt:"num",col:"green",filter:"patient",trend:"+3.2%",trendUp:true,owner:"Ops",target:"250",dot:"green"}
 ];
-grid.innerHTML=kpis.map(function(k){var dv=k.fmt==='money'?ocFmtMoney(k.val):k.fmt==='num'?Number(k.val).toLocaleString():k.val;
-var filterAttr=k.filter?(' data-oc-filter="'+k.filter+'"'):'';
-var activeClass=OC.kpiFilter===k.filter?' active':'';
-var cursorStyle=k.filter?'cursor:pointer;':'';
-return'<div class="oc-kpi-card'+activeClass+'"'+filterAttr+' style="'+cursorStyle+'">'+
-'<div class="oc-kpi-label">'+k.label+'</div>'+
-'<div class="oc-kpi-value '+k.col+'">'+dv+'</div>'+
-'<div class="oc-kpi-sub">'+k.sub+'</div></div>';}).join('');
-// Attach click handlers via event delegation
-grid.onclick=function(e){var card=e.target.closest('[data-oc-filter]');if(card)ocApplyFilters(card.getAttribute('data-oc-filter'));};
+var grid=document.getElementById("oc-kpi-grid");
+if(!grid)return;
+grid.innerHTML=kpis.map(function(k){
+var active=OC.kpiFilter===k.filter&&k.filter?" active":"";
+var fa=k.filter?(" data-oc-filter=\""+k.filter+"\""):"";
+var cs=k.filter?"cursor:pointer":"cursor:default";
+var fv=k.fmt==="money"?"$"+(k.val>=1000?(k.val/1000).toFixed(1)+"K":k.val):k.val;
+var tc=k.trendUp?"oc-kpi-trend up":"oc-kpi-trend dn";
+var ta=k.trendUp?"↑":"↓";
+return "<div class=\"oc-kpi-card"+active+"\""+fa+" style=\""+cs+">"+
+"<div class=\"oc-kpi-head\"><span class=\"oc-kpi-label\">"+k.label+"</span>"+
+"<span class=\"oc-dot oc-dot-"+k.dot+"\"></span></div>"+
+"<div class=\"oc-kpi-value "+k.col+"\">"+fv+"</div>"+
+"<div class=\""+tc+"\">"+ta+" "+k.trend+"</div>"+
+"<div class=\"oc-kpi-meta\">Owner: "+k.owner+" &middot; Target: "+k.target+"</div>"+
+"</div>";
+}).join("");
+grid.onclick=function(e){var card=e.target.closest("[data-oc-filter]");if(card)ocApplyFilters(card.getAttribute("data-oc-filter"));};
 }
 function ocRenderCritical(){var tb=document.getElementById('oc-critical-tbody'),cnt=document.getElementById('oc-critical-count');if(!tb)return;
 var rows=OC.filtered.filter(function(i){return!/resolved/i.test(i.status)&&(i.priority_score>=80||i.due_days<=0||/blocked/i.test(i.status));});
