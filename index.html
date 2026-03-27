@@ -2310,7 +2310,7 @@ function ocMatchKpi(i,f){if(f==='critical')return i.priority_score>=80||/blocked
 function ocRenderKpis(){
 var iss=OC.issues;
 var actPat=228;
-var clRisk=OC.demo.claims_risk.reduce(function(s,c){return s+c.amount_at_risk;},0);
+var clRisk=OC.demo.claims_risk.reduce(function(s,c){return s+c.dollar_amount;},0);
 var nsr=9.2;var nRef=21;
 var crit=iss.filter(function(i){return i.priority_score>80;}).length;
 var sysFail=OC.demo.system_health.filter(function(h){return /failed/i.test(h.status);}).length;
@@ -2331,7 +2331,7 @@ var cs=k.filter?"cursor:pointer":"cursor:default";
 var fv=k.fmt==="money"?"$"+(k.val>=1000?(k.val/1000).toFixed(1)+"K":k.val):k.val;
 var tc=k.trendUp?"oc-kpi-trend up":"oc-kpi-trend dn";
 var ta=k.trendUp?"↑":"↓";
-return "<div class=\"oc-kpi-card"+active+"\""+fa+" style=\""+cs+">"+
+return "<div class=\"oc-kpi-card"+active+"\""+fa+" style=\""+cs+"\">"+
 "<div class=\"oc-kpi-head\"><span class=\"oc-kpi-label\">"+k.label+"</span>"+
 "<span class=\"oc-dot oc-dot-"+k.dot+"\"></span></div>"+
 "<div class=\"oc-kpi-value "+k.col+"\">"+fv+"</div>"+
