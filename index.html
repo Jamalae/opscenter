@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpsCenter v2</title>
+  <link rel="stylesheet" href="./opscenter/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="head">
+      <div>
+        <div class="brand-row"><span class="logo">OC</span><h1>Ops Center</h1></div>
+        <p class="muted">Demo mode. Add live sources later.</p>
+      </div>
+      <div class="header-actions">
+        <span class="live-dot">● Live demo data</span>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section class="filters card">
+      <select id="ownerFilter"></select>
+      <select id="stateFilter"></select>
+      <select id="categoryFilter"></select>
+      <select id="statusFilter"></select>
+      <input id="searchInput" type="search" placeholder="Search issues, owners, notes" />
+    </section>
+
+    <section id="kpiGrid" class="kpi-grid"></section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="card-head">
+          <h2>Today’s Critical Actions</h2>
+          <span class="muted" id="criticalCount"></span>
+        </div>
+        <table>
+          <thead><tr><th>Issue</th><th>Owner</th><th>Due</th><th>Impact</th><th>Status</th><th>Next action</th></tr></thead>
+          <tbody id="criticalActionsTable"></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Owner Accountability</h2>
+        <table>
+          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Exposure</th><th>Stale 7+d</th></tr></thead>
+          <tbody id="ownerTable"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="three-col">
+      <article class="card">
+        <div class="card-head"><h2>Revenue Risk</h2><button id="revenueFocus" class="btn small">Top payer</button></div>
+        <div id="revenueRisk"></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h2>Patient Flow + Referrals</h2><button id="patientFocus" class="btn small">Open patient detail</button></div>
+        <div id="patientFlow"></div>
+      </article>
+
+      <article class="card">
+        <h2>System Health</h2>
+        <div id="systemHealth"></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Issues Queue</h2>
+        <button id="clearFilters" class="btn small" type="button">Clear filters</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th><th>Owner</th><th>Category</th><th>Status</th><th>Priority</th><th>State</th><th>Impact</th><th>Due</th><th>Exposure</th>
+          </tr>
+        </thead>
+        <tbody id="issuesTable"></tbody>
+      </table>
+      <p class="muted" id="resultsSummary"></p>
+    </section>
+  </main>
+  <script src="./opscenter/app.js"></script>
+</body>
+</html>
