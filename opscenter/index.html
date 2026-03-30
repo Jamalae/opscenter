@@ -11,10 +11,10 @@
     <header class="head">
       <div>
         <div class="brand-row"><span class="logo">OC</span><h1>Ops Center</h1></div>
-        <p class="muted">Demo mode. Add live sources later.</p>
+        <p class="muted">Live data · SCA Tracker</p>
       </div>
       <div class="header-actions">
-        <span class="live-dot">● Live demo data</span>
+        <span class="live-dot">● Connecting…</span>
         <button class="btn" id="refreshBtn" type="button">Refresh</button>
       </div>
     </header>
@@ -36,7 +36,7 @@
           <span class="muted" id="criticalCount"></span>
         </div>
         <table>
-          <thead><tr><th>Issue</th><th>Owner</th><th>Due</th><th>Impact</th><th>Status</th><th>Next action</th></tr></thead>
+          <thead><tr><th>Patient / SCA</th><th>Provider</th><th>Follow-up</th><th>Days Open</th><th>Status</th><th>Notes / Next action</th></tr></thead>
           <tbody id="criticalActionsTable"></tbody>
         </table>
       </article>
@@ -44,7 +44,7 @@
       <article class="card">
         <h2>Owner Accountability</h2>
         <table>
-          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Exposure</th><th>Stale 7+d</th></tr></thead>
+          <thead><tr><th>Provider</th><th>Open</th><th>Overdue</th><th>Total Cases</th><th>Stale 7+d</th></tr></thead>
           <tbody id="ownerTable"></tbody>
         </table>
       </article>
@@ -52,7 +52,7 @@
 
     <section class="three-col">
       <article class="card">
-        <div class="card-head"><h2>Revenue Risk</h2><button id="revenueFocus" class="btn small">Top payer</button></div>
+        <div class="card-head"><h2>Cases by Payer</h2></div>
         <div id="revenueRisk"></div>
       </article>
 
@@ -75,7 +75,7 @@
       <table>
         <thead>
           <tr>
-            <th>Issue</th><th>Owner</th><th>Category</th><th>Status</th><th>Priority</th><th>State</th><th>Impact</th><th>Due</th><th>Exposure</th>
+            <th>Patient / SCA</th><th>Provider</th><th>Payer</th><th>Status</th><th>Priority</th><th>State</th><th>Days Open</th><th>Follow-up</th><th>Diagnosis</th>
           </tr>
         </thead>
         <tbody id="issuesTable"></tbody>
