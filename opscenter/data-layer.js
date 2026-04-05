@@ -2,12 +2,13 @@ const OpsDataLayer = (() => {
   const TODAY = new Date('2026-04-05T12:00:00');
   TODAY.setHours(0, 0, 0, 0);
 
+  const SCRIPT_BASE = new URL('.', document.currentScript.src);
   const DATA_SOURCES = {
-    masterCases: './data/master_cases.csv',
-    referrals: './data/referrals.csv',
-    claims: './data/claims.csv',
-    tasks: './data/tasks.csv',
-    denials: './data/denials.csv',
+    masterCases: new URL('./data/master_cases.csv', SCRIPT_BASE).toString(),
+    referrals: new URL('./data/referrals.csv', SCRIPT_BASE).toString(),
+    claims: new URL('./data/claims.csv', SCRIPT_BASE).toString(),
+    tasks: new URL('./data/tasks.csv', SCRIPT_BASE).toString(),
+    denials: new URL('./data/denials.csv', SCRIPT_BASE).toString(),
   };
 
   function parseCSVRow(line) {
