@@ -2,7 +2,12 @@ const OpsDataLayer = (() => {
   const TODAY = new Date('2026-04-05T12:00:00');
   TODAY.setHours(0, 0, 0, 0);
 
-  const SCRIPT_BASE = new URL('.', document.currentScript.src);
+  const scriptUrl = (
+    document.currentScript?.src
+    || [...document.querySelectorAll('script[src]')].map((script) => script.src).find((src) => src.includes('/data-layer.js'))
+    || new URL('./opscenter/data-layer.js', window.location.href).toString()
+  );
+  const SCRIPT_BASE = new URL('.', scriptUrl);
   const DATA_SOURCES = {
     masterCases: new URL('./data/master_cases.csv', SCRIPT_BASE).toString(),
     referrals: new URL('./data/referrals.csv', SCRIPT_BASE).toString(),
