@@ -1,0 +1,11 @@
+denial_id,case_id,payer,denial_reason,denial_date
+1,7,United,Insufficient documentation,2026-03-05
+2,14,Cigna,Out-of-network services denied,2026-03-06
+3,3,United,Missing prior authorization,2026-03-02
+4,4,BCBS,Service not covered,2026-03-01
+5,9,Aetna,Incomplete submission,2026-03-01
+6,12,BCBS,Lack of medical necessity,2026-03-03
+7,15,United,Network adequacy dispute,2026-03-01
+8,17,Aetna,Missing clinical notes,2026-03-05
+9,19,United,Delayed submission,2026-03-04
+10,1,Aetna,Pending additional review,2026-03-06

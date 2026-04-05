@@ -1,436 +1,387 @@
-// ── Config ────────────────────────────────────────────────────────────────────
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXNK7TOq8O2WXfMf4fTSxXYqAJVCCGVx2WCpL_LhwTyAb-mLg4EGauKK9jaJEXw/pub?output=csv';
-
-// ── CSV Parsing ───────────────────────────────────────────────────────────────
-function parseCSVRow(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (c === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += c;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function parseCSV(text) {
-  const lines = text.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
-  if (lines.length < 2) return [];
-
-  const headers = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
-  const col = (name) => headers.indexOf(name.toLowerCase().trim());
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const parsed = [];
-
-  lines.slice(1).forEach((line, idx) => {
-    const cols = parseCSVRow(line);
-    const get = (name) => {
-      const i = col(name);
-      return i >= 0 ? (cols[i] || '').trim() : '';
-    };
-
-    const patientName = get('patient name');
-    if (!patientName) return; // skip blank rows
-
-    const rawStatus  = get('status');
-    const payer      = get('payer');
-    const provider   = get('provider');
-    const state      = get('state');
-    const diagnosis  = get('diagnosis');
-    const dob        = get('dob');
-    const notes      = get('notes');
-    const submittedStr = get('date submitted');
-    const followupStr  = get('follow-up date');
-
-    // Parse dates
-    const submittedDate = submittedStr ? new Date(submittedStr) : null;
-    const followupDate  = followupStr  ? new Date(followupStr)  : null;
-
-    // staleDays = days since submission
-    let staleDays = 0;
-    if (submittedDate && !isNaN(submittedDate)) {
-      staleDays = Math.max(0, Math.floor((today - submittedDate) / 86400000));
-    }
-
-    // due label from follow-up date
-    let due = 'No date';
-    if (followupDate && !isNaN(followupDate)) {
-      const diff = Math.floor((followupDate - today) / 86400000);
-      if (diff < 0)      due = 'Overdue';
-      else if (diff === 0) due = 'Today';
-      else if (diff === 1) due = 'Tomorrow';
-      else                due = followupStr;
-    }
-
-    // Map raw status → app status
-    const statusMap = {
-      'denied':       'Blocked',
-      'blocked':      'Blocked',
-      'pending':      'Open',
-      'submitted':    'Open',
-      'open':         'Open',
-      'in progress':  'In Progress',
-      'under review': 'In Progress',
-      'approved':     'Monitoring',
-      'closed':       'Monitoring',
-      'escalated':    'Escalated',
-    };
-    const status = statusMap[(rawStatus || '').toLowerCase()] || 'Open';
-
-    // Derive priority
-    let priority = 'medium';
-    if (status === 'Blocked')    priority = 'critical';
-    else if (due === 'Overdue' || status === 'Escalated') priority = 'high';
-    else if (status === 'Monitoring') priority = 'low';
-
-    // Build notes string
-    const noteParts = [];
-    if (diagnosis)   noteParts.push(diagnosis);
-    if (dob)         noteParts.push(`DOB: ${dob}`);
-    if (notes)       noteParts.push(notes);
-
-    parsed.push({
-      id:        idx + 1,
-      issue:     `SCA – ${patientName}`,
-      owner:     provider || 'Unassigned',
-      category:  payer    || 'Unknown',
-      state:     state    || '—',
-      status,
-      priority,
-      impact:    staleDays, // repurposed: "days open"
-      due,
-      staleDays,
-      notes:     noteParts.join(' · '),
-      _rawStatus:    rawStatus,
-      _dateSubmitted: submittedDate,
-      _followupDate:  followupDate,
-      _diagnosis: diagnosis,
-    });
-  });
-
-  return parsed;
-}
-
-// ── Static Data (not yet in sheet) ───────────────────────────────────────────
-const systems = [
-  { name: 'n8n · Meta · Well-America', severity: 'Failed',  note: 'Auth failure, token blocked sync', owner: 'Dev' },
-  { name: 'Google Ads · Ads ingest',   severity: 'Warning', note: 'Config mismatch, monitor closely',  owner: 'Dev' },
-  { name: 'Website · Referral form',   severity: 'Healthy', note: 'Patched field mapping',              owner: 'Ops' },
-  { name: 'EMR bridge · Claim intake', severity: 'Healthy', note: 'No error in last 24h',              owner: 'Clinical Ops' },
-];
-
-const patientFlowStats = {
-  activePatients: 228,
-  newIntakes: 21,
-  avgShowRate: 89.9,
-  noShows: 11,
-  stateScores: [
-    { state: 'WA', pts: 96, note: 'Show rate 91.7%' },
-    { state: 'CA', pts: 79, note: 'Show rate 88.2%' },
-    { state: 'FL', pts: 35, note: 'Show rate 89.5%' },
-    { state: 'NY', pts: 18, note: 'Show rate 90%' },
-  ]
+const state = {
+  owner: 'all',
+  payer: 'all',
+  st: 'all',
+  status: 'all',
+  priority: 'all',
+  q: '',
+  kpi: null,
 };
 
-const kpiDefs = [
-  { id: 'blocked',   label: 'Denied / Blocked',       type: 'count'   },
-  { id: 'overdue',   label: 'Overdue Follow-ups',      type: 'count'   },
-  { id: 'new7d',     label: 'New SCAs (7d)',            type: 'count'   },
-  { id: 'nofollowup',label: 'Missing Follow-up Date',  type: 'count'   },
-  { id: 'total',     label: 'Total SCA Cases',          type: 'count'   },
-  { id: 'approval',  label: 'Approval Rate',            type: 'percent' },
-];
-
-// ── Live Data ─────────────────────────────────────────────────────────────────
-let issues = [];
-let criticalActions = [];
-
-// ── App State ─────────────────────────────────────────────────────────────────
-const state = { kpi: null, owner: 'all', st: 'all', category: 'all', status: 'all', q: '' };
+let model = null;
 
 const el = {
-  kpiGrid:             document.getElementById('kpiGrid'),
-  ownerFilter:         document.getElementById('ownerFilter'),
-  stateFilter:         document.getElementById('stateFilter'),
-  categoryFilter:      document.getElementById('categoryFilter'),
-  statusFilter:        document.getElementById('statusFilter'),
-  searchInput:         document.getElementById('searchInput'),
-  criticalActionsTable:document.getElementById('criticalActionsTable'),
-  criticalCount:       document.getElementById('criticalCount'),
-  ownerTable:          document.getElementById('ownerTable'),
-  issuesTable:         document.getElementById('issuesTable'),
-  resultsSummary:      document.getElementById('resultsSummary'),
-  revenueRisk:         document.getElementById('revenueRisk'),
-  patientFlow:         document.getElementById('patientFlow'),
-  systemHealth:        document.getElementById('systemHealth'),
-  clearFilters:        document.getElementById('clearFilters'),
-  refreshBtn:          document.getElementById('refreshBtn'),
+  kpiGrid: document.getElementById('kpiGrid'),
+  ownerFilter: document.getElementById('ownerFilter'),
+  payerFilter: document.getElementById('payerFilter'),
+  stateFilter: document.getElementById('stateFilter'),
+  statusFilter: document.getElementById('statusFilter'),
+  priorityFilter: document.getElementById('priorityFilter'),
+  searchInput: document.getElementById('searchInput'),
+  criticalActionsTable: document.getElementById('criticalActionsTable'),
+  criticalCount: document.getElementById('criticalCount'),
+  ownerTable: document.getElementById('ownerTable'),
+  issuesTable: document.getElementById('issuesTable'),
+  resultsSummary: document.getElementById('resultsSummary'),
+  revenueRisk: document.getElementById('revenueRisk'),
+  patientFlow: document.getElementById('patientFlow'),
+  systemHealth: document.getElementById('systemHealth'),
+  attentionPanel: document.getElementById('attentionPanel'),
+  attentionCount: document.getElementById('attentionCount'),
+  dataNotes: document.getElementById('dataNotes'),
+  dataCoverage: document.getElementById('dataCoverage'),
+  clearFilters: document.getElementById('clearFilters'),
+  refreshBtn: document.getElementById('refreshBtn'),
+  liveDot: document.querySelector('.live-dot'),
 };
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function uniq(values) { return [...new Set(values)].filter(Boolean).sort(); }
-function pct(v)       { return `${v.toFixed(1)}%`; }
+function uniq(values) {
+  return [...new Set(values)].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
+}
 
 function fillSelect(select, label, values) {
-  const opts = ['<option value="all">' + label + '</option>']
-    .concat(values.map(v => `<option value="${v}">${v}</option>`));
-  select.innerHTML = opts.join('');
+  select.innerHTML = ['<option value="all">' + label + '</option>']
+    .concat(values.map((value) => `<option value="${value}">${value}</option>`))
+    .join('');
+}
+
+function money(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value || 0);
+}
+
+function percent(value) {
+  return `${Number(value || 0).toFixed(1)}%`;
+}
+
+function formatDate(date) {
+  if (!date) return 'No date';
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+}
+
+function relativeFollowUp(item) {
+  if (!item.followUpDate) return 'No follow-up';
+  return item.isOverdue ? 'Overdue' : formatDate(item.followUpDate);
+}
+
+function formatKpiValue(card) {
+  if (card.format === 'currency') return money(card.value);
+  if (card.format === 'percent') return percent(card.value);
+  return String(card.value);
+}
+
+function filterCases() {
+  if (!model) return [];
+
+  const query = state.q.trim().toLowerCase();
+  return model.cases.filter((item) => {
+    const kpiMatch = !state.kpi || (() => {
+      if (state.kpi === 'openCases') return item.rawStatus !== 'Approved';
+      if (state.kpi === 'overdue') return item.isOverdue || item.overdueTaskCount > 0;
+      if (state.kpi === 'denied') return item.rawStatus === 'Denied' || item.denialCount > 0;
+      if (state.kpi === 'claimExposure') return item.pendingClaimAmount > 0;
+      if (state.kpi === 'approvalRate') return item.rawStatus === 'Approved';
+      if (state.kpi === 'referralConversion') return item.referralStatus === 'Converted';
+      return true;
+    })();
+
+    return kpiMatch
+      && (state.owner === 'all' || item.owner === state.owner)
+      && (state.payer === 'all' || item.payer === state.payer)
+      && (state.st === 'all' || item.state === state.st)
+      && (state.status === 'all' || item.rawStatus === state.status)
+      && (state.priority === 'all' || item.priority === state.priority)
+      && (!query
+        || item.patientName.toLowerCase().includes(query)
+        || item.payer.toLowerCase().includes(query)
+        || item.owner.toLowerCase().includes(query)
+        || item.provider.toLowerCase().includes(query)
+        || item.notes.toLowerCase().includes(query)
+        || item.diagnosis.toLowerCase().includes(query));
+  });
 }
 
 function initFilters() {
-  fillSelect(el.ownerFilter,    'All providers', uniq(issues.map(i => i.owner)));
-  fillSelect(el.stateFilter,    'All states',    uniq(issues.map(i => i.state)));
-  fillSelect(el.categoryFilter, 'All payers',    uniq(issues.map(i => i.category)));
-  fillSelect(el.statusFilter,   'All statuses',  uniq(issues.map(i => i.status)));
+  fillSelect(el.ownerFilter, 'All owners', uniq(model.cases.map((item) => item.owner)));
+  fillSelect(el.payerFilter, 'All payers', uniq(model.cases.map((item) => item.payer)));
+  fillSelect(el.stateFilter, 'All states', uniq(model.cases.map((item) => item.state)));
+  fillSelect(el.statusFilter, 'All statuses', uniq(model.cases.map((item) => item.rawStatus)));
+  fillSelect(el.priorityFilter, 'All priorities', uniq(model.cases.map((item) => item.priority)));
 }
 
-function matchesFilters(i) {
-  const q = state.q.trim().toLowerCase();
-  const kpiMatch = !state.kpi || (() => {
-    if (state.kpi === 'blocked')    return i.status === 'Blocked';
-    if (state.kpi === 'overdue')    return i.due === 'Overdue';
-    if (state.kpi === 'total')      return true;
-    if (state.kpi === 'approval')   return i._rawStatus && i._rawStatus.toLowerCase() === 'approved';
-    if (state.kpi === 'nofollowup') return !i._followupDate;
-    if (state.kpi === 'new7d') {
-      const sevenAgo = new Date(); sevenAgo.setDate(sevenAgo.getDate() - 7);
-      return i._dateSubmitted && i._dateSubmitted >= sevenAgo;
-    }
-    return true;
-  })();
-  return kpiMatch
-    && (state.owner === 'all'    || i.owner === state.owner)
-    && (state.st === 'all'       || i.state === state.st)
-    && (state.category === 'all' || i.category === state.category)
-    && (state.status === 'all'   || i.status === state.status)
-    && (!q || i.issue.toLowerCase().includes(q)
-           || i.notes.toLowerCase().includes(q)
-           || i.owner.toLowerCase().includes(q)
-           || i.category.toLowerCase().includes(q));
+function badgePriority(priority) {
+  const tone = priority === 'High' ? 'critical' : priority === 'Medium' ? 'medium' : 'low';
+  return `<span class="badge priority-${tone}">${priority}</span>`;
 }
 
-function filtered() { return issues.filter(matchesFilters); }
-
-// ── KPIs ──────────────────────────────────────────────────────────────────────
-function kpiValue(def) {
-  if (!issues.length) return '—';
-  const sevenAgo = new Date(); sevenAgo.setDate(sevenAgo.getDate() - 7);
-  if (def.id === 'blocked')    return String(issues.filter(i => i.status === 'Blocked').length);
-  if (def.id === 'overdue')    return String(issues.filter(i => i.due === 'Overdue').length);
-  if (def.id === 'new7d')      return String(issues.filter(i => i._dateSubmitted && i._dateSubmitted >= sevenAgo).length);
-  if (def.id === 'nofollowup') return String(issues.filter(i => !i._followupDate).length);
-  if (def.id === 'total')      return String(issues.length);
-  if (def.id === 'approval') {
-    const approved = issues.filter(i => (i._rawStatus || '').toLowerCase() === 'approved').length;
-    return pct((approved / issues.length) * 100);
-  }
-  return '0';
+function badgeStatus(status) {
+  const className = status === 'Denied'
+    ? 'status-blocked'
+    : status === 'Approved'
+      ? 'status-approved'
+      : 'status-open';
+  return `<span class="${className}">${status}</span>`;
 }
 
 function renderKpis() {
-  el.kpiGrid.innerHTML = kpiDefs.map(def => {
-    const active = state.kpi === def.id ? 'active' : '';
-    const val = kpiValue(def);
-    // Red for blocked/overdue, green for approval, neutral otherwise
-    const dir = (def.id === 'approval') ? 'down' : 'up';
-    return `<button type="button" class="kpi ${active}" data-kpi="${def.id}">
-      <div class="k">${def.label}</div>
-      <div class="v">${val}</div>
+  el.kpiGrid.innerHTML = model.metrics.cards.map((card) => {
+    const active = state.kpi === card.id ? 'active' : '';
+    const tone = card.tone || '';
+    return `<button type="button" class="kpi ${active} ${tone}" data-kpi="${card.id}">
+      <div class="k">${card.label}</div>
+      <div class="v">${formatKpiValue(card)}</div>
+      <div class="d">${card.id === 'claimExposure' ? `${model.metrics.totals.claims} claims loaded` : `${model.metrics.totals.cases} cases loaded`}</div>
     </button>`;
   }).join('');
-  el.kpiGrid.querySelectorAll('.kpi').forEach(btn => btn.addEventListener('click', () => {
-    const id = btn.getAttribute('data-kpi');
-    state.kpi = state.kpi === id ? null : id;
-    render();
-  }));
+
+  el.kpiGrid.querySelectorAll('.kpi').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = button.getAttribute('data-kpi');
+      state.kpi = state.kpi === id ? null : id;
+      render();
+    });
+  });
 }
 
-// ── Render Functions ──────────────────────────────────────────────────────────
-function badgePriority(p) { return `<span class="badge priority-${p}">${p}</span>`; }
-function badgeStatus(s) {
-  const c = s === 'Blocked' ? 'status-blocked' : (s === 'In Progress' ? 'status-progress' : 'status-open');
-  return `<span class="${c}">${s}</span>`;
-}
+function renderCritical(filteredCases) {
+  const criticalRows = filteredCases
+    .filter((item) => item.isOverdue || item.isBlocked)
+    .sort((a, b) => {
+      const scoreA = (a.isOverdue ? 2 : 0) + (a.isBlocked ? 2 : 0) + a.daysOpen;
+      const scoreB = (b.isOverdue ? 2 : 0) + (b.isBlocked ? 2 : 0) + b.daysOpen;
+      return scoreB - scoreA;
+    })
+    .slice(0, 8);
 
-function renderIssues() {
-  const rows = filtered();
-  el.issuesTable.innerHTML = rows.slice(0, 180).map(i => `<tr>
-    <td>${i.issue}<div class="muted">${i.notes}</div></td>
-    <td>${i.owner}</td>
-    <td>${i.category}</td>
-    <td>${badgeStatus(i.status)}</td>
-    <td>${badgePriority(i.priority)}</td>
-    <td>${i.state}</td>
-    <td>${i.staleDays}d</td>
-    <td>${i.due}</td>
-    <td>${i._diagnosis || '—'}</td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:2rem;">No SCA cases match current filters.</td></tr>';
-  el.resultsSummary.textContent = `${rows.length} cases${rows.length > 180 ? ' (showing first 180)' : ''}`;
-}
-
-function renderCritical() {
-  // Derive critical actions: overdue or blocked, sorted by staleDays desc
-  criticalActions = issues
-    .filter(i => i.status === 'Blocked' || i.due === 'Overdue')
-    .sort((a, b) => b.staleDays - a.staleDays)
-    .slice(0, 8)
-    .map(i => ({
-      issue:      i.issue,
-      owner:      i.owner,
-      due:        i.due,
-      daysOpen:   i.staleDays,
-      status:     i.status,
-      nextAction: i.notes || 'Review case and follow up with payer',
-    }));
-
-  el.criticalActionsTable.innerHTML = criticalActions.length
-    ? criticalActions.map(c => `<tr>
-        <td>${c.issue}</td>
-        <td>${c.owner}</td>
-        <td>${c.due}</td>
-        <td>${c.daysOpen}d open</td>
-        <td>${badgeStatus(c.status)}</td>
-        <td>${c.nextAction}</td>
+  el.criticalActionsTable.innerHTML = criticalRows.length
+    ? criticalRows.map((item) => `<tr>
+        <td>${item.patientName}<div class="table-note">${item.provider} · ${item.diagnosis || 'No diagnosis'}</div></td>
+        <td>${item.owner}</td>
+        <td>${relativeFollowUp(item)}</td>
+        <td>${item.daysOpen}d</td>
+        <td>${badgeStatus(item.rawStatus)}</td>
+        <td>${item.notes || item.attentionReasons.join(' · ') || 'Review case and contact payer'}</td>
       </tr>`).join('')
-    : '<tr><td colspan="6" style="text-align:center;padding:1.5rem;">No blocked or overdue cases.</td></tr>';
-  el.criticalCount.textContent = criticalActions.length
-    ? `${criticalActions.length} items need action`
+    : '<tr><td colspan="6" style="text-align:center;padding:1.5rem;">No urgent cases in the current filter scope.</td></tr>';
+
+  el.criticalCount.textContent = criticalRows.length
+    ? `${criticalRows.length} action items`
     : 'All clear';
 }
 
-function renderOwners() {
-  const map = {};
-  filtered().forEach(i => {
-    if (!map[i.owner]) map[i.owner] = { owner: i.owner, open: 0, overdue: 0, cases: 0, stale: 0 };
-    map[i.owner].open   += (i.status !== 'Monitoring') ? 1 : 0;
-    map[i.owner].overdue += i.due === 'Overdue' ? 1 : 0;
-    map[i.owner].cases  += 1;
-    map[i.owner].stale  += i.staleDays >= 7 ? 1 : 0;
+function renderOwners(filteredCases) {
+  const ownerMap = {};
+  filteredCases.forEach((item) => {
+    if (!ownerMap[item.owner]) {
+      ownerMap[item.owner] = { owner: item.owner, open: 0, overdue: 0, totalCases: 0, stale: 0 };
+    }
+    ownerMap[item.owner].open += item.rawStatus === 'Approved' ? 0 : 1;
+    ownerMap[item.owner].overdue += item.isOverdue ? 1 : 0;
+    ownerMap[item.owner].totalCases += 1;
+    ownerMap[item.owner].stale += item.isStale ? 1 : 0;
   });
-  const rows = Object.values(map).sort((a, b) => b.cases - a.cases).slice(0, 8);
+
+  const rows = Object.values(ownerMap).sort((a, b) => (b.overdue + b.open) - (a.overdue + a.open));
   el.ownerTable.innerHTML = rows.length
-    ? rows.map(r => `<tr>
-        <td>${r.owner}</td><td>${r.open}</td><td>${r.overdue}</td><td>${r.cases}</td><td>${r.stale}</td>
+    ? rows.map((row) => `<tr>
+        <td>${row.owner}</td>
+        <td>${row.open}</td>
+        <td>${row.overdue}</td>
+        <td>${row.totalCases}</td>
+        <td>${row.stale}</td>
       </tr>`).join('')
-    : '<tr><td colspan="5" style="text-align:center;">No data for current filters.</td></tr>';
+    : '<tr><td colspan="5" style="text-align:center;padding:1.5rem;">No owner activity in current filters.</td></tr>';
 }
 
-function renderRevenue() {
-  // Show top payers by case count
-  const byPayer = {};
-  issues.forEach(i => { byPayer[i.category] = (byPayer[i.category] || 0) + 1; });
-  const top   = Object.entries(byPayer).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const total = top.reduce((s, [, v]) => s + v, 0);
+function renderPayerSummary(filteredCases) {
+  const payerMap = {};
+  filteredCases.forEach((item) => {
+    if (!payerMap[item.payer]) {
+      payerMap[item.payer] = { payer: item.payer, openCases: 0, overdue: 0, pendingClaimAmount: 0 };
+    }
+    payerMap[item.payer].openCases += item.rawStatus === 'Approved' ? 0 : 1;
+    payerMap[item.payer].overdue += item.isOverdue ? 1 : 0;
+    payerMap[item.payer].pendingClaimAmount += item.pendingClaimAmount;
+  });
+
+  const top = Object.values(payerMap)
+    .sort((a, b) => (b.pendingClaimAmount + (b.openCases * 500)) - (a.pendingClaimAmount + (a.openCases * 500)))
+    .slice(0, 5);
+  const maxValue = Math.max(...top.map((item) => item.pendingClaimAmount || item.openCases), 1);
+
   el.revenueRisk.innerHTML = top.length
-    ? top.map(([payer, count]) => {
-        const w = Math.round((count / Math.max(total, 1)) * 100);
-        return `<div class="system-item">
-          <div class="card-head"><strong>${payer}</strong><strong>${count} cases</strong></div>
-          <div class="meter"><span style="width:${w}%"></span></div>
-        </div>`;
-      }).join('')
-    : '<p class="muted" style="padding:1rem;">No data yet.</p>';
+    ? top.map((item) => {
+      const width = Math.round(((item.pendingClaimAmount || item.openCases) / maxValue) * 100);
+      return `<div class="system-item">
+        <div class="card-head"><strong>${item.payer}</strong><strong>${money(item.pendingClaimAmount)}</strong></div>
+        <div class="meter"><span style="width:${width}%"></span></div>
+        <div class="table-note">${item.openCases} open cases · ${item.overdue} overdue follow-ups</div>
+      </div>`;
+    }).join('')
+    : '<p class="muted" style="padding:1rem;">No payer activity in the current filter scope.</p>';
 }
 
-function renderPatientFlow() {
-  const s = patientFlowStats;
-  const chips = `<div class="card-head"><strong>Active patients ${s.activePatients}</strong><strong>New intakes ${s.newIntakes}</strong></div>
-    <div class="muted">Avg show rate ${pct(s.avgShowRate)} · No-shows ${s.noShows}</div>`;
-  const states = s.stateScores.map(x =>
-    `<div class="system-item">
-      <div class="card-head"><strong>${x.state}</strong><strong>${x.pts} pts</strong></div>
-      <div class="meter"><span style="width:${x.pts}%"></span></div>
-      <div class="muted">${x.note}</div>
-    </div>`
-  ).join('');
-  el.patientFlow.innerHTML = chips + states;
+function renderPatientFlow(filteredCases) {
+  const pendingReferrals = model.summary.referralSummary.pendingReferrals;
+  const convertedReferrals = model.summary.referralSummary.convertedReferrals;
+  const openTasks = filteredCases.reduce((total, item) => total + item.openTaskCount, 0);
+  const topStates = Object.values(filteredCases.reduce((acc, item) => {
+    if (!acc[item.state]) acc[item.state] = { state: item.state, cases: 0, referrals: 0 };
+    acc[item.state].cases += 1;
+    acc[item.state].referrals += item.referralStatus === 'Converted' ? 1 : 0;
+    return acc;
+  }, {})).sort((a, b) => b.cases - a.cases).slice(0, 4);
+
+  el.patientFlow.innerHTML = `
+    <div class="mini-grid">
+      <div class="mini-stat"><span class="label">Total referrals</span><span class="value">${model.summary.referralSummary.totalReferrals}</span></div>
+      <div class="mini-stat"><span class="label">Converted</span><span class="value">${convertedReferrals}</span></div>
+      <div class="mini-stat"><span class="label">Open tasks</span><span class="value">${openTasks}</span></div>
+    </div>
+    <div class="table-note">Pending referrals ${pendingReferrals} · Active cases ${filteredCases.filter((item) => item.rawStatus !== 'Approved').length}</div>
+    ${topStates.map((row) => `<div class="system-item">
+      <div class="card-head"><strong>${row.state}</strong><strong>${row.cases} cases</strong></div>
+      <div class="meter"><span style="width:${Math.max(20, Math.round((row.cases / Math.max(topStates[0]?.cases || 1, 1)) * 100))}%"></span></div>
+      <div class="table-note">${row.referrals} referral matches</div>
+    </div>`).join('')}
+  `;
 }
 
 function renderSystems() {
-  el.systemHealth.innerHTML = systems.map(s =>
-    `<div class="system-item">
-      <div class="card-head"><strong>${s.name}</strong><strong>${s.severity}</strong></div>
-      <div class="muted">${s.note}</div>
-      <div class="muted">Owner: ${s.owner}</div>
-    </div>`
-  ).join('');
+  el.systemHealth.innerHTML = model.systemHealth.map((item) => `<div class="system-item">
+    <div class="card-head"><strong>${item.name}</strong><strong>${item.severity}</strong></div>
+    <div class="muted">${item.note}</div>
+    <div class="table-note">Owner: ${item.owner}</div>
+  </div>`).join('');
+}
+
+function renderAttention() {
+  el.attentionPanel.innerHTML = model.attention.length
+    ? model.attention.map((item) => `<div class="attention-item">
+        <div class="attention-top">
+          <div>
+            <div class="attention-title">${item.patientName}</div>
+            <div class="table-note">${item.state} · ${item.payer} · ${item.owner}</div>
+          </div>
+          <div>${badgePriority(item.priority)}</div>
+        </div>
+        <div class="muted">${item.notes || 'No case notes provided.'}</div>
+        <div class="tag-row">
+          ${item.attentionReasons.map((reason) => `<span class="tag ${reason === 'Overdue follow-up' || reason === 'Blocked high-priority' ? 'bad' : reason === 'Missing required fields' ? 'warn' : ''}">${reason}</span>`).join('')}
+          ${item.denialCount ? `<span class="tag bad">${item.denialCount} denial${item.denialCount > 1 ? 's' : ''}</span>` : ''}
+          ${item.pendingClaimAmount ? `<span class="tag warn">${money(item.pendingClaimAmount)} pending claims</span>` : ''}
+        </div>
+      </div>`).join('')
+    : '<div class="note-card">No cases currently meet the attention rules.</div>';
+
+  el.attentionCount.textContent = `${model.attention.length} surfaced from live rules`;
+}
+
+function renderDataNotes() {
+  el.dataCoverage.textContent = `${model.metrics.totals.cases} cases · ${model.metrics.totals.referrals} referrals · ${model.metrics.totals.claims} claims`;
+  el.dataNotes.innerHTML = `
+    <div class="note-card">
+      <strong>Field mappings</strong>
+      <div class="table-note">${model.mappings.join(' ')}</div>
+    </div>
+    <div class="note-card">
+      <strong>Assumptions</strong>
+      <div class="table-note">Cases become attention items from overdue follow-up dates, overdue tasks, stale activity after 7+ days, blocked or denied records, and missing required fields.</div>
+    </div>
+    <div class="note-card">
+      <strong>Gaps</strong>
+      <div class="table-note">${model.gaps.join(' ')}</div>
+    </div>
+  `;
+}
+
+function renderIssues(filteredCases) {
+  el.issuesTable.innerHTML = filteredCases.length
+    ? filteredCases.map((item) => {
+      const flags = [
+        `${item.claimCount} claim${item.claimCount === 1 ? '' : 's'}`,
+        item.denialCount ? `${item.denialCount} denial${item.denialCount === 1 ? '' : 's'}` : null,
+        item.missingFields.length ? `Missing: ${item.missingFields.join(', ')}` : null,
+      ].filter(Boolean).join(' · ');
+
+      return `<tr>
+        <td>${item.patientName}<div class="table-note">${item.provider} · ${item.diagnosis || 'No diagnosis'} · ${item.tierStatus}</div></td>
+        <td>${item.owner}</td>
+        <td>${item.payer}</td>
+        <td>${badgeStatus(item.rawStatus)}</td>
+        <td>${badgePriority(item.priority)}</td>
+        <td>${item.state}</td>
+        <td>${item.daysOpen}d</td>
+        <td>${relativeFollowUp(item)}</td>
+        <td>${flags || 'No extra flags'}</td>
+      </tr>`;
+    }).join('')
+    : '<tr><td colspan="9" style="text-align:center;padding:2rem;">No cases match the current filters.</td></tr>';
+
+  el.resultsSummary.textContent = `${filteredCases.length} cases shown from ${model.metrics.totals.cases} total live cases`;
 }
 
 function render() {
+  const filteredCases = filterCases();
   renderKpis();
-  renderIssues();
-  renderCritical();
-  renderOwners();
-  renderRevenue();
-  renderPatientFlow();
+  renderCritical(filteredCases);
+  renderOwners(filteredCases);
+  renderPayerSummary(filteredCases);
+  renderPatientFlow(filteredCases);
   renderSystems();
+  renderAttention();
+  renderDataNotes();
+  renderIssues(filteredCases);
 }
 
-// ── Event Binding ─────────────────────────────────────────────────────────────
 function bind() {
-  el.ownerFilter.addEventListener('change',    e => { state.owner    = e.target.value; render(); });
-  el.stateFilter.addEventListener('change',    e => { state.st       = e.target.value; render(); });
-  el.categoryFilter.addEventListener('change', e => { state.category = e.target.value; render(); });
-  el.statusFilter.addEventListener('change',   e => { state.status   = e.target.value; render(); });
-  el.searchInput.addEventListener('input',     e => { state.q        = e.target.value; render(); });
+  el.ownerFilter.addEventListener('change', (event) => { state.owner = event.target.value; render(); });
+  el.payerFilter.addEventListener('change', (event) => { state.payer = event.target.value; render(); });
+  el.stateFilter.addEventListener('change', (event) => { state.st = event.target.value; render(); });
+  el.statusFilter.addEventListener('change', (event) => { state.status = event.target.value; render(); });
+  el.priorityFilter.addEventListener('change', (event) => { state.priority = event.target.value; render(); });
+  el.searchInput.addEventListener('input', (event) => { state.q = event.target.value; render(); });
   el.clearFilters.addEventListener('click', () => {
-    state.kpi = null; state.owner = 'all'; state.st = 'all';
-    state.category = 'all'; state.status = 'all'; state.q = '';
-    el.ownerFilter.value = 'all'; el.stateFilter.value = 'all';
-    el.categoryFilter.value = 'all'; el.statusFilter.value = 'all';
+    state.owner = 'all';
+    state.payer = 'all';
+    state.st = 'all';
+    state.status = 'all';
+    state.priority = 'all';
+    state.q = '';
+    state.kpi = null;
+    el.ownerFilter.value = 'all';
+    el.payerFilter.value = 'all';
+    el.stateFilter.value = 'all';
+    el.statusFilter.value = 'all';
+    el.priorityFilter.value = 'all';
     el.searchInput.value = '';
     render();
   });
   el.refreshBtn.addEventListener('click', () => loadData());
 }
 
-// ── Data Loading ──────────────────────────────────────────────────────────────
 async function loadData() {
-  // Show loading state
-  el.issuesTable.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">Loading from Google Sheets…</td></tr>';
-  el.criticalActionsTable.innerHTML = '';
-  el.criticalCount.textContent = '';
+  el.issuesTable.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">Loading CSV-backed operational data…</td></tr>';
+  el.resultsSummary.textContent = 'Loading';
+  if (el.liveDot) el.liveDot.textContent = '● Refreshing CSV sources…';
 
   try {
-    const bust = Date.now(); // prevent stale cache
-    const res  = await fetch(`${CSV_URL}&cachebust=${bust}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    issues = parseCSV(text);
-  } catch (err) {
-    console.error('Failed to load sheet:', err);
-    el.issuesTable.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:#c00;">
-      Could not load data from Google Sheets.<br>
-      <small>Make sure the sheet is published (File → Share → Publish to web).</small>
-    </td></tr>`;
+    model = await OpsDataLayer.loadOperationalData();
+    initFilters();
+    render();
+    if (el.liveDot) {
+      el.liveDot.textContent = `● Live CSV data · ${model.metrics.totals.cases} cases · ${model.metrics.totals.claims} claims`;
+    }
+  } catch (error) {
+    console.error(error);
+    el.issuesTable.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:#ff9cae;">Unable to load local CSV data. Keep the files in <code>opscenter/data/</code> and serve the app over HTTP.</td></tr>`;
     el.resultsSummary.textContent = 'Load error';
-    return;
-  }
-
-  initFilters();
-  render();
-
-  // Update header status
-  const liveEl = document.querySelector('.live-dot');
-  if (liveEl) {
-    liveEl.textContent = issues.length
-      ? `● Live · ${issues.length} cases loaded`
-      : '● Connected · Sheet is empty — add rows to see data';
+    if (el.liveDot) el.liveDot.textContent = '● CSV load failed';
   }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 bind();
 loadData();

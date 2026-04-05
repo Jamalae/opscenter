@@ -1,0 +1,21 @@
+task_id,case_id,task_type,owner,due_date,status,priority
+1,1,Follow-up,Alex,2026-03-10,Open,High
+2,2,Initial Follow-up,Jordan,2026-03-08,Open,Medium
+3,3,Tier2 Escalation,Alex,2026-03-06,Overdue,High
+4,4,Tier3 Escalation,Chris,2026-03-03,Overdue,High
+5,5,Close Case,Jordan,2026-03-20,Completed,Low
+6,6,Follow-up,Alex,2026-03-15,Open,Medium
+7,7,Review Denial,Chris,2026-03-07,Overdue,High
+8,8,Initial Follow-up,Jordan,2026-03-07,Open,Medium
+9,9,Regulatory Escalation,Alex,2026-03-02,Overdue,High
+10,10,Initial Review,Chris,2026-03-18,Open,Low
+11,11,Close Case,Alex,2026-03-10,Completed,Medium
+12,12,Tier2 Escalation,Jordan,2026-03-06,Overdue,High
+13,13,Follow-up,Chris,2026-03-14,Open,Medium
+14,14,Denial Review,Alex,2026-03-10,Completed,Low
+15,15,Regulatory Escalation,Jordan,2026-03-02,Overdue,High
+16,16,Initial Review,Chris,2026-03-16,Open,Medium
+17,17,Follow-up,Alex,2026-03-08,Overdue,High
+18,18,Close Case,Jordan,2026-03-15,Completed,Low
+19,19,Tier2 Escalation,Chris,2026-03-06,Overdue,High
+20,20,Initial Follow-up,Alex,2026-03-09,Open,Medium

@@ -11,19 +11,20 @@
     <header class="head">
       <div>
         <div class="brand-row"><span class="logo">OC</span><h1>Ops Center</h1></div>
-        <p class="muted">Live data · SCA Tracker</p>
+        <p class="muted">CSV-backed command center for SCA, referrals, claims, tasks, and denials.</p>
       </div>
       <div class="header-actions">
-        <span class="live-dot">● Connecting…</span>
+        <span class="live-dot">● Loading CSV sources…</span>
         <button class="btn" id="refreshBtn" type="button">Refresh</button>
       </div>
     </header>
 
     <section class="filters card">
       <select id="ownerFilter"></select>
+      <select id="payerFilter"></select>
       <select id="stateFilter"></select>
-      <select id="categoryFilter"></select>
       <select id="statusFilter"></select>
+      <select id="priorityFilter"></select>
       <input id="searchInput" type="search" placeholder="Search issues, owners, notes" />
     </section>
 
@@ -44,7 +45,7 @@
       <article class="card">
         <h2>Owner Accountability</h2>
         <table>
-          <thead><tr><th>Provider</th><th>Open</th><th>Overdue</th><th>Total Cases</th><th>Stale 7+d</th></tr></thead>
+          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Total Cases</th><th>Stale 7+d</th></tr></thead>
           <tbody id="ownerTable"></tbody>
         </table>
       </article>
@@ -57,13 +58,31 @@
       </article>
 
       <article class="card">
-        <div class="card-head"><h2>Patient Flow + Referrals</h2><button id="patientFocus" class="btn small">Open patient detail</button></div>
+        <div class="card-head"><h2>Patient Flow + Referrals</h2></div>
         <div id="patientFlow"></div>
       </article>
 
       <article class="card">
         <h2>System Health</h2>
         <div id="systemHealth"></div>
+      </article>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="card-head">
+          <h2>Needs Attention</h2>
+          <span class="muted" id="attentionCount"></span>
+        </div>
+        <div id="attentionPanel" class="attention-list"></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Data Notes</h2>
+          <span class="muted" id="dataCoverage"></span>
+        </div>
+        <div id="dataNotes" class="notes-stack"></div>
       </article>
     </section>
 
@@ -75,7 +94,7 @@
       <table>
         <thead>
           <tr>
-            <th>Patient / SCA</th><th>Provider</th><th>Payer</th><th>Status</th><th>Priority</th><th>State</th><th>Days Open</th><th>Follow-up</th><th>Diagnosis</th>
+            <th>Patient / SCA</th><th>Owner</th><th>Payer</th><th>Status</th><th>Priority</th><th>State</th><th>Days Open</th><th>Follow-up</th><th>Claims / Flags</th>
           </tr>
         </thead>
         <tbody id="issuesTable"></tbody>
@@ -83,6 +102,7 @@
       <p class="muted" id="resultsSummary"></p>
     </section>
   </main>
+  <script src="./data-layer.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
