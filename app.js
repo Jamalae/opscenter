@@ -54,6 +54,7 @@ const el = {
   workforceTable: document.getElementById('workforceTable'),
   hireTable: document.getElementById('hireTable'),
   hubstaffSummary: document.getElementById('hubstaffSummary'),
+  hubstaffTimestamp: document.getElementById('hubstaffTimestamp'),
   hubstaffKpis: document.getElementById('hubstaffKpis'),
   hubstaffStatus: document.getElementById('hubstaffStatus'),
   hubstaffReadiness: document.getElementById('hubstaffReadiness'),
@@ -97,6 +98,16 @@ function percent(value) {
 function formatDate(date) {
   if (!date) return 'No date';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+}
+
+function formatDateTime(date) {
+  if (!date) return 'not available yet';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function badgePriority(priority) {
@@ -581,15 +592,32 @@ function renderStaffView() {
 }
 
 function renderHubstaffView() {
-  const sourceConfigured = Boolean(model && model.hubstaff && model.hubstaff.configured);
+  const hubstaff = model?.hubstaff || {
+    configured: false,
+    source: 'loading',
+    loadedAt: null,
+    stale: false,
+    staleReason: '',
+    employeeCount: 0,
+    trackedHours: 0,
+    activityRate: 0,
+    payrollEstimate: 0,
+    rows: [],
+  };
+  const sourceConfigured = Boolean(hubstaff && hubstaff.configured);
+  const isLoading = hubstaff.source === 'loading';
+  const isEmpty = sourceConfigured && (!hubstaff.rows || hubstaff.rows.length === 0);
   const employeeCount = model?.hubstaff?.employeeCount || 0;
   const trackedHours = model?.hubstaff?.trackedHours || 0;
   const activityRate = model?.hubstaff?.activityRate || 0;
   const payrollEstimate = model?.hubstaff?.payrollEstimate || 0;
 
-  el.hubstaffSummary.textContent = sourceConfigured
+  el.hubstaffSummary.textContent = isLoading
+    ? 'Loading Hubstaff source…'
+    : sourceConfigured
     ? `${employeeCount} tracked team members · ${trackedHours} hours loaded`
     : 'Hubstaff tab is ready, but the live account source is not configured yet';
+  el.hubstaffTimestamp.textContent = `Last updated: ${formatDateTime(hubstaff.loadedAt)}`;
 
   el.hubstaffKpis.innerHTML = [
     { label: 'Tracked Team Members', value: employeeCount },
@@ -604,11 +632,17 @@ function renderHubstaffView() {
   `).join('');
 
   el.hubstaffStatus.innerHTML = [
-    sourceConfigured
-      ? 'Hubstaff data is connected and available to the dashboard.'
-      : 'No Hubstaff source is connected yet. The tab is in place so we can add it without changing the site structure again.',
+    isLoading
+      ? 'Loading state: waiting for the Hubstaff source response.'
+      : sourceConfigured
+        ? isEmpty
+          ? 'Empty state: the Hubstaff source is connected, but it returned no rows for the current snapshot.'
+          : 'Hubstaff data is connected and available to the dashboard.'
+        : 'Empty state: no Hubstaff source is connected yet. The tab is in place so we can add it without changing the site structure again.',
+    hubstaff.stale
+      ? `Stale-data flag: ${hubstaff.staleReason || 'the last available Hubstaff data may be out of date.'}`
+      : 'Stale-data flag: current snapshot is considered fresh.',
     'The safest GitHub Pages pattern is to load Hubstaff data from a published CSV/Sheet snapshot or a lightweight serverless proxy, not from a private token directly in browser code.',
-    'Once a source is defined, this tab can show team hours, activity levels, payroll estimates, missing timesheets, and attendance exceptions.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   el.hubstaffReadiness.innerHTML = [
@@ -618,11 +652,11 @@ function renderHubstaffView() {
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   el.hubstaffMetricsTable.innerHTML = [
-    ['Hours by employee', sourceConfigured ? 'Ready' : 'Awaiting source', 'Daily or weekly tracked time by person'],
-    ['Activity score', sourceConfigured ? 'Ready' : 'Awaiting source', 'Average activity and low-activity flags'],
-    ['Attendance exceptions', sourceConfigured ? 'Ready' : 'Awaiting source', 'Missed shifts, no time, or under-target hours'],
-    ['Payroll rollup', sourceConfigured ? 'Ready' : 'Awaiting source', 'Estimated payroll totals by employee or team'],
-    ['Team utilization', sourceConfigured ? 'Ready' : 'Awaiting source', 'Capacity view against expected staffing levels'],
+    ['Hours by employee', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Daily or weekly tracked time by person'],
+    ['Activity score', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Average activity and low-activity flags'],
+    ['Attendance exceptions', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Missed shifts, no time, or under-target hours'],
+    ['Payroll rollup', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Estimated payroll totals by employee or team'],
+    ['Team utilization', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Capacity view against expected staffing levels'],
   ].map((row) => `
     <tr>
       <td>${escapeHtml(row[0])}</td>

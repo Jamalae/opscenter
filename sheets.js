@@ -371,6 +371,18 @@ const OpsSheets = (() => {
       loadedAt: new Date(),
       workbookUrl: WORKBOOK_PUBLISHED_URL,
       sourceMeta,
+      hubstaff: {
+        configured: false,
+        source: 'not_configured',
+        loadedAt: null,
+        stale: true,
+        staleReason: 'Hubstaff source has not been connected yet.',
+        employeeCount: 0,
+        trackedHours: 0,
+        activityRate: 0,
+        payrollEstimate: 0,
+        rows: [],
+      },
       dataset,
       issues,
       metrics: {
