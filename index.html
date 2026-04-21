@@ -3,106 +3,353 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpsCenter v2</title>
-  <link rel="stylesheet" href="./opscenter/styles.css" />
+  <title>OpsCenter Workforce Dashboard</title>
+  <meta
+    name="description"
+    content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
+  />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <main class="shell">
     <header class="head">
       <div>
-        <div class="brand-row"><span class="logo">OC</span><h1>Ops Center</h1></div>
-        <p class="muted">CSV-backed command center for SCA, referrals, claims, tasks, and denials.</p>
+        <div class="brand-row">
+          <span class="logo">OC</span>
+          <div>
+            <h1>Ops Center</h1>
+            <p class="muted">
+              Workforce, hiring, intake, and staffing operations dashboard backed by Google Sheets.
+            </p>
+          </div>
+        </div>
       </div>
       <div class="header-actions">
-        <span class="live-dot">● Loading CSV sources…</span>
+        <a
+          class="btn link-btn"
+          href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml"
+          target="_blank"
+          rel="noreferrer"
+        >Open Source Sheet</a>
+        <span class="live-dot" id="liveStatus">● Connecting to sheet…</span>
         <button class="btn" id="refreshBtn" type="button">Refresh</button>
       </div>
     </header>
 
-    <section class="filters card">
-      <select id="ownerFilter"></select>
-      <select id="payerFilter"></select>
-      <select id="stateFilter"></select>
-      <select id="statusFilter"></select>
-      <select id="priorityFilter"></select>
-      <input id="searchInput" type="search" placeholder="Search issues, owners, notes" />
-    </section>
-
-    <section id="kpiGrid" class="kpi-grid"></section>
-
-    <section class="two-col">
-      <article class="card">
-        <div class="card-head">
-          <h2>Today’s Critical Actions</h2>
-          <span class="muted" id="criticalCount"></span>
-        </div>
-        <table>
-          <thead><tr><th>Patient / SCA</th><th>Owner</th><th>Follow-up</th><th>Days Open</th><th>Status</th><th>Notes / Next action</th></tr></thead>
-          <tbody id="criticalActionsTable"></tbody>
-        </table>
-      </article>
-
-      <article class="card">
-        <h2>Owner Accountability</h2>
-        <table>
-          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Total Cases</th><th>Stale 7+d</th></tr></thead>
-          <tbody id="ownerTable"></tbody>
-        </table>
-      </article>
-    </section>
-
-    <section class="three-col">
-      <article class="card">
-        <div class="card-head"><h2>Cases by Payer</h2></div>
-        <div id="revenueRisk"></div>
-      </article>
-
-      <article class="card">
-        <div class="card-head"><h2>Patient Flow + Referrals</h2></div>
-        <div id="patientFlow"></div>
-      </article>
-
-      <article class="card">
-        <h2>System Health</h2>
-        <div id="systemHealth"></div>
-      </article>
-    </section>
-
-    <section class="two-col">
-      <article class="card">
-        <div class="card-head">
-          <h2>Needs Attention</h2>
-          <span class="muted" id="attentionCount"></span>
-        </div>
-        <div id="attentionPanel" class="attention-list"></div>
-      </article>
-
-      <article class="card">
-        <div class="card-head">
-          <h2>Data Notes</h2>
-          <span class="muted" id="dataCoverage"></span>
-        </div>
-        <div id="dataNotes" class="notes-stack"></div>
-      </article>
-    </section>
-
-    <section class="card">
-      <div class="card-head">
-        <h2>Issues Queue</h2>
-        <button id="clearFilters" class="btn small" type="button">Clear filters</button>
+    <section class="card intro-strip">
+      <div>
+        <strong>Live data source</strong>
+        <p class="muted">
+          Published workbook tabs are centralized in <code>sheets.js</code>. If a tab is unavailable, the app falls back to the last good browser cache and shows the source state in System Health.
+        </p>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Patient / SCA</th><th>Owner</th><th>Payer</th><th>Status</th><th>Priority</th><th>State</th><th>Days Open</th><th>Follow-up</th><th>Claims / Flags</th>
-          </tr>
-        </thead>
-        <tbody id="issuesTable"></tbody>
-      </table>
-      <p class="muted" id="resultsSummary"></p>
+      <div class="meta-grid" id="sourceMeta"></div>
+    </section>
+
+    <section class="card controls">
+      <div class="view-nav" id="viewNav"></div>
+      <div class="filters">
+        <select id="stateFilter"></select>
+        <select id="specialtyFilter"></select>
+        <select id="statusFilter"></select>
+        <select id="sourceFilter"></select>
+        <input id="searchInput" type="search" placeholder="Search names, states, notes, specialties" />
+      </div>
+    </section>
+
+    <section class="kpi-grid" id="executiveKpis"></section>
+
+    <section class="view active" id="view-executive">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Executive Dashboard</h2>
+            <span class="muted" id="executiveSummary"></span>
+          </div>
+          <div class="insight-grid" id="executiveInsights"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Top Watchlist</h2>
+            <span class="muted">Highest urgency across all workstreams</span>
+          </div>
+          <div class="attention-list" id="watchlistPanel"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-ops">
+      <section class="ops-stack">
+        <section class="kpi-grid" id="opsKpis"></section>
+
+        <section class="two-col">
+          <article class="card">
+            <div class="card-head">
+              <h2>Today’s Critical Actions</h2>
+              <span class="muted" id="criticalCount"></span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Candidate / Provider</th>
+                  <th>Owner</th>
+                  <th>Timeline</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Next action</th>
+                </tr>
+              </thead>
+              <tbody id="criticalActionsTable"></tbody>
+            </table>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Owner Accountability</h2>
+              <span class="muted">Derived from live sheet workload</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th>Open</th>
+                  <th>Critical</th>
+                  <th>Watchlist</th>
+                  <th>Coverage</th>
+                </tr>
+              </thead>
+              <tbody id="ownerTable"></tbody>
+            </table>
+          </article>
+        </section>
+
+        <section class="three-col">
+          <article class="card">
+            <div class="card-head">
+              <h2>Revenue Risk</h2>
+              <span class="muted">Capacity and credentialing drag</span>
+            </div>
+            <div id="revenueRisk"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Patient Flow</h2>
+              <span class="muted">Hiring pipeline used as capacity proxy</span>
+            </div>
+            <div id="patientFlow"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>System Health</h2>
+              <span class="muted">Source quality and freshness</span>
+            </div>
+            <div id="systemHealth"></div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Issues Queue</h2>
+            <button id="clearFilters" class="btn small" type="button">Clear filters</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>State</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Risk</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody id="issuesTable"></tbody>
+          </table>
+          <p class="muted" id="resultsSummary"></p>
+        </section>
+      </section>
+    </section>
+
+    <section class="view" id="view-intake">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Intake / Referral Reporting</h2>
+            <span class="muted" id="intakeSummary"></span>
+          </div>
+          <section class="mini-kpi-grid" id="intakeKpis"></section>
+          <div id="intakeFlow" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Referral Source Snapshot</h2>
+            <span class="muted">Based on available New Hiring rows</span>
+          </div>
+          <div id="referralSourcePanel" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Interview Tracker</h2>
+            <span class="muted">Sheet3</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Position</th>
+                <th>State</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="interviewTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>New Hiring Intake</h2>
+            <span class="muted">New Hiring + Resume Pool</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>State</th>
+                <th>Specialty</th>
+                <th>Hours</th>
+                <th>Interview Status</th>
+                <th>Credentialing</th>
+              </tr>
+            </thead>
+            <tbody id="intakeTable"></tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-staff">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Staff Metrics</h2>
+            <span class="muted" id="staffSummary"></span>
+          </div>
+          <section class="mini-kpi-grid" id="staffKpis"></section>
+          <div id="staffInsights" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Licensed State Coverage</h2>
+            <span class="muted">Current workforce tab</span>
+          </div>
+          <div id="coveragePanel" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Current Workforce</h2>
+            <span class="muted">Licenses and contract mix</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Licensed State</th>
+                <th>Specialty</th>
+                <th>Contract</th>
+                <th>Future License</th>
+              </tr>
+            </thead>
+            <tbody id="workforceTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Final Hires / Signed Candidates</h2>
+            <span class="muted">Final Sheet</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Title</th>
+                <th>States</th>
+                <th>Hours</th>
+                <th>Rate</th>
+                <th>Comments</th>
+              </tr>
+            </thead>
+            <tbody id="hireTable"></tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-hubstaff">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Hubstaff Overview</h2>
+            <span class="muted" id="hubstaffSummary"></span>
+          </div>
+          <section class="mini-kpi-grid" id="hubstaffKpis"></section>
+          <div id="hubstaffStatus" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Connection Readiness</h2>
+            <span class="muted">What we still need to go live</span>
+          </div>
+          <div id="hubstaffReadiness" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Expected Hubstaff Metrics</h2>
+            <span class="muted">Ready for live account mapping</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Status</th>
+                <th>What it will show</th>
+              </tr>
+            </thead>
+            <tbody id="hubstaffMetricsTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Integration Notes</h2>
+            <span class="muted">Static-site safe approach</span>
+          </div>
+          <div id="hubstaffNotes" class="stack"></div>
+        </article>
+      </div>
     </section>
   </main>
-  <script src="./opscenter/data-layer.js"></script>
-  <script src="./opscenter/app.js"></script>
+
+  <script src="./sheets.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

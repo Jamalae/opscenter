@@ -68,6 +68,31 @@
       </article>
     </section>
 
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>Referrals</h2>
+          <p class="muted">Program-specific intake performance with room for additional referral subtabs later.</p>
+        </div>
+      </div>
+      <div class="subtabs" id="referralSubtabs"></div>
+      <div class="referral-toolbar">
+        <select id="referralStateFilter"></select>
+        <select id="referralPayerFilter"></select>
+        <select id="referralStatusFilter"></select>
+      </div>
+      <section id="referralKpis" class="mini-kpi-grid"></section>
+      <table>
+        <thead>
+          <tr>
+            <th>Referral ID</th><th>Patient</th><th>State</th><th>Payer</th><th>Referral Date</th><th>Status</th><th>Program</th>
+          </tr>
+        </thead>
+        <tbody id="referralTable"></tbody>
+      </table>
+      <p class="muted" id="referralSummary"></p>
+    </section>
+
     <section class="two-col">
       <article class="card">
         <div class="card-head">
