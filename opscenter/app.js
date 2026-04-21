@@ -4,6 +4,10 @@ const state = {
   st: 'all',
   status: 'all',
   priority: 'all',
+  referralTab: 'standard',
+  referralState: 'all',
+  referralPayer: 'all',
+  referralStatus: 'all',
   q: '',
   kpi: null,
 };
@@ -26,6 +30,13 @@ const el = {
   revenueRisk: document.getElementById('revenueRisk'),
   patientFlow: document.getElementById('patientFlow'),
   systemHealth: document.getElementById('systemHealth'),
+  referralSubtabs: document.getElementById('referralSubtabs'),
+  referralStateFilter: document.getElementById('referralStateFilter'),
+  referralPayerFilter: document.getElementById('referralPayerFilter'),
+  referralStatusFilter: document.getElementById('referralStatusFilter'),
+  referralKpis: document.getElementById('referralKpis'),
+  referralTable: document.getElementById('referralTable'),
+  referralSummary: document.getElementById('referralSummary'),
   attentionPanel: document.getElementById('attentionPanel'),
   attentionCount: document.getElementById('attentionCount'),
   dataNotes: document.getElementById('dataNotes'),
@@ -112,6 +123,32 @@ function initFilters() {
   fillSelect(el.priorityFilter, 'All priorities', uniq(model.cases.map((item) => item.priority)));
 }
 
+function getActiveReferralTab() {
+  return model.referralModules.tabs.find((tab) => tab.id === state.referralTab) || model.referralModules.tabs[0];
+}
+
+function initReferralFilters() {
+  const tab = getActiveReferralTab();
+  fillSelect(el.referralStateFilter, 'All states', tab.filterValues.states);
+  fillSelect(el.referralPayerFilter, 'All payers', tab.filterValues.payers);
+  fillSelect(el.referralStatusFilter, 'All statuses', tab.filterValues.statuses);
+  el.referralStateFilter.value = 'all';
+  el.referralPayerFilter.value = 'all';
+  el.referralStatusFilter.value = 'all';
+  state.referralState = 'all';
+  state.referralPayer = 'all';
+  state.referralStatus = 'all';
+}
+
+function filterReferralRows() {
+  const tab = getActiveReferralTab();
+  return tab.rows.filter((item) =>
+    (state.referralState === 'all' || item.state === state.referralState)
+    && (state.referralPayer === 'all' || item.payer === state.referralPayer)
+    && (state.referralStatus === 'all' || item.status === state.referralStatus)
+  );
+}
+
 function badgePriority(priority) {
   const tone = priority === 'High' ? 'critical' : priority === 'Medium' ? 'medium' : 'low';
   return `<span class="badge priority-${tone}">${priority}</span>`;
@@ -120,7 +157,7 @@ function badgePriority(priority) {
 function badgeStatus(status) {
   const className = status === 'Denied'
     ? 'status-blocked'
-    : status === 'Approved'
+    : status === 'Approved' || status === 'Converted'
       ? 'status-approved'
       : 'status-open';
   return `<span class="${className}">${status}</span>`;
@@ -250,6 +287,50 @@ function renderPatientFlow(filteredCases) {
   `;
 }
 
+function renderReferralSection() {
+  el.referralSubtabs.innerHTML = model.referralModules.tabs.map((tab) => `<button type="button" class="subtab ${tab.id === state.referralTab ? 'active' : ''}" data-referral-tab="${tab.id}">
+      ${tab.label}
+    </button>`).join('');
+
+  el.referralSubtabs.querySelectorAll('.subtab').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.referralTab = button.getAttribute('data-referral-tab');
+      initReferralFilters();
+      renderReferralSection();
+    });
+  });
+
+  const activeTab = getActiveReferralTab();
+  const rows = filterReferralRows();
+  const filteredConverted = rows.filter((item) => item.status === 'Converted').length;
+  const filteredPending = rows.filter((item) => item.status === 'Pending').length;
+  const filteredConversionRate = rows.length ? (filteredConverted / rows.length) * 100 : 0;
+
+  el.referralKpis.innerHTML = [
+    { label: 'Total Referrals', value: rows.length },
+    { label: 'Converted Referrals', value: filteredConverted },
+    { label: 'Pending Referrals', value: filteredPending },
+    { label: 'Conversion Rate', value: percent(filteredConversionRate) },
+  ].map((card) => `<div class="mini-kpi">
+      <div class="k">${card.label}</div>
+      <div class="v">${card.value}</div>
+    </div>`).join('');
+
+  el.referralTable.innerHTML = rows.length
+    ? rows.map((item) => `<tr>
+        <td>${item.referralId}</td>
+        <td>${item.patientName}</td>
+        <td>${item.state}</td>
+        <td>${item.payer}</td>
+        <td>${item.referralDateLabel}</td>
+        <td>${badgeStatus(item.status)}</td>
+        <td>${item.referralProgram}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;">No referrals match the current program filters.</td></tr>';
+
+  el.referralSummary.textContent = `${activeTab.label}: ${rows.length} rows shown from ${activeTab.metrics.total} total referrals in this program`;
+}
+
 function renderSystems() {
   el.systemHealth.innerHTML = model.systemHealth.map((item) => `<div class="system-item">
     <div class="card-head"><strong>${item.name}</strong><strong>${item.severity}</strong></div>
@@ -331,6 +412,7 @@ function render() {
   renderOwners(filteredCases);
   renderPayerSummary(filteredCases);
   renderPatientFlow(filteredCases);
+  renderReferralSection();
   renderSystems();
   renderAttention();
   renderDataNotes();
@@ -343,6 +425,9 @@ function bind() {
   el.stateFilter.addEventListener('change', (event) => { state.st = event.target.value; render(); });
   el.statusFilter.addEventListener('change', (event) => { state.status = event.target.value; render(); });
   el.priorityFilter.addEventListener('change', (event) => { state.priority = event.target.value; render(); });
+  el.referralStateFilter.addEventListener('change', (event) => { state.referralState = event.target.value; renderReferralSection(); });
+  el.referralPayerFilter.addEventListener('change', (event) => { state.referralPayer = event.target.value; renderReferralSection(); });
+  el.referralStatusFilter.addEventListener('change', (event) => { state.referralStatus = event.target.value; renderReferralSection(); });
   el.searchInput.addEventListener('input', (event) => { state.q = event.target.value; render(); });
   el.clearFilters.addEventListener('click', () => {
     state.owner = 'all';
@@ -350,6 +435,9 @@ function bind() {
     state.st = 'all';
     state.status = 'all';
     state.priority = 'all';
+    state.referralState = 'all';
+    state.referralPayer = 'all';
+    state.referralStatus = 'all';
     state.q = '';
     state.kpi = null;
     el.ownerFilter.value = 'all';
@@ -357,6 +445,7 @@ function bind() {
     el.stateFilter.value = 'all';
     el.statusFilter.value = 'all';
     el.priorityFilter.value = 'all';
+    initReferralFilters();
     el.searchInput.value = '';
     render();
   });
@@ -370,10 +459,12 @@ async function loadData() {
 
   try {
     model = await OpsDataLayer.loadOperationalData();
+    state.referralTab = model.referralModules.empireTabId || model.referralModules.defaultTabId;
     initFilters();
+    initReferralFilters();
     render();
     if (el.liveDot) {
-      el.liveDot.textContent = `● Live CSV data · ${model.metrics.totals.cases} cases · ${model.metrics.totals.claims} claims`;
+      el.liveDot.textContent = `● Live CSV data · ${model.metrics.totals.cases} cases · ${model.metrics.totals.referrals} referrals`;
     }
   } catch (error) {
     console.error(error);

@@ -3,206 +3,354 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpsCenter v2</title>
-  <link rel="stylesheet" href="./opscenter/styles.css" />
+  <title>OpsCenter Workforce Dashboard</title>
+  <meta
+    name="description"
+    content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
+  />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <main class="shell">
     <header class="head">
       <div>
-        <div class="brand-row"><span class="logo">OC</span><h1>Ops Center</h1></div>
-        <p class="muted">CSV-backed command center for SCA, referrals, claims, tasks, and denials.</p>
+        <div class="brand-row">
+          <span class="logo">OC</span>
+          <div>
+            <h1>Ops Center</h1>
+            <p class="muted">
+              Workforce, hiring, intake, and staffing operations dashboard backed by Google Sheets.
+            </p>
+          </div>
+        </div>
       </div>
       <div class="header-actions">
-        <span class="live-dot">● Loading CSV sources…</span>
+        <a
+          class="btn link-btn"
+          href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml"
+          target="_blank"
+          rel="noreferrer"
+        >Open Source Sheet</a>
+        <span class="live-dot" id="liveStatus">● Connecting to sheet…</span>
         <button class="btn" id="refreshBtn" type="button">Refresh</button>
       </div>
     </header>
 
-    <section class="filters card">
-      <select id="ownerFilter"></select>
-      <select id="payerFilter"></select>
-      <select id="stateFilter"></select>
-      <select id="statusFilter"></select>
-      <select id="priorityFilter"></select>
-      <input id="searchInput" type="search" placeholder="Search issues, owners, notes" />
-    </section>
-
-    <section id="kpiGrid" class="kpi-grid"></section>
-
-    <section class="two-col">
-      <article class="card">
-        <div class="card-head">
-          <h2>Today’s Critical Actions</h2>
-          <span class="muted" id="criticalCount"></span>
-        </div>
-        <table>
-          <thead><tr><th>Patient / SCA</th><th>Owner</th><th>Follow-up</th><th>Days Open</th><th>Status</th><th>Notes / Next action</th></tr></thead>
-          <tbody id="criticalActionsTable"></tbody>
-        </table>
-      </article>
-
-      <article class="card">
-        <h2>Owner Accountability</h2>
-        <table>
-          <thead><tr><th>Owner</th><th>Open</th><th>Overdue</th><th>Total Cases</th><th>Stale 7+d</th></tr></thead>
-          <tbody id="ownerTable"></tbody>
-        </table>
-      </article>
-    </section>
-
-    <section class="three-col">
-      <article class="card">
-        <div class="card-head"><h2>Cases by Payer</h2></div>
-        <div id="revenueRisk"></div>
-      </article>
-
-      <article class="card">
-        <div class="card-head"><h2>Patient Flow + Referrals</h2></div>
-        <div id="patientFlow"></div>
-      </article>
-
-      <article class="card">
-        <h2>System Health</h2>
-        <div id="systemHealth"></div>
-      </article>
-    </section>
-
-    <section class="two-col">
-      <article class="card">
-        <div class="card-head">
-          <h2>Needs Attention</h2>
-          <span class="muted" id="attentionCount"></span>
-        </div>
-        <div id="attentionPanel" class="attention-list"></div>
-      </article>
-
-      <article class="card">
-        <div class="card-head">
-          <h2>Data Notes</h2>
-          <span class="muted" id="dataCoverage"></span>
-        </div>
-        <div id="dataNotes" class="notes-stack"></div>
-      </article>
-    </section>
-
-    <section class="card">
-      <div class="card-head">
-        <h2>Issues Queue</h2>
-        <button id="clearFilters" class="btn small" type="button">Clear filters</button>
+    <section class="card intro-strip">
+      <div>
+        <strong>Live data source</strong>
+        <p class="muted">
+          Published workbook tabs are centralized in <code>sheets.js</code>. If a tab is unavailable, the app falls back to the last good browser cache and shows the source state in System Health.
+        </p>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Patient / SCA</th><th>Owner</th><th>Payer</th><th>Status</th><th>Priority</th><th>State</th><th>Days Open</th><th>Follow-up</th><th>Claims / Flags</th>
-          </tr>
-        </thead>
-        <tbody id="issuesTable"></tbody>
-      </table>
-      <p class="muted" id="resultsSummary"></p>
+      <div class="meta-grid" id="sourceMeta"></div>
     </section>
 
-    <section class="card">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <div class="card-head">
-    <h2>&#x1F5FA;&#xFE0F; NJ Commercial Insurance by County</h2>
-    <span class="muted">ACS 5-Year Estimates 2019&#x2013;2023 &middot; Private health insurance coverage</span>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
-    <div style="background:rgba(30,87,153,0.08);border:1px solid rgba(30,87,153,0.25);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#1e5799;">6.71M</div><div style="font-size:12px;color:#888;margin-top:3px;">Commercially Insured</div></div>
-    <div style="background:rgba(30,87,153,0.05);border:1px solid rgba(30,87,153,0.15);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#2e7fc1;">73.0%</div><div style="font-size:12px;color:#888;margin-top:3px;">NJ State Average</div></div>
-    <div style="background:rgba(30,87,153,0.05);border:1px solid rgba(30,87,153,0.15);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#555;">9.29M</div><div style="font-size:12px;color:#888;margin-top:3px;">Total NJ Population</div></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-    <div id="njMap" style="height:560px;border-radius:8px;border:1px solid #e5e7eb;"></div>
-    <div style="overflow-y:auto;max-height:560px;">
-      <table style="width:100%;font-size:12px;border-collapse:collapse;">
-        <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;"><tr>
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">County</th>
-          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">% Commercial</th>
-          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">Comm. Insured</th>
-          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">Population</th>
-        </tr></thead>
-        <tbody id="njCountyTable"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-(function(){
-  var NJ=[
-    {name:"Hunterdon",pop:128947,pct:85.6,ins:110379},
-    {name:"Morris",pop:509285,pct:83.5,ins:425253},
-    {name:"Somerset",pop:345361,pct:81.9,ins:282851},
-    {name:"Sussex",pop:144221,pct:80.2,ins:115705},
-    {name:"Bergen",pop:955732,pct:79.4,ins:758851},
-    {name:"Monmouth",pop:643615,pct:79.0,ins:508456},
-    {name:"Burlington",pop:461860,pct:77.2,ins:356556},
-    {name:"Gloucester",pop:302294,pct:76.4,ins:230953},
-    {name:"Warren",pop:108692,pct:75.4,ins:81954},
-    {name:"Cape May",pop:95263,pct:73.5,ins:70018},
-    {name:"Middlesex",pop:863162,pct:72.8,ins:628382},
-    {name:"Union",pop:575345,pct:72.0,ins:414249},
-    {name:"Mercer",pop:379615,pct:71.4,ins:271065},
-    {name:"Ocean",pop:637229,pct:71.2,ins:453707},
-    {name:"Camden",pop:523485,pct:69.2,ins:362251},
-    {name:"Salem",pop:64837,pct:67.5,ins:43765},
-    {name:"Essex",pop:863728,pct:64.8,ins:559496},
-    {name:"Atlantic",pop:274534,pct:63.3,ins:173780},
-    {name:"Passaic",pop:524118,pct:62.4,ins:327050},
-    {name:"Hudson",pop:724854,pct:61.9,ins:448885},
-    {name:"Cumberland",pop:154152,pct:56.8,ins:87558}
-  ];
-  var lookup={};NJ.forEach(function(d){lookup[d.name]=d;});
-  function getColor(p){return p>=82?'#1a5276':p>=78?'#1f618d':p>=74?'#2874a6':p>=70?'#2e86c1':p>=66?'#5499c7':p>=62?'#7fb3d3':'#a9cce3';}
-  var tbody=document.getElementById('njCountyTable');
-  if(tbody){NJ.forEach(function(d,i){
-    var bar=Math.round((d.pct-55)/35*100);
-    tbody.innerHTML+='<tr style="border-bottom:1px solid #f1f5f9;'+(i%2===0?'background:#fafafa':'')+'">'
-      +'<td style="padding:7px 10px;font-weight:500;color:#1e293b;">'+d.name+'</td>'
-      +'<td style="padding:7px 10px;text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
-      +'<div style="width:60px;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden;"><div style="width:'+bar+'%;background:'+getColor(d.pct)+';height:100%;border-radius:3px;"></div></div>'
-      +'<span style="font-weight:600;color:'+getColor(d.pct)+';">'+d.pct+'%</span></div></td>'
-      +'<td style="padding:7px 10px;text-align:right;color:#334155;">'+d.ins.toLocaleString()+'</td>'
-      +'<td style="padding:7px 10px;text-align:right;color:#94a3b8;">'+d.pop.toLocaleString()+'</td>'
-      +'</tr>';
-  });}
-  var map=L.map('njMap',{scrollWheelZoom:false}).setView([40.1,-74.5],8);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
-  var info=document.createElement('div');
-  info.style.cssText='position:absolute;top:10px;right:10px;z-index:1000;background:white;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:12px;min-width:160px;pointer-events:none;';
-  info.innerHTML='<b style="color:#1e293b;">Hover a county</b>';
-  document.getElementById('njMap').appendChild(info);
-  fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-jersey-counties.geojson')
-    .then(function(r){return r.json();}).then(function(geo){
-      var gl=L.geoJSON(geo,{
-        style:function(f){var d=lookup[f.properties.name]||{};return{fillColor:getColor(d.pct||0),weight:1.5,opacity:1,color:'white',fillOpacity:0.82};},
-        onEachFeature:function(f,layer){
-          var nm=f.properties.name,d=lookup[nm]||{};
-          layer.on({
-            mouseover:function(e){
-              e.target.setStyle({weight:3,color:'#1a5276',fillOpacity:.95});
-              info.innerHTML='<b style="color:#1e293b;">'+nm+' County</b><br><span style="color:#1f618d;font-size:15px;font-weight:600;">'+d.pct+'%</span><br><span style="color:#64748b;">'+d.ins.toLocaleString()+' insured</span><br><span style="color:#94a3b8;">Pop: '+d.pop.toLocaleString()+'</span>';
-            },
-            mouseout:function(e){gl.resetStyle(e.target);info.innerHTML='<b style="color:#1e293b;">Hover a county</b>';}
-          });
-        }
-      }).addTo(map);
-      map.fitBounds(gl.getBounds());
-      var leg=L.control({position:'bottomleft'});
-      leg.onAdd=function(){
-        var d=L.DomUtil.create('div');
-        d.style.cssText='background:white;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:11px;line-height:1.8;';
-        d.innerHTML='<b style="color:#1e293b;">% Commercial</b><br>'+[['#1a5276','82%+'],['#1f618d','78-82%'],['#2874a6','74-78%'],['#2e86c1','70-74%'],['#5499c7','66-70%'],['#7fb3d3','62-66%'],['#a9cce3','&lt;62%']].map(function(r){return'<div style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+r[0]+'"></span>'+r[1]+'</div>';}).join('');
-        return d;
-      };
-      leg.addTo(map);
-    });
-})();
-</script>
-    </main>
-  <script src="./opscenter/data-layer.js"></script>
-  <script src="./opscenter/app.js"></script>
+    <section class="card controls">
+      <div class="view-nav" id="viewNav"></div>
+      <div class="filters">
+        <select id="stateFilter"></select>
+        <select id="specialtyFilter"></select>
+        <select id="statusFilter"></select>
+        <select id="sourceFilter"></select>
+        <input id="searchInput" type="search" placeholder="Search names, states, notes, specialties" />
+      </div>
+    </section>
+
+    <section class="kpi-grid" id="executiveKpis"></section>
+
+    <section class="view active" id="view-executive">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Executive Dashboard</h2>
+            <span class="muted" id="executiveSummary"></span>
+          </div>
+          <div class="insight-grid" id="executiveInsights"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Top Watchlist</h2>
+            <span class="muted">Highest urgency across all workstreams</span>
+          </div>
+          <div class="attention-list" id="watchlistPanel"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-ops">
+      <section class="ops-stack">
+        <section class="kpi-grid" id="opsKpis"></section>
+
+        <section class="two-col">
+          <article class="card">
+            <div class="card-head">
+              <h2>Today’s Critical Actions</h2>
+              <span class="muted" id="criticalCount"></span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Candidate / Provider</th>
+                  <th>Owner</th>
+                  <th>Timeline</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Next action</th>
+                </tr>
+              </thead>
+              <tbody id="criticalActionsTable"></tbody>
+            </table>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Owner Accountability</h2>
+              <span class="muted">Derived from live sheet workload</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th>Open</th>
+                  <th>Critical</th>
+                  <th>Watchlist</th>
+                  <th>Coverage</th>
+                </tr>
+              </thead>
+              <tbody id="ownerTable"></tbody>
+            </table>
+          </article>
+        </section>
+
+        <section class="three-col">
+          <article class="card">
+            <div class="card-head">
+              <h2>Revenue Risk</h2>
+              <span class="muted">Capacity and credentialing drag</span>
+            </div>
+            <div id="revenueRisk"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Patient Flow</h2>
+              <span class="muted">Hiring pipeline used as capacity proxy</span>
+            </div>
+            <div id="patientFlow"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>System Health</h2>
+              <span class="muted">Source quality and freshness</span>
+            </div>
+            <div id="systemHealth"></div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Issues Queue</h2>
+            <button id="clearFilters" class="btn small" type="button">Clear filters</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>State</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Risk</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody id="issuesTable"></tbody>
+          </table>
+          <p class="muted" id="resultsSummary"></p>
+        </section>
+      </section>
+    </section>
+
+    <section class="view" id="view-intake">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Intake / Referral Reporting</h2>
+            <span class="muted" id="intakeSummary"></span>
+          </div>
+          <section class="mini-kpi-grid" id="intakeKpis"></section>
+          <div id="intakeFlow" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Referral Source Snapshot</h2>
+            <span class="muted">Based on available New Hiring rows</span>
+          </div>
+          <div id="referralSourcePanel" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Interview Tracker</h2>
+            <span class="muted">Sheet3</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Position</th>
+                <th>State</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="interviewTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>New Hiring Intake</h2>
+            <span class="muted">New Hiring + Resume Pool</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>State</th>
+                <th>Specialty</th>
+                <th>Hours</th>
+                <th>Interview Status</th>
+                <th>Credentialing</th>
+              </tr>
+            </thead>
+            <tbody id="intakeTable"></tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-staff">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Staff Metrics</h2>
+            <span class="muted" id="staffSummary"></span>
+          </div>
+          <section class="mini-kpi-grid" id="staffKpis"></section>
+          <div id="staffInsights" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Licensed State Coverage</h2>
+            <span class="muted">Current workforce tab</span>
+          </div>
+          <div id="coveragePanel" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Current Workforce</h2>
+            <span class="muted">Licenses and contract mix</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Licensed State</th>
+                <th>Specialty</th>
+                <th>Contract</th>
+                <th>Future License</th>
+              </tr>
+            </thead>
+            <tbody id="workforceTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Final Hires / Signed Candidates</h2>
+            <span class="muted">Final Sheet</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Title</th>
+                <th>States</th>
+                <th>Hours</th>
+                <th>Rate</th>
+                <th>Comments</th>
+              </tr>
+            </thead>
+            <tbody id="hireTable"></tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-hubstaff">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Hubstaff Overview</h2>
+            <span class="muted" id="hubstaffSummary">Waiting for Hubstaff source…</span>
+          </div>
+          <p class="muted" id="hubstaffTimestamp">Last updated: not available yet</p>
+          <section class="mini-kpi-grid" id="hubstaffKpis"></section>
+          <div id="hubstaffStatus" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Connection Readiness</h2>
+            <span class="muted">What we still need to go live</span>
+          </div>
+          <div id="hubstaffReadiness" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Expected Hubstaff Metrics</h2>
+            <span class="muted">Ready for live account mapping</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Status</th>
+                <th>What it will show</th>
+              </tr>
+            </thead>
+            <tbody id="hubstaffMetricsTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Integration Notes</h2>
+            <span class="muted">Static-site safe approach</span>
+          </div>
+          <div id="hubstaffNotes" class="stack"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="./sheets.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

@@ -96,7 +96,20 @@ const OpsDataLayer = (() => {
   }
 
   function referralKey(row) {
-    return [row.patient_name, row.state, row.payer].map((part) => (part || '').toLowerCase()).join('|');
+    return [row.patient_name || row.patientName, row.state, row.payer].map((part) => (part || '').toLowerCase()).join('|');
+  }
+
+  function normalizeReferral(row) {
+    return {
+      referralId: row.referral_id,
+      patientName: row.patient_name || 'Unknown patient',
+      state: row.state || '—',
+      payer: row.payer || 'Unknown',
+      referralDate: safeDate(row.referral_date),
+      referralDateLabel: row.referral_date || 'No date',
+      status: row.status || 'Pending',
+      referralProgram: row.referral_program || 'Standard',
+    };
   }
 
   function normalizeMasterCase(row, related) {
@@ -301,11 +314,52 @@ const OpsDataLayer = (() => {
       .slice(0, 8);
   }
 
+  function buildReferralModules(referrals) {
+    const programs = uniqReferrals(referrals.map((item) => item.referralProgram));
+    const tabOrder = ['Standard', 'Empire IPA', ...programs.filter((program) => !['Standard', 'Empire IPA'].includes(program))];
+    const tabs = tabOrder.map((program) => {
+      const rows = referrals.filter((item) => item.referralProgram === program);
+      const converted = rows.filter((item) => item.status === 'Converted').length;
+      const pending = rows.filter((item) => item.status === 'Pending').length;
+      return {
+        id: slugify(program),
+        label: program,
+        rows,
+        metrics: {
+          total: rows.length,
+          converted,
+          pending,
+          conversionRate: rows.length ? (converted / rows.length) * 100 : 0,
+        },
+        filterValues: {
+          states: uniqReferrals(rows.map((item) => item.state)),
+          payers: uniqReferrals(rows.map((item) => item.payer)),
+          statuses: uniqReferrals(rows.map((item) => item.status)),
+        },
+      };
+    });
+
+    return {
+      tabs,
+      defaultTabId: slugify('Standard'),
+      empireTabId: slugify('Empire IPA'),
+    };
+  }
+
+  function uniqReferrals(values) {
+    return [...new Set(values)].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
+  }
+
+  function slugify(value) {
+    return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
   function buildModel(payload) {
+    const normalizedReferrals = payload.referrals.map(normalizeReferral);
     const claimsByCase = mapBy(payload.claims, 'case_id');
     const tasksByCase = mapBy(payload.tasks, 'case_id');
     const denialsByCase = mapBy(payload.denials, 'case_id');
-    const referralsByKey = payload.referrals.reduce((acc, item) => {
+    const referralsByKey = normalizedReferrals.reduce((acc, item) => {
       acc[referralKey(item)] = item;
       return acc;
     }, {});
@@ -320,18 +374,20 @@ const OpsDataLayer = (() => {
     return {
       loadedAt: TODAY,
       cases,
-      referrals: payload.referrals,
+      referrals: normalizedReferrals,
       claims: payload.claims,
       tasks: payload.tasks,
       denials: payload.denials,
       attention: buildAttention(cases),
-      metrics: buildMetrics(cases, payload.referrals, payload.claims, payload.tasks),
-      summary: buildSummaryRows(cases, payload.claims, payload.referrals, payload.tasks),
+      metrics: buildMetrics(cases, normalizedReferrals, payload.claims, payload.tasks),
+      summary: buildSummaryRows(cases, payload.claims, normalizedReferrals, payload.tasks),
       systemHealth: buildHealth(cases, payload.claims, payload.tasks, payload.denials),
+      referralModules: buildReferralModules(normalizedReferrals),
       mappings: [
         'master_cases.case_id is the primary case key.',
         'claims.case_id, tasks.case_id, and denials.case_id link directly to master cases.',
         'referrals do not include case_id, so referral records are matched by patient_name + state + payer.',
+        'referrals.referral_program defines referral subtabs such as Standard and Empire IPA.',
       ],
       gaps: [
         'No direct case_id in referrals, so duplicate patients with the same payer/state could create ambiguous matches later.',
