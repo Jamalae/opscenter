@@ -101,7 +101,107 @@
       </table>
       <p class="muted" id="resultsSummary"></p>
     </section>
-  </main>
+
+    <section class="card">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <div class="card-head">
+    <h2>&#x1F5FA;&#xFE0F; NJ Commercial Insurance by County</h2>
+    <span class="muted">ACS 5-Year Estimates 2019&#x2013;2023 &middot; Private health insurance coverage</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
+    <div style="background:rgba(30,87,153,0.08);border:1px solid rgba(30,87,153,0.25);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#1e5799;">6.71M</div><div style="font-size:12px;color:#888;margin-top:3px;">Commercially Insured</div></div>
+    <div style="background:rgba(30,87,153,0.05);border:1px solid rgba(30,87,153,0.15);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#2e7fc1;">73.0%</div><div style="font-size:12px;color:#888;margin-top:3px;">NJ State Average</div></div>
+    <div style="background:rgba(30,87,153,0.05);border:1px solid rgba(30,87,153,0.15);border-radius:10px;padding:14px 18px;"><div style="font-size:26px;font-weight:700;color:#555;">9.29M</div><div style="font-size:12px;color:#888;margin-top:3px;">Total NJ Population</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+    <div id="njMap" style="height:560px;border-radius:8px;border:1px solid #e5e7eb;"></div>
+    <div style="overflow-y:auto;max-height:560px;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;"><tr>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">County</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">% Commercial</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">Comm. Insured</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;color:#64748b;font-weight:600;">Population</th>
+        </tr></thead>
+        <tbody id="njCountyTable"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  var NJ=[
+    {name:"Hunterdon",pop:128947,pct:85.6,ins:110379},
+    {name:"Morris",pop:509285,pct:83.5,ins:425253},
+    {name:"Somerset",pop:345361,pct:81.9,ins:282851},
+    {name:"Sussex",pop:144221,pct:80.2,ins:115705},
+    {name:"Bergen",pop:955732,pct:79.4,ins:758851},
+    {name:"Monmouth",pop:643615,pct:79.0,ins:508456},
+    {name:"Burlington",pop:461860,pct:77.2,ins:356556},
+    {name:"Gloucester",pop:302294,pct:76.4,ins:230953},
+    {name:"Warren",pop:108692,pct:75.4,ins:81954},
+    {name:"Cape May",pop:95263,pct:73.5,ins:70018},
+    {name:"Middlesex",pop:863162,pct:72.8,ins:628382},
+    {name:"Union",pop:575345,pct:72.0,ins:414249},
+    {name:"Mercer",pop:379615,pct:71.4,ins:271065},
+    {name:"Ocean",pop:637229,pct:71.2,ins:453707},
+    {name:"Camden",pop:523485,pct:69.2,ins:362251},
+    {name:"Salem",pop:64837,pct:67.5,ins:43765},
+    {name:"Essex",pop:863728,pct:64.8,ins:559496},
+    {name:"Atlantic",pop:274534,pct:63.3,ins:173780},
+    {name:"Passaic",pop:524118,pct:62.4,ins:327050},
+    {name:"Hudson",pop:724854,pct:61.9,ins:448885},
+    {name:"Cumberland",pop:154152,pct:56.8,ins:87558}
+  ];
+  var lookup={};NJ.forEach(function(d){lookup[d.name]=d;});
+  function getColor(p){return p>=82?'#1a5276':p>=78?'#1f618d':p>=74?'#2874a6':p>=70?'#2e86c1':p>=66?'#5499c7':p>=62?'#7fb3d3':'#a9cce3';}
+  var tbody=document.getElementById('njCountyTable');
+  if(tbody){NJ.forEach(function(d,i){
+    var bar=Math.round((d.pct-55)/35*100);
+    tbody.innerHTML+='<tr style="border-bottom:1px solid #f1f5f9;'+(i%2===0?'background:#fafafa':'')+'">'
+      +'<td style="padding:7px 10px;font-weight:500;color:#1e293b;">'+d.name+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'
+      +'<div style="width:60px;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden;"><div style="width:'+bar+'%;background:'+getColor(d.pct)+';height:100%;border-radius:3px;"></div></div>'
+      +'<span style="font-weight:600;color:'+getColor(d.pct)+';">'+d.pct+'%</span></div></td>'
+      +'<td style="padding:7px 10px;text-align:right;color:#334155;">'+d.ins.toLocaleString()+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;color:#94a3b8;">'+d.pop.toLocaleString()+'</td>'
+      +'</tr>';
+  });}
+  var map=L.map('njMap',{scrollWheelZoom:false}).setView([40.1,-74.5],8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+  var info=document.createElement('div');
+  info.style.cssText='position:absolute;top:10px;right:10px;z-index:1000;background:white;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:12px;min-width:160px;pointer-events:none;';
+  info.innerHTML='<b style="color:#1e293b;">Hover a county</b>';
+  document.getElementById('njMap').appendChild(info);
+  fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-jersey-counties.geojson')
+    .then(function(r){return r.json();}).then(function(geo){
+      var gl=L.geoJSON(geo,{
+        style:function(f){var d=lookup[f.properties.name]||{};return{fillColor:getColor(d.pct||0),weight:1.5,opacity:1,color:'white',fillOpacity:0.82};},
+        onEachFeature:function(f,layer){
+          var nm=f.properties.name,d=lookup[nm]||{};
+          layer.on({
+            mouseover:function(e){
+              e.target.setStyle({weight:3,color:'#1a5276',fillOpacity:.95});
+              info.innerHTML='<b style="color:#1e293b;">'+nm+' County</b><br><span style="color:#1f618d;font-size:15px;font-weight:600;">'+d.pct+'%</span><br><span style="color:#64748b;">'+d.ins.toLocaleString()+' insured</span><br><span style="color:#94a3b8;">Pop: '+d.pop.toLocaleString()+'</span>';
+            },
+            mouseout:function(e){gl.resetStyle(e.target);info.innerHTML='<b style="color:#1e293b;">Hover a county</b>';}
+          });
+        }
+      }).addTo(map);
+      map.fitBounds(gl.getBounds());
+      var leg=L.control({position:'bottomleft'});
+      leg.onAdd=function(){
+        var d=L.DomUtil.create('div');
+        d.style.cssText='background:white;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:11px;line-height:1.8;';
+        d.innerHTML='<b style="color:#1e293b;">% Commercial</b><br>'+[['#1a5276','82%+'],['#1f618d','78-82%'],['#2874a6','74-78%'],['#2e86c1','70-74%'],['#5499c7','66-70%'],['#7fb3d3','62-66%'],['#a9cce3','&lt;62%']].map(function(r){return'<div style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+r[0]+'"></span>'+r[1]+'</div>';}).join('');
+        return d;
+      };
+      leg.addTo(map);
+    });
+})();
+</script>
+    </main>
   <script src="./opscenter/data-layer.js"></script>
   <script src="./opscenter/app.js"></script>
 </body>
