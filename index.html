@@ -9,6 +9,7 @@
     content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
   />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <main class="shell">
@@ -348,9 +349,86 @@
         </article>
       </div>
     </section>
-  </main>
+  
+  <section class="view" id="view-njmap">
+    <section class="kpi-grid" style="margin-bottom:1rem">
+      <article class="kpi accent"><div class="k">Commercially Insured</div><div class="v">6.71M</div><div class="d">Private coverage holders statewide</div></article>
+      <article class="kpi good"><div class="k">Avg Commercial Rate</div><div class="v">73.0%</div><div class="d">Population-weighted average</div></article>
+      <article class="kpi accent"><div class="k">NJ Population</div><div class="v">9.29M</div><div class="d">Total across 21 counties</div></article>
+    </section>
+    <div class="two-col">
+      <article class="card">
+        <div class="card-head"><h2>Commercial Insurance by County</h2><span class="muted">ACS 2019–2023 5-Year Estimates · % with private health insurance</span></div>
+        <div id="njMap" style="height:520px;border-radius:8px;overflow:hidden;"></div>
+      </article>
+      <article class="card" style="overflow:auto">
+        <div class="card-head"><h2>County Rankings</h2><span class="muted">Ranked by % commercially insured</span></div>
+        <table>
+          <thead><tr><th>#</th><th>County</th><th>% Insured</th><th>Insured Pop.</th><th>Total Pop.</th></tr></thead>
+          <tbody id="njCountyTable"></tbody>
+        </table>
+      </article>
+    </div>
+  </section>
+</main>
 
   <script src="./sheets.js"></script>
   <script src="./app.js"></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  (function(){
+    var NJ=[
+      {name:"Hunterdon",pop:128947,pct:85.6,ins:110379},
+      {name:"Morris",pop:509285,pct:83.5,ins:425253},
+      {name:"Somerset",pop:345361,pct:81.9,ins:282851},
+      {name:"Sussex",pop:144221,pct:80.2,ins:115705},
+      {name:"Bergen",pop:955732,pct:79.4,ins:758851},
+      {name:"Monmouth",pop:643615,pct:79.0,ins:508456},
+      {name:"Burlington",pop:461860,pct:77.2,ins:356556},
+      {name:"Gloucester",pop:302294,pct:76.4,ins:230953},
+      {name:"Warren",pop:108692,pct:75.4,ins:81954},
+      {name:"Cape May",pop:95263,pct:73.5,ins:70018},
+      {name:"Middlesex",pop:863162,pct:72.8,ins:628382},
+      {name:"Union",pop:575345,pct:72.0,ins:414249},
+      {name:"Mercer",pop:379615,pct:71.4,ins:271065},
+      {name:"Ocean",pop:637229,pct:71.2,ins:453707},
+      {name:"Camden",pop:523485,pct:69.2,ins:362251},
+      {name:"Salem",pop:64837,pct:67.5,ins:43765},
+      {name:"Essex",pop:863728,pct:64.8,ins:559496},
+      {name:"Atlantic",pop:274534,pct:63.3,ins:173780},
+      {name:"Passaic",pop:524118,pct:62.4,ins:327050},
+      {name:"Hudson",pop:724854,pct:61.9,ins:448885},
+      {name:"Cumberland",pop:154152,pct:56.8,ins:87558}
+    ];
+    var breaks=[57,62,65,68,72,75,80,86];
+    var colors=['#d0e8f5','#a9cce3','#7fb3d3','#5499c0','#2980b9','#1f6fa3','#1a5c8a','#154472'];
+    function getColor(p){for(var i=breaks.length-1;i>=0;i--){if(p>=breaks[i])return colors[i];}return colors[0];}
+    var tbody=document.getElementById('njCountyTable');
+    if(tbody){tbody.innerHTML=NJ.map(function(c,i){var w=Math.round((c.pct/86)*100);return'<tr><td>'+(i+1)+'</td><td>'+c.name+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:56px;height:8px;border-radius:4px;background:#1e2028"><div style="width:'+w+'%;height:100%;border-radius:4px;background:'+getColor(c.pct)+'"></div></div>'+c.pct+'%</div></td><td>'+c.ins.toLocaleString()+'</td><td>'+c.pop.toLocaleString()+'</td></tr>';}).join('');}
+    document.querySelectorAll('.view-tab').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(btn.dataset.view==='njmap')initMap();
+      });
+    });
+    function initMap(){
+      var el=document.getElementById('njMap');
+      if(!el||el._leaflet_id)return;
+      var map=L.map('njMap',{attributionControl:false}).setView([40.1,-74.5],8);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:13}).addTo(map);
+      fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-jersey-counties.geojson')
+        .then(function(r){return r.json();})
+        .then(function(geo){
+          L.geoJson(geo,{
+            style:function(f){var n=f.properties.name.replace(/ County$/i,'').trim();var c=NJ.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});return{fillColor:c?getColor(c.pct):'#ccc',weight:1,color:'#fff',fillOpacity:0.85};},
+            onEachFeature:function(f,layer){var n=f.properties.name.replace(/ County$/i,'').trim();var c=NJ.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});if(c)layer.bindTooltip('<strong>'+c.name+' County</strong><br>'+c.pct+'% commercially insured<br>'+c.ins.toLocaleString()+' insured · '+c.pop.toLocaleString()+' total',{sticky:true});}
+          }).addTo(map);
+        });
+      var leg=L.control({position:'bottomleft'});
+      leg.onAdd=function(){var d=L.DomUtil.create('div');d.style.cssText='background:rgba(15,17,23,0.92);padding:8px 12px;border-radius:6px;color:#ccc;font-size:11px;line-height:1.7';d.innerHTML='<div style="font-weight:600;margin-bottom:4px">% Commercially Insured</div>'+breaks.slice(0,7).map(function(b,i){return'<div style="display:flex;align-items:center;gap:6px"><div style="width:13px;height:13px;border-radius:2px;background:'+colors[i]+'"></div>'+b+'–'+(breaks[i+1]||86)+'%</div>';}).join('');return d;};
+      leg.addTo(map);
+    }
+  })();
+  </script>
 </body>
 </html>
