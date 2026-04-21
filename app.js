@@ -15,6 +15,7 @@ const views = [
   { id: 'intake', label: 'Intake / Referral Reporting' },
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
+  { id: 'njmap', label: 'NJ Insurance Map' },
 ];
 
 const el = {
