@@ -1,6 +1,8 @@
 const OpsSheets = (() => {
   const WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml';
   const WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
+  const HUBSTAFF_WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pubhtml';
+  const HUBSTAFF_WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub';
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
@@ -12,8 +14,14 @@ const OpsSheets = (() => {
     { id: 'newHiring', label: 'New Hiring', sheetName: 'New Hiring', gid: '1396856298' },
   ];
 
-  function buildCsvUrl(gid) {
-    return `${WORKBOOK_CSV_BASE}?gid=${gid}&single=true&output=csv`;
+  const HUBSTAFF_TAB_CONFIG = [
+    { id: 'weeklyKpi', label: 'Hubstaff Weekly KPI', sheetName: 'Weekly_KPI', gid: '356491693', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
+    { id: 'rawImport', label: 'Hubstaff Raw Import', sheetName: 'Raw_Import', gid: '861294478', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
+    { id: 'exceptions', label: 'Hubstaff Exceptions', sheetName: 'Exceptions', gid: '1400853667', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
+  ];
+
+  function buildCsvUrl(gid, csvBase = WORKBOOK_CSV_BASE) {
+    return `${csvBase}?gid=${gid}&single=true&output=csv`;
   }
 
   function parseCSVRow(line) {
@@ -101,7 +109,7 @@ const OpsSheets = (() => {
   }
 
   async function loadTab(tab) {
-    const csvUrl = buildCsvUrl(tab.gid);
+    const csvUrl = buildCsvUrl(tab.gid, tab.csvBase);
     const meta = {
       id: tab.id,
       label: tab.label,
@@ -220,6 +228,41 @@ const OpsSheets = (() => {
       referralSource: cleanText(row['Referral Source']),
       credentialing: cleanText(row.Credentaling),
       source: 'New Hiring',
+    };
+  }
+
+  function normalizeHubstaffRawRow(row) {
+    return {
+      employeeName: cleanText(row.employee_name),
+      teamName: cleanText(row.team_name),
+      dateLabel: cleanText(row.date),
+      date: parseDate(row.date),
+      trackedHours: Number(row.tracked_hours || 0),
+      activityPercent: Number(row.activity_percent || 0),
+      payRate: Number(row.pay_rate || 0),
+      payrollEstimate: Number(row.payroll_estimate || 0),
+      attendanceStatus: cleanText(row.attendance_status) || 'No flag',
+      sourceUpdatedAt: parseDate(row.source_updated_at),
+      sourceUpdatedAtLabel: cleanText(row.source_updated_at),
+    };
+  }
+
+  function normalizeHubstaffExceptionRow(row) {
+    return {
+      employeeName: cleanText(row['VA Name'] || row.employee_name || row.name),
+      issue: cleanText(row.Issue),
+      actionNeeded: cleanText(row['Action Needed']),
+    };
+  }
+
+  function normalizeHubstaffWeeklyKpiRow(row) {
+    return {
+      employeeName: cleanText(row['VA Name']),
+      totalHours: Number(row['Total Hours'] || 0),
+      avgActivityPercent: Number(row['Avg Activity %'] || 0),
+      corePercent: Number(row['Core %'] || 0),
+      nonCorePercent: Number(row['Non-Core %'] || 0),
+      output: cleanText(row['Output (Calls / Emails / Referrals)']),
     };
   }
 
@@ -343,6 +386,85 @@ const OpsSheets = (() => {
     return issues;
   }
 
+  function buildHubstaffModel(rawTabs) {
+    const rawRows = (rawTabs.rawImport || [])
+      .filter((row) => row.employee_name || row.team_name || row.tracked_hours)
+      .map(normalizeHubstaffRawRow);
+    const weeklyRows = (rawTabs.weeklyKpi || [])
+      .filter((row) => row['VA Name'] || row['Total Hours'] || row['Avg Activity %'])
+      .map(normalizeHubstaffWeeklyKpiRow);
+    const exceptionRows = (rawTabs.exceptions || [])
+      .filter((row) => row['VA Name'] || row.Issue || row['Action Needed'])
+      .map(normalizeHubstaffExceptionRow);
+
+    const employeeCount = uniq(rawRows.map((row) => row.employeeName)).length;
+    const trackedHours = rawRows.reduce((sum, row) => sum + row.trackedHours, 0);
+    const payrollEstimate = rawRows.reduce((sum, row) => sum + row.payrollEstimate, 0);
+    const activityRows = rawRows.filter((row) => Number.isFinite(row.activityPercent));
+    const activityRate = activityRows.length
+      ? activityRows.reduce((sum, row) => sum + row.activityPercent, 0) / activityRows.length
+      : 0;
+    const latestUpdate = rawRows
+      .map((row) => row.sourceUpdatedAt)
+      .filter(Boolean)
+      .sort((a, b) => a - b)
+      .pop() || null;
+    const staleThresholdMs = 36 * 60 * 60 * 1000;
+    const stale = !latestUpdate || (Date.now() - latestUpdate.getTime()) > staleThresholdMs;
+    const lowActivityCount = rawRows.filter((row) => row.activityPercent > 0 && row.activityPercent < 50).length;
+    const noActivityCount = rawRows.filter((row) => row.activityPercent === 0).length;
+    const attendanceIssues = rawRows.filter((row) => row.attendanceStatus && row.attendanceStatus !== 'No flag').length;
+    const topEmployees = Object.values(rawRows.reduce((acc, row) => {
+      const key = row.employeeName || 'Unknown';
+      if (!acc[key]) {
+        acc[key] = {
+          employeeName: key,
+          trackedHours: 0,
+          payrollEstimate: 0,
+          activityTotal: 0,
+          activityCount: 0,
+        };
+      }
+      acc[key].trackedHours += row.trackedHours;
+      acc[key].payrollEstimate += row.payrollEstimate;
+      acc[key].activityTotal += row.activityPercent;
+      acc[key].activityCount += 1;
+      return acc;
+    }, {}))
+      .map((row) => ({
+        employeeName: row.employeeName,
+        trackedHours: row.trackedHours,
+        payrollEstimate: row.payrollEstimate,
+        activityPercent: row.activityCount ? row.activityTotal / row.activityCount : 0,
+      }))
+      .sort((a, b) => b.trackedHours - a.trackedHours)
+      .slice(0, 5);
+
+    return {
+      configured: true,
+      source: 'live',
+      workbookUrl: HUBSTAFF_WORKBOOK_PUBLISHED_URL,
+      loadedAt: latestUpdate,
+      stale,
+      staleReason: stale
+        ? (latestUpdate
+          ? 'Hubstaff snapshot is older than 36 hours.'
+          : 'Hubstaff rows are missing a usable source_updated_at timestamp.')
+        : '',
+      employeeCount,
+      trackedHours,
+      activityRate,
+      payrollEstimate,
+      lowActivityCount,
+      noActivityCount,
+      attendanceIssues,
+      rows: rawRows,
+      weeklyKpis: weeklyRows,
+      exceptions: exceptionRows,
+      topEmployees,
+    };
+  }
+
   function buildModel(rawTabs, sourceMeta) {
     const dataset = {
       candidatePool: rawTabs.candidatePool.map(normalizeCandidatePoolRow),
@@ -371,18 +493,7 @@ const OpsSheets = (() => {
       loadedAt: new Date(),
       workbookUrl: WORKBOOK_PUBLISHED_URL,
       sourceMeta,
-      hubstaff: {
-        configured: false,
-        source: 'not_configured',
-        loadedAt: null,
-        stale: true,
-        staleReason: 'Hubstaff source has not been connected yet.',
-        employeeCount: 0,
-        trackedHours: 0,
-        activityRate: 0,
-        payrollEstimate: 0,
-        rows: [],
-      },
+      hubstaff: buildHubstaffModel(rawTabs.hubstaff || {}),
       dataset,
       issues,
       metrics: {
@@ -417,13 +528,21 @@ const OpsSheets = (() => {
   }
 
   async function loadWorkbookData() {
-    const results = await Promise.all(TAB_CONFIG.map(loadTab));
+    const [primaryResults, hubstaffResults] = await Promise.all([
+      Promise.all(TAB_CONFIG.map(loadTab)),
+      Promise.all(HUBSTAFF_TAB_CONFIG.map(loadTab)),
+    ]);
     const rawTabs = {};
     const sourceMeta = [];
 
-    results.forEach(({ rows, meta }) => {
+    primaryResults.forEach(({ rows, meta }) => {
       rawTabs[meta.id] = rows;
       sourceMeta.push(meta);
+    });
+
+    rawTabs.hubstaff = {};
+    hubstaffResults.forEach(({ rows, meta }) => {
+      rawTabs.hubstaff[meta.id] = rows;
     });
 
     return buildModel(rawTabs, sourceMeta);
