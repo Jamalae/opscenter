@@ -5,6 +5,7 @@ const state = {
   statusFilter: 'all',
   sourceFilter: 'all',
   search: '',
+  selectedCoverageState: 'all',
 };
 
 let model = null;
@@ -58,6 +59,7 @@ const el = {
   stateCoverageStats: document.getElementById('stateCoverageStats'),
   stateAtlas: document.getElementById('stateAtlas'),
   stateCoverageSummary: document.getElementById('stateCoverageSummary'),
+  stateCoverageSelect: document.getElementById('stateCoverageSelect'),
   stateCoverageInsights: document.getElementById('stateCoverageInsights'),
   hubstaffSummary: document.getElementById('hubstaffSummary'),
   hubstaffTimestamp: document.getElementById('hubstaffTimestamp'),
@@ -616,6 +618,18 @@ function renderStaffView() {
       totalCoverage: item.workforceRows + item.finalHireRows + item.hiringRows,
     }))
     .sort((a, b) => b.totalCoverage - a.totalCoverage || a.stateCode.localeCompare(b.stateCode));
+  const coverageLookup = Object.fromEntries(coveredStates.map((item) => [item.stateCode, item]));
+
+  if (!coveredStates.length) {
+    state.selectedCoverageState = 'all';
+  } else if (
+    state.selectedCoverageState === 'all'
+    || !coverageLookup[state.selectedCoverageState]
+  ) {
+    state.selectedCoverageState = coveredStates[0].stateCode;
+  }
+
+  const selectedCoverage = coverageLookup[state.selectedCoverageState] || null;
 
   el.staffSummary.textContent = `${workforce.length} workforce rows · ${hires.length} final hires · ${futureLicenses} future-license notes`;
   el.staffKpis.innerHTML = [
@@ -674,9 +688,20 @@ function renderStaffView() {
     <strong>State insurance maps are temporarily removed.</strong>
     This section now shows verified company coverage only while the county-level multi-state insurance module is rebuilt on top of real datasets.
   `;
-  el.stateCoverageSummary.textContent = coveredStates.length
-    ? `${coveredStates.length} states covered across workforce, final hires, and hiring pipeline`
+  el.stateCoverageSummary.textContent = selectedCoverage
+    ? `${selectedCoverage.stateCode} selected from ${coveredStates.length} covered states`
     : 'No state coverage could be derived from the current company data';
+  el.stateCoverageSelect.innerHTML = coveredStates.length
+    ? coveredStates.map((item) => `
+      <option value="${escapeHtml(item.stateCode)}" ${item.stateCode === state.selectedCoverageState ? 'selected' : ''}>
+        ${escapeHtml(item.stateCode)} · ${item.totalCoverage} rows
+      </option>
+    `).join('')
+    : '<option value="all">No states available</option>';
+  el.stateCoverageSelect.onchange = (event) => {
+    state.selectedCoverageState = event.target.value;
+    renderStaffView();
+  };
 
   el.stateCoverageStats.innerHTML = coveredStates.length
     ? [
@@ -694,7 +719,7 @@ function renderStaffView() {
 
   el.stateAtlas.innerHTML = coveredStates.length
     ? coveredStates.map((item) => `
-      <div class="state-chip-card">
+      <button type="button" class="state-chip-card ${item.stateCode === state.selectedCoverageState ? 'active' : ''}" data-state-code="${escapeHtml(item.stateCode)}">
         <div class="state-chip-top">
           <div class="state-chip-code">${escapeHtml(item.stateCode)}</div>
           <span class="badge status-approved">${item.totalCoverage}</span>
@@ -704,32 +729,70 @@ function renderStaffView() {
           <div class="table-note">${item.workforceRows} workforce · ${item.finalHireRows} final · ${item.hiringRows} hiring</div>
           <div class="table-note">${item.specialtyCount} specialties · ${item.contractCount} contract types</div>
         </div>
-      </div>
+      </button>
     `).join('')
     : '<div class="empty-state">No covered states are available yet.</div>';
+  el.stateAtlas.querySelectorAll('.state-chip-card').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.selectedCoverageState = button.getAttribute('data-state-code');
+      renderStaffView();
+    });
+  });
 
-  el.stateCoverageInsights.innerHTML = coveredStates.length
+  const selectedWorkforceRows = selectedCoverage
+    ? model.dataset.currentWorkforce.filter((item) =>
+      OpsSheets.utils.splitStates(item.licensedState || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedFinalRows = selectedCoverage
+    ? model.dataset.finalHires.filter((item) =>
+      OpsSheets.utils.splitStates(item.states || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedHiringRows = selectedCoverage
+    ? model.dataset.newHiring.filter((item) =>
+      OpsSheets.utils.splitStates(item.state || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedSpecialties = summarizeCounts([
+    ...selectedWorkforceRows.map((item) => item.specialty || 'Unknown'),
+    ...selectedFinalRows.map((item) => item.title || 'Unknown'),
+    ...selectedHiringRows.map((item) => item.specialty || 'Unknown'),
+  ]);
+  const selectedContracts = summarizeCounts(selectedWorkforceRows.map((item) => item.contractType || 'Unknown'));
+  const selectedProviders = uniq([
+    ...selectedWorkforceRows.map((item) => item.providerName).filter(Boolean),
+    ...selectedFinalRows.map((item) => item.name).filter(Boolean),
+    ...selectedHiringRows.map((item) => item.name).filter(Boolean),
+  ]);
+
+  el.stateCoverageInsights.innerHTML = selectedCoverage
     ? [
       {
-        title: 'Top Coverage States',
-        rows: coveredStates.slice(0, 8).map((item) => ({ label: item.stateCode, value: item.totalCoverage })),
-        suffix: 'coverage rows',
+        title: `${selectedCoverage.stateCode} Coverage Mix`,
+        rows: [
+          { label: 'Total coverage rows', value: selectedCoverage.totalCoverage },
+          { label: 'Providers', value: selectedCoverage.providerCount },
+          { label: 'Workforce rows', value: selectedCoverage.workforceRows },
+          { label: 'Final hire rows', value: selectedCoverage.finalHireRows },
+          { label: 'Hiring rows', value: selectedCoverage.hiringRows },
+        ],
+        suffix: '',
       },
       {
-        title: 'Licensed Workforce States',
-        rows: coveredStates
-          .filter((item) => item.workforceRows > 0)
-          .slice(0, 8)
-          .map((item) => ({ label: item.stateCode, value: item.workforceRows })),
-        suffix: 'workforce rows',
+        title: `${selectedCoverage.stateCode} Top Specialties`,
+        rows: selectedSpecialties.slice(0, 8),
+        suffix: 'rows',
       },
       {
-        title: 'Hiring Expansion States',
-        rows: coveredStates
-          .filter((item) => item.hiringRows > 0)
-          .slice(0, 8)
-          .map((item) => ({ label: item.stateCode, value: item.hiringRows })),
-        suffix: 'hiring rows',
+        title: `${selectedCoverage.stateCode} Contract Mix`,
+        rows: selectedContracts.slice(0, 8),
+        suffix: 'providers',
+      },
+      {
+        title: `${selectedCoverage.stateCode} Named Coverage`,
+        rows: selectedProviders.slice(0, 8).map((label) => ({ label, value: '' })),
+        suffix: '',
       },
     ].map((block) => `
       <div class="note-card">

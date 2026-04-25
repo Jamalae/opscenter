@@ -488,10 +488,20 @@ th {
 }
 
 .state-chip-card {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
   padding: 12px;
   border-radius: 14px;
   background: #101b3d;
   border: 1px solid rgba(112, 141, 230, 0.16);
+}
+
+.state-chip-card.active {
+  border-color: rgba(125, 181, 255, 0.65);
+  box-shadow: 0 0 0 1px rgba(125, 181, 255, 0.2) inset;
+  background: #14265a;
 }
 
 .state-chip-top {
@@ -526,6 +536,22 @@ th {
   border-radius: 12px;
   background: #101b3d;
   border: 1px solid rgba(112, 141, 230, 0.16);
+}
+
+.card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.compact-select {
+  min-width: 180px;
+  background: #101b3d;
+  color: var(--text);
+  border: 1px solid rgba(112, 141, 230, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 
 .empty-state {
