@@ -554,6 +554,32 @@ th {
   padding: 8px 12px;
 }
 
+.insurance-map {
+  min-height: 520px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0e1837;
+  border: 1px solid rgba(112, 141, 230, 0.16);
+}
+
+.insurance-map a,
+.note-card a,
+td a {
+  color: #9ec4ff;
+  word-break: break-word;
+}
+
+.leaflet-tooltip {
+  background: rgba(8, 12, 24, 0.94);
+  color: #e8eefc;
+  border: 1px solid rgba(125, 181, 255, 0.24);
+  box-shadow: none;
+}
+
+.leaflet-tooltip:before {
+  border-top-color: rgba(8, 12, 24, 0.94);
+}
+
 .empty-state {
   padding: 1.25rem;
   text-align: center;

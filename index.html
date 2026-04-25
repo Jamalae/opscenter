@@ -8,6 +8,12 @@
     name="description"
     content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
   />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -382,9 +388,89 @@
         </article>
       </div>
     </section>
+
+    <section class="view" id="view-insurance">
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>State Insurance Maps</h2>
+            <div class="card-head-actions">
+              <span class="muted" id="insuranceSelectionSummary">Loading verified county insurance data…</span>
+              <select id="insuranceStateSelect" class="compact-select"></select>
+            </div>
+          </div>
+          <div id="insuranceStatus" class="stack"></div>
+          <section class="mini-kpi-grid" id="insuranceKpis"></section>
+          <div id="insuranceSourceMeta" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 id="insuranceMapTitle">County Enrollment Map</h2>
+            <span class="muted" id="insuranceMapSub">Verified rows from external data files only</span>
+          </div>
+          <div id="insuranceCountyMap" class="insurance-map"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>County Enrollment</h2>
+            <span class="muted">Aggregated from verified plan rows for the selected state</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>County</th>
+                <th>Total Enrollment</th>
+                <th>Plans</th>
+                <th>Parent Orgs</th>
+                <th>Source Year</th>
+              </tr>
+            </thead>
+            <tbody id="insuranceCountyTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Official Source Catalog</h2>
+            <span class="muted">Preferred CMS and Medicaid managed care sources</span>
+          </div>
+          <div id="insuranceSourceCatalog" class="stack"></div>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Verified Plan Rows</h2>
+          <span class="muted">Sample rows only; add more states by updating data files, not code</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>County</th>
+              <th>Program Type</th>
+              <th>Plan</th>
+              <th>Parent Org</th>
+              <th>Total Enrollment</th>
+              <th>Source / Year</th>
+            </tr>
+          </thead>
+          <tbody id="insurancePlanTable"></tbody>
+        </table>
+      </article>
+    </section>
   </main>
 
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="./sheets.js"></script>
+  <script src="./insurance.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
