@@ -54,6 +54,7 @@ const el = {
   workforceTable: document.getElementById('workforceTable'),
   hireTable: document.getElementById('hireTable'),
   coveredStatesCount: document.getElementById('coveredStatesCount'),
+  stateCoverageNotice: document.getElementById('stateCoverageNotice'),
   stateCoverageStats: document.getElementById('stateCoverageStats'),
   stateAtlas: document.getElementById('stateAtlas'),
   stateCoverageSummary: document.getElementById('stateCoverageSummary'),
@@ -669,6 +670,10 @@ function renderStaffView() {
     : '<tr><td colspan="6" class="empty-state">No final-hire rows match the current filters.</td></tr>';
 
   el.coveredStatesCount.textContent = coveredStates.length;
+  el.stateCoverageNotice.innerHTML = `
+    <strong>State insurance maps are temporarily removed.</strong>
+    This section now shows verified company coverage only while the county-level multi-state insurance module is rebuilt on top of real datasets.
+  `;
   el.stateCoverageSummary.textContent = coveredStates.length
     ? `${coveredStates.length} states covered across workforce, final hires, and hiring pipeline`
     : 'No state coverage could be derived from the current company data';
