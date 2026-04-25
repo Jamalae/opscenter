@@ -5,9 +5,14 @@ const state = {
   statusFilter: 'all',
   sourceFilter: 'all',
   search: '',
+  selectedCoverageState: 'all',
+  insuranceState: 'all',
 };
 
 let model = null;
+let insuranceMap = null;
+let insuranceMapLayer = null;
+let insuranceGeoJson = null;
 
 const views = [
   { id: 'executive', label: 'Executive Dashboard' },
@@ -15,7 +20,7 @@ const views = [
   { id: 'intake', label: 'Intake / Referral Reporting' },
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
-  { id: 'njmap', label: 'State Insurance Maps' },
+  { id: 'insurance', label: 'State Insurance Maps' },
 ];
 
 const el = {
@@ -54,6 +59,13 @@ const el = {
   coveragePanel: document.getElementById('coveragePanel'),
   workforceTable: document.getElementById('workforceTable'),
   hireTable: document.getElementById('hireTable'),
+  coveredStatesCount: document.getElementById('coveredStatesCount'),
+  stateCoverageNotice: document.getElementById('stateCoverageNotice'),
+  stateCoverageStats: document.getElementById('stateCoverageStats'),
+  stateAtlas: document.getElementById('stateAtlas'),
+  stateCoverageSummary: document.getElementById('stateCoverageSummary'),
+  stateCoverageSelect: document.getElementById('stateCoverageSelect'),
+  stateCoverageInsights: document.getElementById('stateCoverageInsights'),
   hubstaffSummary: document.getElementById('hubstaffSummary'),
   hubstaffTimestamp: document.getElementById('hubstaffTimestamp'),
   hubstaffKpis: document.getElementById('hubstaffKpis'),
@@ -61,6 +73,17 @@ const el = {
   hubstaffReadiness: document.getElementById('hubstaffReadiness'),
   hubstaffMetricsTable: document.getElementById('hubstaffMetricsTable'),
   hubstaffNotes: document.getElementById('hubstaffNotes'),
+  insuranceStateSelect: document.getElementById('insuranceStateSelect'),
+  insuranceSelectionSummary: document.getElementById('insuranceSelectionSummary'),
+  insuranceStatus: document.getElementById('insuranceStatus'),
+  insuranceKpis: document.getElementById('insuranceKpis'),
+  insuranceSourceMeta: document.getElementById('insuranceSourceMeta'),
+  insuranceMapTitle: document.getElementById('insuranceMapTitle'),
+  insuranceMapSub: document.getElementById('insuranceMapSub'),
+  insuranceCountyMap: document.getElementById('insuranceCountyMap'),
+  insuranceCountyTable: document.getElementById('insuranceCountyTable'),
+  insuranceSourceCatalog: document.getElementById('insuranceSourceCatalog'),
+  insurancePlanTable: document.getElementById('insurancePlanTable'),
 };
 
 function uniq(values) {
@@ -94,6 +117,13 @@ function money(value) {
 
 function percent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
+}
+
+function wholeNumber(value) {
+  if (!Number.isFinite(value)) return 'N/A';
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 function formatDate(date) {
@@ -223,7 +253,7 @@ function renderViewNav() {
       state.view = button.getAttribute('data-view');
       document.querySelectorAll('.view').forEach((section) => section.classList.remove('active'));
       document.getElementById(`view-${state.view}`).classList.add('active');
-      renderViewNav();
+      render();
     });
   });
 }
@@ -538,6 +568,91 @@ function renderStaffView() {
   const specialties = summarizeCounts(workforce.map((item) => item.specialty || 'Unknown'));
   const states = summarizeCounts(workforce.map((item) => item.licensedState || 'Unknown'));
   const futureLicenses = workforce.filter((item) => item.futureLicense).length;
+  const companyStateCoverage = {};
+
+  model.dataset.currentWorkforce.forEach((item) => {
+    const statesForRow = OpsSheets.utils.splitStates(item.licensedState || '');
+    statesForRow.forEach((stateCode) => {
+      if (!companyStateCoverage[stateCode]) {
+        companyStateCoverage[stateCode] = {
+          stateCode,
+          workforceRows: 0,
+          finalHireRows: 0,
+          hiringRows: 0,
+          providers: new Set(),
+          specialties: new Set(),
+          contractTypes: new Set(),
+        };
+      }
+      companyStateCoverage[stateCode].workforceRows += 1;
+      if (item.providerName) companyStateCoverage[stateCode].providers.add(item.providerName);
+      if (item.specialty) companyStateCoverage[stateCode].specialties.add(item.specialty);
+      if (item.contractType) companyStateCoverage[stateCode].contractTypes.add(item.contractType);
+    });
+  });
+
+  model.dataset.finalHires.forEach((item) => {
+    OpsSheets.utils.splitStates(item.states || '').forEach((stateCode) => {
+      if (!companyStateCoverage[stateCode]) {
+        companyStateCoverage[stateCode] = {
+          stateCode,
+          workforceRows: 0,
+          finalHireRows: 0,
+          hiringRows: 0,
+          providers: new Set(),
+          specialties: new Set(),
+          contractTypes: new Set(),
+        };
+      }
+      companyStateCoverage[stateCode].finalHireRows += 1;
+      if (item.name) companyStateCoverage[stateCode].providers.add(item.name);
+      if (item.title) companyStateCoverage[stateCode].specialties.add(item.title);
+    });
+  });
+
+  model.dataset.newHiring.forEach((item) => {
+    OpsSheets.utils.splitStates(item.state || '').forEach((stateCode) => {
+      if (!companyStateCoverage[stateCode]) {
+        companyStateCoverage[stateCode] = {
+          stateCode,
+          workforceRows: 0,
+          finalHireRows: 0,
+          hiringRows: 0,
+          providers: new Set(),
+          specialties: new Set(),
+          contractTypes: new Set(),
+        };
+      }
+      companyStateCoverage[stateCode].hiringRows += 1;
+      if (item.name) companyStateCoverage[stateCode].providers.add(item.name);
+      if (item.specialty) companyStateCoverage[stateCode].specialties.add(item.specialty);
+    });
+  });
+
+  const coveredStates = Object.values(companyStateCoverage)
+    .map((item) => ({
+      stateCode: item.stateCode,
+      workforceRows: item.workforceRows,
+      finalHireRows: item.finalHireRows,
+      hiringRows: item.hiringRows,
+      providerCount: item.providers.size,
+      specialtyCount: item.specialties.size,
+      contractCount: item.contractTypes.size,
+      totalCoverage: item.workforceRows + item.finalHireRows + item.hiringRows,
+    }))
+    .sort((a, b) => b.totalCoverage - a.totalCoverage || a.stateCode.localeCompare(b.stateCode));
+  const coverageLookup = Object.fromEntries(coveredStates.map((item) => [item.stateCode, item]));
+
+  if (!coveredStates.length) {
+    state.selectedCoverageState = 'all';
+  } else if (
+    state.selectedCoverageState === 'all'
+    || !coverageLookup[state.selectedCoverageState]
+  ) {
+    state.selectedCoverageState = coveredStates[0].stateCode;
+  }
+
+  const selectedCoverage = coverageLookup[state.selectedCoverageState] || null;
 
   el.staffSummary.textContent = `${workforce.length} workforce rows · ${hires.length} final hires · ${futureLicenses} future-license notes`;
   el.staffKpis.innerHTML = [
@@ -590,6 +705,125 @@ function renderStaffView() {
       </tr>
     `).join('')
     : '<tr><td colspan="6" class="empty-state">No final-hire rows match the current filters.</td></tr>';
+
+  el.coveredStatesCount.textContent = coveredStates.length;
+  el.stateCoverageNotice.innerHTML = `
+    <strong>State insurance maps are temporarily removed.</strong>
+    This section now shows verified company coverage only while the county-level multi-state insurance module is rebuilt on top of real datasets.
+  `;
+  el.stateCoverageSummary.textContent = selectedCoverage
+    ? `${selectedCoverage.stateCode} selected from ${coveredStates.length} covered states`
+    : 'No state coverage could be derived from the current company data';
+  el.stateCoverageSelect.innerHTML = coveredStates.length
+    ? coveredStates.map((item) => `
+      <option value="${escapeHtml(item.stateCode)}" ${item.stateCode === state.selectedCoverageState ? 'selected' : ''}>
+        ${escapeHtml(item.stateCode)} · ${item.totalCoverage} rows
+      </option>
+    `).join('')
+    : '<option value="all">No states available</option>';
+  el.stateCoverageSelect.onchange = (event) => {
+    state.selectedCoverageState = event.target.value;
+    renderStaffView();
+  };
+
+  el.stateCoverageStats.innerHTML = coveredStates.length
+    ? [
+      { label: 'Covered States', value: coveredStates.length },
+      { label: 'Workforce-Licensed States', value: coveredStates.filter((item) => item.workforceRows > 0).length },
+      { label: 'Final Hire States', value: coveredStates.filter((item) => item.finalHireRows > 0).length },
+      { label: 'Hiring Pipeline States', value: coveredStates.filter((item) => item.hiringRows > 0).length },
+    ].map((item) => `
+      <div class="metric-row">
+        <span>${escapeHtml(item.label)}</span>
+        <strong>${escapeHtml(item.value)}</strong>
+      </div>
+    `).join('')
+    : '<div class="empty-state">State coverage rows will appear here when the source data includes them.</div>';
+
+  el.stateAtlas.innerHTML = coveredStates.length
+    ? coveredStates.map((item) => `
+      <button type="button" class="state-chip-card ${item.stateCode === state.selectedCoverageState ? 'active' : ''}" data-state-code="${escapeHtml(item.stateCode)}">
+        <div class="state-chip-top">
+          <div class="state-chip-code">${escapeHtml(item.stateCode)}</div>
+          <span class="badge status-approved">${item.totalCoverage}</span>
+        </div>
+        <div class="state-chip-meta">
+          <div class="table-note">${item.providerCount} providers</div>
+          <div class="table-note">${item.workforceRows} workforce · ${item.finalHireRows} final · ${item.hiringRows} hiring</div>
+          <div class="table-note">${item.specialtyCount} specialties · ${item.contractCount} contract types</div>
+        </div>
+      </button>
+    `).join('')
+    : '<div class="empty-state">No covered states are available yet.</div>';
+  el.stateAtlas.querySelectorAll('.state-chip-card').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.selectedCoverageState = button.getAttribute('data-state-code');
+      renderStaffView();
+    });
+  });
+
+  const selectedWorkforceRows = selectedCoverage
+    ? model.dataset.currentWorkforce.filter((item) =>
+      OpsSheets.utils.splitStates(item.licensedState || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedFinalRows = selectedCoverage
+    ? model.dataset.finalHires.filter((item) =>
+      OpsSheets.utils.splitStates(item.states || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedHiringRows = selectedCoverage
+    ? model.dataset.newHiring.filter((item) =>
+      OpsSheets.utils.splitStates(item.state || '').includes(selectedCoverage.stateCode)
+    )
+    : [];
+  const selectedSpecialties = summarizeCounts([
+    ...selectedWorkforceRows.map((item) => item.specialty || 'Unknown'),
+    ...selectedFinalRows.map((item) => item.title || 'Unknown'),
+    ...selectedHiringRows.map((item) => item.specialty || 'Unknown'),
+  ]);
+  const selectedContracts = summarizeCounts(selectedWorkforceRows.map((item) => item.contractType || 'Unknown'));
+  const selectedProviders = uniq([
+    ...selectedWorkforceRows.map((item) => item.providerName).filter(Boolean),
+    ...selectedFinalRows.map((item) => item.name).filter(Boolean),
+    ...selectedHiringRows.map((item) => item.name).filter(Boolean),
+  ]);
+
+  el.stateCoverageInsights.innerHTML = selectedCoverage
+    ? [
+      {
+        title: `${selectedCoverage.stateCode} Coverage Mix`,
+        rows: [
+          { label: 'Total coverage rows', value: selectedCoverage.totalCoverage },
+          { label: 'Providers', value: selectedCoverage.providerCount },
+          { label: 'Workforce rows', value: selectedCoverage.workforceRows },
+          { label: 'Final hire rows', value: selectedCoverage.finalHireRows },
+          { label: 'Hiring rows', value: selectedCoverage.hiringRows },
+        ],
+        suffix: '',
+      },
+      {
+        title: `${selectedCoverage.stateCode} Top Specialties`,
+        rows: selectedSpecialties.slice(0, 8),
+        suffix: 'rows',
+      },
+      {
+        title: `${selectedCoverage.stateCode} Contract Mix`,
+        rows: selectedContracts.slice(0, 8),
+        suffix: 'providers',
+      },
+      {
+        title: `${selectedCoverage.stateCode} Named Coverage`,
+        rows: selectedProviders.slice(0, 8).map((label) => ({ label, value: '' })),
+        suffix: '',
+      },
+    ].map((block) => `
+      <div class="note-card">
+        <strong>${escapeHtml(block.title)}</strong>
+        <div class="metric-list">${renderMetricList(block.rows, block.suffix)}</div>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No company-wide state coverage detail is available yet.</div>';
 }
 
 function renderHubstaffView() {
@@ -612,6 +846,9 @@ function renderHubstaffView() {
   const trackedHours = model?.hubstaff?.trackedHours || 0;
   const activityRate = model?.hubstaff?.activityRate || 0;
   const payrollEstimate = model?.hubstaff?.payrollEstimate || 0;
+  const topEmployees = hubstaff.topEmployees || [];
+  const exceptions = hubstaff.exceptions || [];
+  const weeklyKpis = hubstaff.weeklyKpis || [];
 
   el.hubstaffSummary.textContent = isLoading
     ? 'Loading Hubstaff source…'
@@ -638,26 +875,37 @@ function renderHubstaffView() {
       : sourceConfigured
         ? isEmpty
           ? 'Empty state: the Hubstaff source is connected, but it returned no rows for the current snapshot.'
-          : 'Hubstaff data is connected and available to the dashboard.'
+          : `Hubstaff data is connected from Google Sheets with ${hubstaff.rows.length} imported rows.`
         : 'Empty state: no Hubstaff source is connected yet. The tab is in place so we can add it without changing the site structure again.',
     hubstaff.stale
       ? `Stale-data flag: ${hubstaff.staleReason || 'the last available Hubstaff data may be out of date.'}`
       : 'Stale-data flag: current snapshot is considered fresh.',
-    'The safest GitHub Pages pattern is to load Hubstaff data from a published CSV/Sheet snapshot or a lightweight serverless proxy, not from a private token directly in browser code.',
+    sourceConfigured
+      ? `Low activity rows: ${hubstaff.lowActivityCount || 0} · Zero-activity rows: ${hubstaff.noActivityCount || 0} · Attendance issues: ${hubstaff.attendanceIssues || 0}`
+      : 'The safest GitHub Pages pattern is to load Hubstaff data from a published CSV/Sheet snapshot or a lightweight serverless proxy, not from a private token directly in browser code.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
-  el.hubstaffReadiness.innerHTML = [
-    'Needed: which Hubstaff dataset you want exposed first: hours, activity, payroll, schedules, or attendance exceptions.',
-    'Needed: a GitHub Pages-safe source. Best options are a published Google Sheet export, a CSV snapshot, or a small API proxy.',
-    'Needed: column mapping for employee name, team, hours, activity, pay rate, and date range.',
-  ].map((line) => `<div class="note-card">${line}</div>`).join('');
+  el.hubstaffReadiness.innerHTML = sourceConfigured
+    ? topEmployees.length
+      ? topEmployees.map((row) => `
+        <div class="metric-row">
+          <span>${escapeHtml(row.employeeName)}</span>
+          <strong>${row.trackedHours.toFixed(1)} hrs · ${percent(row.activityPercent)}</strong>
+        </div>
+      `).join('')
+      : '<div class="empty-state">No employee-level Hubstaff rollups are available yet.</div>'
+    : [
+      'Needed: which Hubstaff dataset you want exposed first: hours, activity, payroll, schedules, or attendance exceptions.',
+      'Needed: a GitHub Pages-safe source. Best options are a published Google Sheet export, a CSV snapshot, or a small API proxy.',
+      'Needed: column mapping for employee name, team, hours, activity, pay rate, and date range.',
+    ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   el.hubstaffMetricsTable.innerHTML = [
-    ['Hours by employee', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Daily or weekly tracked time by person'],
-    ['Activity score', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Average activity and low-activity flags'],
-    ['Attendance exceptions', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Missed shifts, no time, or under-target hours'],
-    ['Payroll rollup', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Estimated payroll totals by employee or team'],
-    ['Team utilization', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', 'Capacity view against expected staffing levels'],
+    ['Hours by employee', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${topEmployees.length} top employees ranked by tracked hours` : 'Daily or weekly tracked time by person'],
+    ['Activity score', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${hubstaff.lowActivityCount || 0} low-activity rows under 50% activity` : 'Average activity and low-activity flags'],
+    ['Attendance exceptions', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${exceptions.length} exception rows in the published Exceptions tab` : 'Missed shifts, no time, or under-target hours'],
+    ['Payroll rollup', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? money(payrollEstimate) : 'Estimated payroll totals by employee or team'],
+    ['Team utilization', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${weeklyKpis.length} weekly KPI summary rows available` : 'Capacity view against expected staffing levels'],
   ].map((row) => `
     <tr>
       <td>${escapeHtml(row[0])}</td>
@@ -667,10 +915,226 @@ function renderHubstaffView() {
   `).join('');
 
   el.hubstaffNotes.innerHTML = [
-    'If you already export Hubstaff into Google Sheets, I can add that sheet as another source in `sheets.js` and make this tab live with the same static-site architecture.',
-    'If you want direct Hubstaff API data, we should not embed private API credentials in this front-end. That would require a secure backend or serverless function.',
-    'If you want a fast first pass, send the Hubstaff export link or sample CSV headers and I can wire the tab to real metrics next.',
+    sourceConfigured
+      ? `Live source: ${hubstaff.workbookUrl || 'Published Google Sheet'}`
+      : 'If you already export Hubstaff into Google Sheets, I can add that sheet as another source in `sheets.js` and make this tab live with the same static-site architecture.',
+    sourceConfigured
+      ? `Rows imported from Raw_Import: ${hubstaff.rows.length}. Weekly KPI rows: ${weeklyKpis.length}. Exception rows: ${exceptions.length}.`
+      : 'If you want direct Hubstaff API data, we should not embed private API credentials in this front-end. That would require a secure backend or serverless function.',
+    sourceConfigured
+      ? 'If names still look like Hubstaff IDs instead of real people, update the n8n transform to write readable employee and team names into the Google Sheet.'
+      : 'If you want a fast first pass, send the Hubstaff export link or sample CSV headers and I can wire the tab to real metrics next.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
+}
+
+function buildInsuranceBreaks(values) {
+  const sorted = values.filter((value) => value > 0).sort((a, b) => a - b);
+  if (!sorted.length) return [0];
+  const percentiles = [0.25, 0.5, 0.75, 1];
+  return Array.from(new Set(percentiles.map((point) => {
+    const index = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * point));
+    return sorted[index];
+  })));
+}
+
+function insuranceColor(value, breaks) {
+  if (!value) return '#16213d';
+  const palette = ['#213a6b', '#295598', '#3f73bb', '#5b8fd0', '#7fafe8'];
+  let colorIndex = 0;
+  while (colorIndex < breaks.length && value > breaks[colorIndex]) {
+    colorIndex += 1;
+  }
+  return palette[Math.min(colorIndex, palette.length - 1)];
+}
+
+async function renderInsuranceMap(selectedState) {
+  if (state.view !== 'insurance') return;
+  if (!selectedState || !el.insuranceCountyMap) return;
+  if (typeof L === 'undefined') {
+    el.insuranceCountyMap.innerHTML = '<div class="empty-state">Leaflet did not load, so the county map could not be rendered.</div>';
+    return;
+  }
+
+  if (!insuranceGeoJson) {
+    const response = await fetch(model.insurance.geojsonPath, { cache: 'force-cache' });
+    if (!response.ok) {
+      throw new Error(`County GeoJSON could not be loaded: ${response.status}`);
+    }
+    insuranceGeoJson = await response.json();
+  }
+
+  const countyLookup = Object.fromEntries(
+    selectedState.locations
+      .filter((location) => location.county_fips)
+      .map((location) => [location.county_fips, location])
+  );
+  const stateFips = selectedState.rows.find((row) => row.county_fips)?.county_fips?.slice(0, 2) || '';
+  const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === stateFips);
+  const breaks = buildInsuranceBreaks(selectedState.locations.map((location) => location.total_enrollment));
+
+  if (!insuranceMap) {
+    insuranceMap = L.map(el.insuranceCountyMap, {
+      attributionControl: false,
+      zoomControl: true,
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 12,
+    }).addTo(insuranceMap);
+  }
+
+  if (insuranceMapLayer) {
+    insuranceMapLayer.remove();
+    insuranceMapLayer = null;
+  }
+
+  insuranceMapLayer = L.geoJSON({
+    type: 'FeatureCollection',
+    features: stateFeatures,
+  }, {
+    style(feature) {
+      const county = countyLookup[feature.id];
+      return {
+        color: '#d6e2ff',
+        weight: 1,
+        fillOpacity: county ? 0.82 : 0.15,
+        fillColor: county ? insuranceColor(county.total_enrollment, breaks) : '#16213d',
+      };
+    },
+    onEachFeature(feature, layer) {
+      const location = countyLookup[feature.id];
+      const countyName = feature.properties.NAME;
+      const plans = location && location.plan_names.length
+        ? location.plan_names.slice(0, 3).join(', ')
+        : 'No plan names available';
+      const orgs = location && location.parent_orgs.length
+        ? location.parent_orgs.slice(0, 2).join(', ')
+        : 'No parent org available';
+      const detail = location
+        ? `${wholeNumber(location.total_enrollment)} total enrollment across ${location.row_count} rows`
+        : 'No verified insurance rows loaded yet';
+      layer.bindTooltip(
+        `<strong>${escapeHtml(countyName)}</strong><br>${escapeHtml(detail)}<br>Plans: ${escapeHtml(plans)}<br>Parents: ${escapeHtml(orgs)}`
+      );
+    },
+  }).addTo(insuranceMap);
+
+  const bounds = insuranceMapLayer.getBounds();
+  if (bounds.isValid()) {
+    insuranceMap.fitBounds(bounds, { padding: [16, 16] });
+  }
+  setTimeout(() => insuranceMap.invalidateSize(), 0);
+}
+
+function renderInsuranceView() {
+  const insurance = model.insurance || {
+    states: [],
+    rows: [],
+    error: 'Insurance data is not loaded yet.',
+  };
+
+  if (!insurance.states.length) {
+    el.insuranceSelectionSummary.textContent = 'No verified insurance rows are loaded yet.';
+    el.insuranceStateSelect.innerHTML = '<option value="all">No states available</option>';
+    el.insuranceStatus.innerHTML = `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`;
+    el.insuranceKpis.innerHTML = '';
+    el.insuranceSourceMeta.innerHTML = '';
+    el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">No county insurance rows are available.</td></tr>';
+    el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">No verified plan rows are available.</td></tr>';
+    el.insuranceSourceCatalog.innerHTML = '';
+    return;
+  }
+
+  const insuranceLookup = Object.fromEntries(insurance.states.map((entry) => [entry.state, entry]));
+  if (state.insuranceState === 'all' || !insuranceLookup[state.insuranceState]) {
+    state.insuranceState = insurance.states[0].state;
+  }
+  const selectedState = insuranceLookup[state.insuranceState];
+
+  el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
+    <option value="${escapeHtml(entry.state)}" ${entry.state === state.insuranceState ? 'selected' : ''}>
+      ${escapeHtml(entry.label)}
+    </option>
+  `).join('');
+  el.insuranceStateSelect.onchange = (event) => {
+    state.insuranceState = event.target.value;
+    renderInsuranceView();
+  };
+
+  el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
+  el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
+  el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ') || 'N/A'} · rows are loaded from external CSV files`;
+
+  el.insuranceStatus.innerHTML = [
+    'No hardcoded state buttons are used here. The dropdown is populated from `data/state_insurance_sample.csv`.',
+    'The system supports either county or geographic_region and continues rendering when some fields are blank.',
+    selectedState.notes[0] || 'No source note available for this state.',
+  ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
+
+  el.insuranceKpis.innerHTML = [
+    { label: 'Geographies', value: selectedState.locations.length },
+    { label: 'Total Enrollment', value: wholeNumber(selectedState.total_enrollment) },
+    { label: 'Plans', value: selectedState.plan_count },
+    { label: 'Parent Orgs', value: selectedState.parent_org_count },
+  ].map((card) => `
+    <div class="mini-kpi">
+      <div class="k">${escapeHtml(card.label)}</div>
+      <div class="v">${escapeHtml(card.value)}</div>
+    </div>
+  `).join('');
+
+  el.insuranceSourceMeta.innerHTML = [
+    `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
+    ...selectedState.source_urls.map((url) => `
+      <div class="note-card">
+        <strong>Verified source</strong>
+        <div><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></div>
+      </div>
+    `),
+  ].join('');
+
+  el.insuranceCountyTable.innerHTML = selectedState.locations.map((location) => `
+    <tr>
+      <td>${escapeHtml(location.location_label)}</td>
+      <td>${wholeNumber(location.total_enrollment)}</td>
+      <td>${wholeNumber(location.row_count)}</td>
+      <td>${wholeNumber(location.parent_orgs.length)}</td>
+      <td>${escapeHtml(location.source_years.join(', ') || 'N/A')}</td>
+    </tr>
+  `).join('');
+
+  el.insurancePlanTable.innerHTML = selectedState.rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.county)}</td>
+      <td>${escapeHtml(row.program_type)}</td>
+      <td>${escapeHtml(row.plan_name)}</td>
+      <td>${escapeHtml(row.parent_org)}</td>
+      <td>${wholeNumber(row.total_enrollment)}</td>
+      <td>${row.source_url ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noreferrer">${escapeHtml(row.source_year || 'Source')}</a>` : escapeHtml(row.source_year || 'N/A')}</td>
+    </tr>
+  `).join('');
+
+  const sourceCards = Array.from(new Set(selectedState.rows
+    .filter((row) => row.source_url || row.source_year)
+    .map((row) => JSON.stringify({
+      url: row.source_url,
+      year: row.source_year,
+      note: row.notes,
+    })))).map((entry) => JSON.parse(entry));
+
+  el.insuranceSourceCatalog.innerHTML = sourceCards.length
+    ? sourceCards.map((source) => `
+      <div class="note-card">
+        <strong>Source ${escapeHtml(source.year || 'N/A')}</strong>
+        <div class="table-note">${escapeHtml(source.note || 'No note provided')}</div>
+        <div>${source.url ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.url)}</a>` : 'No source URL provided'}</div>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No source URL or year is available for this state.</div>';
+
+  renderInsuranceMap(selectedState).catch((error) => {
+    console.error(error);
+    el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+  });
 }
 
 function summarizeCounts(values) {
@@ -687,7 +1151,7 @@ function renderMetricList(rows, suffix) {
   return rows.map((row) => `
     <div class="metric-row">
       <span>${escapeHtml(row.label)}</span>
-      <strong>${row.value} ${escapeHtml(suffix)}</strong>
+      <strong>${row.value}${suffix ? ` ${escapeHtml(suffix)}` : ''}</strong>
     </div>
   `).join('');
 }
@@ -736,6 +1200,7 @@ function render() {
   renderIntakeView();
   renderStaffView();
   renderHubstaffView();
+  renderInsuranceView();
 }
 
 function bind() {
@@ -772,7 +1237,24 @@ async function loadData() {
   el.issuesTable.innerHTML = '<tr><td colspan="8" class="empty-state">Loading workbook data…</td></tr>';
 
   try {
-    model = await OpsSheets.loadWorkbookData();
+    const [workbookResult, insuranceResult] = await Promise.allSettled([
+      OpsSheets.loadWorkbookData(),
+      OpsInsurance.loadData(),
+    ]);
+
+    if (workbookResult.status !== 'fulfilled') {
+      throw workbookResult.reason;
+    }
+
+    model = workbookResult.value;
+    model.insurance = insuranceResult.status === 'fulfilled'
+      ? insuranceResult.value
+      : {
+        states: [],
+        rows: [],
+        sourceCatalog: [],
+        error: insuranceResult.reason?.message || 'Insurance data load failed.',
+      };
     initFilters();
     render();
     const liveCount = model.sourceMeta.filter((item) => item.source === 'live').length;

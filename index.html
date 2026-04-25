@@ -8,8 +8,13 @@
     name="description"
     content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
   />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <main class="shell">
@@ -299,6 +304,40 @@
           </table>
         </article>
       </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Covered States Snapshot</h2>
+            <span class="muted">Company-wide licensing and hiring coverage, not insurance-map data</span>
+          </div>
+          <div id="stateCoverageNotice" class="note-card"></div>
+          <div class="map-panel">
+            <div class="state-map-card">
+              <div class="state-map-shell">
+                <div class="state-map-badge">
+                  <strong id="coveredStatesCount">0</strong>
+                  <span>covered states</span>
+                </div>
+                <div class="table-note">Built from workforce licensing, final hires, and hiring pipeline rows.</div>
+              </div>
+            </div>
+            <div class="stack" id="stateCoverageStats"></div>
+          </div>
+          <div class="state-atlas-grid" id="stateAtlas"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>State Coverage Detail</h2>
+            <div class="card-head-actions">
+              <span class="muted" id="stateCoverageSummary"></span>
+              <select id="stateCoverageSelect" class="compact-select"></select>
+            </div>
+          </div>
+          <div id="stateCoverageInsights" class="stack"></div>
+        </article>
+      </div>
     </section>
 
     <section class="view" id="view-hubstaff">
@@ -349,323 +388,89 @@
         </article>
       </div>
     </section>
-  
-  <section class="view" id="view-njmap">
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <button onclick="teleMapTab('CA',this)" class="btn active" id="tmt-CA" style="background:#1a3a5c;color:#5499c0;border:1px solid #2980b9;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">California</button>
-      <button onclick="teleMapTab('TX',this)" class="btn" id="tmt-TX" style="background:#1a1d2e;color:#8b8fa8;border:1px solid #2a2d3e;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">Texas</button>
-      <button onclick="teleMapTab('FL',this)" class="btn" id="tmt-FL" style="background:#1a1d2e;color:#8b8fa8;border:1px solid #2a2d3e;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">Florida</button>
-      <button onclick="teleMapTab('AZ',this)" class="btn" id="tmt-AZ" style="background:#1a1d2e;color:#8b8fa8;border:1px solid #2a2d3e;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">Arizona</button>
-    </div>
-    <div id="tele-map-view">
-      <!-- KPIs injected by script -->
-      <div id="tele-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <section class="view" id="view-insurance">
+      <div class="two-col">
         <article class="card">
-          <div class="card-head"><h2 id="tele-map-title">Commercial Insurance by County</h2><span class="muted" id="tele-map-sub">ACS 2019-2023 · % with private health insurance</span></div>
-          <div id="tele-stateMap" style="height:500px;border-radius:8px;overflow:hidden;"></div>
+          <div class="card-head">
+            <h2>State Insurance Maps</h2>
+            <div class="card-head-actions">
+              <span class="muted" id="insuranceSelectionSummary">Loading verified county insurance data…</span>
+              <select id="insuranceStateSelect" class="compact-select"></select>
+            </div>
+          </div>
+          <div id="insuranceStatus" class="stack"></div>
+          <section class="mini-kpi-grid" id="insuranceKpis"></section>
+          <div id="insuranceSourceMeta" class="stack"></div>
         </article>
-        <article class="card" style="overflow:auto;max-height:600px">
-          <div class="card-head"><h2>County Rankings</h2><span class="muted" id="tele-table-sub">Ranked highest to lowest</span></div>
-          <table>
-            <thead><tr><th>#</th><th>County</th><th>% Insured</th><th>Insured Pop.</th><th>Total Pop.</th></tr></thead>
-            <tbody id="tele-countyTable"></tbody>
-          </table>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 id="insuranceMapTitle">County Enrollment Map</h2>
+            <span class="muted" id="insuranceMapSub">Verified rows from external data files only</span>
+          </div>
+          <div id="insuranceCountyMap" class="insurance-map"></div>
         </article>
       </div>
-    </div>
-  </section>
-    <div class="two-col">
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>County Enrollment</h2>
+            <span class="muted">Aggregated from verified plan rows for the selected state</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>County</th>
+                <th>Total Enrollment</th>
+                <th>Plans</th>
+                <th>Parent Orgs</th>
+                <th>Source Year</th>
+              </tr>
+            </thead>
+            <tbody id="insuranceCountyTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Official Source Catalog</h2>
+            <span class="muted">Preferred CMS and Medicaid managed care sources</span>
+          </div>
+          <div id="insuranceSourceCatalog" class="stack"></div>
+        </article>
+      </div>
+
       <article class="card">
-        <div class="card-head"><h2>Commercial Insurance by County</h2><span class="muted">ACS 2019–2023 5-Year Estimates · % with private health insurance</span></div>
-        <div id="njMap" style="height:520px;border-radius:8px;overflow:hidden;"></div>
-      </article>
-      <article class="card" style="overflow:auto">
-        <div class="card-head"><h2>County Rankings</h2><span class="muted">Ranked by % commercially insured</span></div>
+        <div class="card-head">
+          <h2>Verified Plan Rows</h2>
+          <span class="muted">Sample rows only; add more states by updating data files, not code</span>
+        </div>
         <table>
-          <thead><tr><th>#</th><th>County</th><th>% Insured</th><th>Insured Pop.</th><th>Total Pop.</th></tr></thead>
-          <tbody id="njCountyTable"></tbody>
+          <thead>
+            <tr>
+              <th>County</th>
+              <th>Program Type</th>
+              <th>Plan</th>
+              <th>Parent Org</th>
+              <th>Total Enrollment</th>
+              <th>Source / Year</th>
+            </tr>
+          </thead>
+          <tbody id="insurancePlanTable"></tbody>
         </table>
       </article>
-    </div>
-  </section>
-</main>
+    </section>
+  </main>
 
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="./sheets.js"></script>
+  <script src="./insurance.js"></script>
   <script src="./app.js"></script>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-  (function(){
-    var STATES = {
-      CA: {
-        label:'California', center:[37.5,-119.5], zoom:6, totalPop:39538223,
-        geoUrl:'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/california-counties.geojson',
-        counties:[
-          {name:"Marin",pop:258826,pct:82.1,ins:212496},
-          {name:"San Mateo",pop:764442,pct:77.2,ins:590117},
-          {name:"Placer",pop:398329,pct:78.3,ins:311892},
-          {name:"El Dorado",pop:191185,pct:77.5,ins:148168},
-          {name:"Santa Clara",pop:1927852,pct:74.8,ins:1441813},
-          {name:"San Francisco",pop:873965,pct:74.6,ins:651698},
-          {name:"Napa",pop:137744,pct:73.8,ins:101655},
-          {name:"Sonoma",pop:494336,pct:72.4,ins:357859},
-          {name:"Contra Costa",pop:1153526,pct:73.1,ins:843427},
-          {name:"Ventura",pop:843843,pct:70.3,ins:593221},
-          {name:"San Luis Obispo",pop:283111,pct:72.6,ins:205439},
-          {name:"Santa Cruz",pop:273213,pct:71.2,ins:194468},
-          {name:"Orange",pop:3175692,pct:72.1,ins:2289724},
-          {name:"Alameda",pop:1682353,pct:67.3,ins:1132237},
-          {name:"Santa Barbara",pop:446527,pct:67.8,ins:302825},
-          {name:"Yolo",pop:220500,pct:68.4,ins:150822},
-          {name:"Sacramento",pop:1585055,pct:64.8,ins:1027116},
-          {name:"San Diego",pop:3338330,pct:65.2,ins:2176551},
-          {name:"Shasta",pop:182155,pct:63.5,ins:115668},
-          {name:"San Luis Obispo",pop:283111,pct:72.6,ins:205439},
-          {name:"Riverside",pop:2458395,pct:62.7,ins:1541413},
-          {name:"Monterey",pop:437325,pct:60.4,ins:264148},
-          {name:"Los Angeles",pop:10014009,pct:58.9,ins:5898243},
-          {name:"Stanislaus",pop:550660,pct:59.1,ins:325440},
-          {name:"San Bernardino",pop:2181654,pct:59.8,ins:1304629},
-          {name:"San Joaquin",pop:779233,pct:57.9,ins:451276},
-          {name:"Fresno",pop:999101,pct:56.4,ins:563533},
-          {name:"Kern",pop:900202,pct:53.7,ins:483208},
-          {name:"Tulare",pop:473117,pct:50.1,ins:236992},
-          {name:"Merced",pop:277680,pct:49.8,ins:138264},
-          {name:"Imperial",pop:179702,pct:45.2,ins:81225}
-        ]
-      },
-      TX: {
-        label:'Texas', center:[31.5,-99.5], zoom:6, totalPop:29145505,
-        geoUrl:'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/texas.geojson',
-        counties:[
-          {name:"Collin",pop:1064465,pct:75.3,ins:801540},
-          {name:"Williamson",pop:686679,pct:73.5,ins:504709},
-          {name:"Denton",pop:906422,pct:73.1,ins:662534},
-          {name:"Fort Bend",pop:811688,pct:72.4,ins:587662},
-          {name:"Hays",pop:257054,pct:72.8,ins:187095},
-          {name:"Montgomery",pop:620443,pct:73.2,ins:453964},
-          {name:"Brazoria",pop:374264,pct:70.1,ins:262379},
-          {name:"Travis",pop:1290188,pct:70.1,ins:904522},
-          {name:"Galveston",pop:350682,pct:68.7,ins:240818},
-          {name:"Midland",pop:169432,pct:70.2,ins:118961},
-          {name:"Tarrant",pop:2110640,pct:64.2,ins:1355031},
-          {name:"Lubbock",pop:322634,pct:64.3,ins:207433},
-          {name:"Smith",pop:232751,pct:63.8,ins:148495},
-          {name:"Dallas",pop:2613539,pct:61.4,ins:1604713},
-          {name:"Bexar",pop:2009324,pct:59.8,ins:1201576},
-          {name:"McLennan",pop:265207,pct:59.7,ins:158319},
-          {name:"Harris",pop:4731145,pct:59.7,ins:2824495},
-          {name:"Jefferson",pop:251565,pct:58.1,ins:146159},
-          {name:"Nueces",pop:355279,pct:59.4,ins:211036},
-          {name:"Ector",pop:165803,pct:60.8,ins:100808},
-          {name:"Bell",pop:362924,pct:61.4,ins:222855},
-          {name:"El Paso",pop:865657,pct:51.8,ins:448250},
-          {name:"Cameron",pop:423163,pct:44.6,ins:188701},
-          {name:"Webb",pop:276652,pct:42.8,ins:118487},
-          {name:"Hidalgo",pop:870781,pct:41.2,ins:358762}
-        ]
-      },
-      FL: {
-        label:'Florida', center:[28.0,-82.0], zoom:7, totalPop:21538187,
-        geoUrl:'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/florida-counties.geojson',
-        counties:[
-          {name:"St. Johns",pop:264672,pct:80.1,ins:212002},
-          {name:"Collier",pop:375752,pct:76.2,ins:286323},
-          {name:"Sarasota",pop:433742,pct:73.4,ins:318366},
-          {name:"Seminole",pop:471826,pct:72.8,ins:343489},
-          {name:"Clay",pop:219252,pct:71.8,ins:157383},
-          {name:"Charlotte",pop:188910,pct:71.2,ins:134504},
-          {name:"Lee",pop:760822,pct:70.1,ins:533536},
-          {name:"Okaloosa",pop:212378,pct:69.7,ins:148027},
-          {name:"Palm Beach",pop:1496770,pct:68.4,ins:1023791},
-          {name:"Manatee",pop:403253,pct:69.4,ins:279818},
-          {name:"Brevard",pop:606612,pct:68.2,ins:413663},
-          {name:"Pinellas",pop:959107,pct:66.3,ins:635587},
-          {name:"Alachua",pop:278468,pct:66.4,ins:184942},
-          {name:"Lake",pop:367118,pct:65.3,ins:239602},
-          {name:"Hillsborough",pop:1471968,pct:64.8,ins:953634},
-          {name:"Duval",pop:995567,pct:63.7,ins:634246},
-          {name:"Volusia",pop:553284,pct:63.1,ins:349121},
-          {name:"St. Lucie",pop:325909,pct:63.2,ins:206025},
-          {name:"Escambia",pop:318316,pct:62.4,ins:198709},
-          {name:"Pasco",pop:553947,pct:64.7,ins:358203},
-          {name:"Marion",pop:365579,pct:61.5,ins:224731},
-          {name:"Orange",pop:1393452,pct:62.9,ins:876581},
-          {name:"Hernando",pop:193920,pct:62.8,ins:121782},
-          {name:"Polk",pop:724777,pct:61.8,ins:447912},
-          {name:"Citrus",pop:153843,pct:63.7,ins:98008},
-          {name:"Osceola",pop:388656,pct:56.8,ins:220836},
-          {name:"Broward",pop:1944375,pct:64.2,ins:1248289},
-          {name:"Miami-Dade",pop:2716940,pct:56.7,ins:1540505}
-        ]
-      },
-      AZ: {
-        label:'Arizona', center:[34.3,-111.7], zoom:7, totalPop:7151502,
-        geoUrl:'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/arizona-counties.geojson',
-        counties:[
-          {name:"Yavapai",pop:235099,pct:67.3,ins:158222},
-          {name:"Maricopa",pop:4420568,pct:66.2,ins:2926416},
-          {name:"Mohave",pop:212181,pct:62.8,ins:133250},
-          {name:"Coconino",pop:145101,pct:61.9,ins:89827},
-          {name:"Pinal",pop:425264,pct:61.4,ins:261112},
-          {name:"Pima",pop:1043433,pct:61.8,ins:644842},
-          {name:"Cochise",pop:125922,pct:59.7,ins:75175},
-          {name:"Greenlee",pop:9498,pct:59.8,ins:5680},
-          {name:"Gila",pop:54018,pct:57.9,ins:31276},
-          {name:"La Paz",pop:20846,pct:54.8,ins:11424},
-          {name:"Graham",pop:38533,pct:54.1,ins:20846},
-          {name:"Yuma",pop:213787,pct:52.7,ins:112656},
-          {name:"Santa Cruz",pop:46498,pct:50.2,ins:23342},
-          {name:"Navajo",pop:108705,pct:46.1,ins:50117},
-          {name:"Apache",pop:71518,pct:39.8,ins:28464}
-        ]
-      }
-    };
-    
-    var currentState = 'CA';
-    var mapInstance = null;
-    
-    var breaks=[40,50,57,62,66,70,74,82];
-    var cols=['#d0e8f5','#a9cce3','#7fb3d3','#5499c0','#2980b9','#1f6fa3','#1a5c8a','#154472'];
-    function getColor(p){for(var i=breaks.length-1;i>=0;i--){if(p>=breaks[i])return cols[i];}return cols[0];}
-    
-    function renderTable(st) {
-      var tbody = document.getElementById('tele-countyTable');
-      if (!tbody) return;
-      var counties = st.counties.slice().sort(function(a,b){return b.pct-a.pct;});
-      var maxPct = counties[0].pct;
-      tbody.innerHTML = counties.map(function(c,i){
-        var w = Math.round((c.pct/maxPct)*100);
-        return '<tr><td>'+(i+1)+'</td><td>'+c.name+'</td><td>'+
-          '<div style="display:flex;align-items:center;gap:6px">'+
-          '<div style="width:56px;height:7px;border-radius:3px;background:#222">'+
-          '<div style="width:'+w+'%;height:100%;border-radius:3px;background:'+getColor(c.pct)+'"></div></div>'+
-          c.pct+'%</div></td><td>'+c.ins.toLocaleString()+'</td><td>'+c.pop.toLocaleString()+'</td></tr>';
-      }).join('');
-    }
-    
-    function renderKpis(stKey, st) {
-      var kpiDiv = document.getElementById('tele-kpis');
-      if (!kpiDiv) return;
-      var totalIns = st.counties.reduce(function(s,c){return s+c.ins;},0);
-      var avgPct = (st.counties.reduce(function(s,c){return s+c.pct*c.pop;},0) / st.counties.reduce(function(s,c){return s+c.pop;},0)).toFixed(1);
-      kpiDiv.innerHTML = [
-        {label:'Commercially Insured',val:(totalIns/1000000).toFixed(2)+'M',sub:'Private coverage holders'},
-        {label:'Avg Commercial Rate',val:avgPct+'%',sub:'Population-weighted avg'},
-        {label:'Counties Tracked',val:st.counties.length,sub:'Of '+{CA:58,TX:254,FL:67,AZ:15}[stKey]+' total counties'}
-      ].map(function(k){return '<div class="kpi accent"><div class="k">'+k.label+'</div><div class="v">'+k.val+'</div><div class="d">'+k.sub+'</div></div>';}).join('');
-    }
-    
-    function initMap(stKey) {
-      var st = STATES[stKey];
-      var el = document.getElementById('tele-stateMap');
-      if (!el) return;
-      // Remove old map
-      if (mapInstance) { mapInstance.remove(); mapInstance = null; el._leaflet_id = undefined; }
-      var map = L.map('tele-stateMap',{attributionControl:false}).setView(st.center, st.zoom);
-      mapInstance = map;
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:13}).addTo(map);
-      document.getElementById('tele-map-title').textContent = 'Commercial Insurance – '+st.label;
-      document.getElementById('tele-map-sub').textContent = 'ACS 2019-2023 · % with private health insurance · '+st.counties.length+' counties shown';
-      fetch(st.geoUrl)
-        .then(function(r){return r.json();})
-        .then(function(geo){
-          L.geoJson(geo,{
-            style:function(f){
-              var n=(f.properties.name||f.properties.NAME||'').replace(/ County$/i,'').trim();
-              var c=st.counties.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});
-              return{fillColor:c?getColor(c.pct):'#ddd',weight:0.8,color:'#fff',fillOpacity:c?0.85:0.3};
-            },
-            onEachFeature:function(f,layer){
-              var n=(f.properties.name||f.properties.NAME||'').replace(/ County$/i,'').trim();
-              var c=st.counties.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});
-              if(c) layer.bindTooltip('<strong>'+c.name+'</strong><br>'+c.pct+'% commercially insured<br>'+c.ins.toLocaleString()+' insured · '+c.pop.toLocaleString()+' total',{sticky:true});
-              else layer.bindTooltip('<strong>'+n+'</strong><br>No data',{sticky:true});
-            }
-          }).addTo(map);
-          var leg=L.control({position:'bottomleft'});
-          leg.onAdd=function(){var d=L.DomUtil.create('div','info legend');d.style.cssText='background:rgba(15,17,23,0.92);padding:8px 12px;border-radius:6px;color:#ccc;font-size:11px;line-height:1.7';d.innerHTML='<div style="font-weight:600;margin-bottom:3px">% Commercially Insured</div>'+breaks.slice(0,7).map(function(b,i){return'<div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:2px;background:'+cols[i]+'"></div>'+b+'–'+(breaks[i+1]||82)+'%</div>';}).join('');return d;};
-          leg.addTo(map);
-        }).catch(function(){});
-    }
-    
-    window.teleMapTab = function(stKey, btn) {
-      currentState = stKey;
-      // Update button styles
-      ['CA','TX','FL','AZ'].forEach(function(k){
-        var b = document.getElementById('tmt-'+k);
-        if (!b) return;
-        if (k === stKey) { b.style.background='#1a3a5c'; b.style.color='#5499c0'; b.style.borderColor='#2980b9'; }
-        else { b.style.background='#0f1117'; b.style.color='#6b7280'; b.style.borderColor='#2a2d3e'; }
-      });
-      var st = STATES[stKey];
-      renderKpis(stKey, st);
-      renderTable(st);
-      initMap(stKey);
-    };
-    
-    // Init CA on load
-    document.addEventListener('DOMContentLoaded', function(){
-      setTimeout(function(){ teleMapTab('CA', null); }, 200);
-    });
-    // Also try immediately
-    setTimeout(function(){ teleMapTab('CA', null); }, 500);
-  })();
-  </script>
-  <script>
-  (function(){
-    var NJ=[
-      {name:"Hunterdon",pop:128947,pct:85.6,ins:110379},
-      {name:"Morris",pop:509285,pct:83.5,ins:425253},
-      {name:"Somerset",pop:345361,pct:81.9,ins:282851},
-      {name:"Sussex",pop:144221,pct:80.2,ins:115705},
-      {name:"Bergen",pop:955732,pct:79.4,ins:758851},
-      {name:"Monmouth",pop:643615,pct:79.0,ins:508456},
-      {name:"Burlington",pop:461860,pct:77.2,ins:356556},
-      {name:"Gloucester",pop:302294,pct:76.4,ins:230953},
-      {name:"Warren",pop:108692,pct:75.4,ins:81954},
-      {name:"Cape May",pop:95263,pct:73.5,ins:70018},
-      {name:"Middlesex",pop:863162,pct:72.8,ins:628382},
-      {name:"Union",pop:575345,pct:72.0,ins:414249},
-      {name:"Mercer",pop:379615,pct:71.4,ins:271065},
-      {name:"Ocean",pop:637229,pct:71.2,ins:453707},
-      {name:"Camden",pop:523485,pct:69.2,ins:362251},
-      {name:"Salem",pop:64837,pct:67.5,ins:43765},
-      {name:"Essex",pop:863728,pct:64.8,ins:559496},
-      {name:"Atlantic",pop:274534,pct:63.3,ins:173780},
-      {name:"Passaic",pop:524118,pct:62.4,ins:327050},
-      {name:"Hudson",pop:724854,pct:61.9,ins:448885},
-      {name:"Cumberland",pop:154152,pct:56.8,ins:87558}
-    ];
-    var breaks=[57,62,65,68,72,75,80,86];
-    var colors=['#d0e8f5','#a9cce3','#7fb3d3','#5499c0','#2980b9','#1f6fa3','#1a5c8a','#154472'];
-    function getColor(p){for(var i=breaks.length-1;i>=0;i--){if(p>=breaks[i])return colors[i];}return colors[0];}
-    var tbody=document.getElementById('njCountyTable');
-    if(tbody){tbody.innerHTML=NJ.map(function(c,i){var w=Math.round((c.pct/86)*100);return'<tr><td>'+(i+1)+'</td><td>'+c.name+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:56px;height:8px;border-radius:4px;background:#1e2028"><div style="width:'+w+'%;height:100%;border-radius:4px;background:'+getColor(c.pct)+'"></div></div>'+c.pct+'%</div></td><td>'+c.ins.toLocaleString()+'</td><td>'+c.pop.toLocaleString()+'</td></tr>';}).join('');}
-    document.querySelectorAll('.view-tab').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        if(btn.dataset.view==='njmap')initMap();
-      });
-    });
-    function initMap(){
-      var el=document.getElementById('njMap');
-      if(!el||el._leaflet_id)return;
-      var map=L.map('njMap',{attributionControl:false}).setView([40.1,-74.5],8);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:13}).addTo(map);
-      fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-jersey-counties.geojson')
-        .then(function(r){return r.json();})
-        .then(function(geo){
-          L.geoJson(geo,{
-            style:function(f){var n=f.properties.name.replace(/ County$/i,'').trim();var c=NJ.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});return{fillColor:c?getColor(c.pct):'#ccc',weight:1,color:'#fff',fillOpacity:0.85};},
-            onEachFeature:function(f,layer){var n=f.properties.name.replace(/ County$/i,'').trim();var c=NJ.find(function(x){return x.name.toLowerCase()===n.toLowerCase();});if(c)layer.bindTooltip('<strong>'+c.name+' County</strong><br>'+c.pct+'% commercially insured<br>'+c.ins.toLocaleString()+' insured · '+c.pop.toLocaleString()+' total',{sticky:true});}
-          }).addTo(map);
-        });
-      var leg=L.control({position:'bottomleft'});
-      leg.onAdd=function(){var d=L.DomUtil.create('div');d.style.cssText='background:rgba(15,17,23,0.92);padding:8px 12px;border-radius:6px;color:#ccc;font-size:11px;line-height:1.7';d.innerHTML='<div style="font-weight:600;margin-bottom:4px">% Commercially Insured</div>'+breaks.slice(0,7).map(function(b,i){return'<div style="display:flex;align-items:center;gap:6px"><div style="width:13px;height:13px;border-radius:2px;background:'+colors[i]+'"></div>'+b+'–'+(breaks[i+1]||86)+'%</div>';}).join('');return d;};
-      leg.addTo(map);
-    }
-  })();
-  </script>
 </body>
 </html>
