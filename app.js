@@ -963,9 +963,14 @@ async function renderInsuranceMap(selectedState) {
     insuranceGeoJson = await response.json();
   }
 
-  const countyLookup = Object.fromEntries(selectedState.counties.map((county) => [county.county_fips, county]));
-  const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === selectedState.state_fips);
-  const breaks = buildInsuranceBreaks(selectedState.counties.map((county) => county.total_enrollment));
+  const countyLookup = Object.fromEntries(
+    selectedState.locations
+      .filter((location) => location.county_fips)
+      .map((location) => [location.county_fips, location])
+  );
+  const stateFips = selectedState.rows.find((row) => row.county_fips)?.county_fips?.slice(0, 2) || '';
+  const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === stateFips);
+  const breaks = buildInsuranceBreaks(selectedState.locations.map((location) => location.total_enrollment));
 
   if (!insuranceMap) {
     insuranceMap = L.map(el.insuranceCountyMap, {
@@ -996,12 +1001,20 @@ async function renderInsuranceMap(selectedState) {
       };
     },
     onEachFeature(feature, layer) {
-      const county = countyLookup[feature.id];
+      const location = countyLookup[feature.id];
       const countyName = feature.properties.NAME;
-      const detail = county
-        ? `${wholeNumber(county.total_enrollment)} total enrollment across ${county.plan_count} verified plan rows`
+      const plans = location && location.plan_names.length
+        ? location.plan_names.slice(0, 3).join(', ')
+        : 'No plan names available';
+      const orgs = location && location.parent_orgs.length
+        ? location.parent_orgs.slice(0, 2).join(', ')
+        : 'No parent org available';
+      const detail = location
+        ? `${wholeNumber(location.total_enrollment)} total enrollment across ${location.row_count} rows`
         : 'No verified insurance rows loaded yet';
-      layer.bindTooltip(`<strong>${escapeHtml(countyName)}</strong><br>${escapeHtml(detail)}`);
+      layer.bindTooltip(
+        `<strong>${escapeHtml(countyName)}</strong><br>${escapeHtml(detail)}<br>Plans: ${escapeHtml(plans)}<br>Parents: ${escapeHtml(orgs)}`
+      );
     },
   }).addTo(insuranceMap);
 
@@ -1016,7 +1029,6 @@ function renderInsuranceView() {
   const insurance = model.insurance || {
     states: [],
     rows: [],
-    sourceCatalog: [],
     error: 'Insurance data is not loaded yet.',
   };
 
@@ -1048,18 +1060,18 @@ function renderInsuranceView() {
     renderInsuranceView();
   };
 
-  el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.counties.length} counties with verified rows · ${selectedState.plan_count} plan rows`;
+  el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
   el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
-  el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ')} · rows are loaded from external JSON files`;
+  el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ') || 'N/A'} · rows are loaded from external CSV files`;
 
   el.insuranceStatus.innerHTML = [
-    'No hardcoded state buttons are used here. The dropdown is populated from `data/insurance/state-manifest.json`.',
-    'The sample dataset contains verified CMS rows only. Add remaining states by updating the insurance data files, not by changing app code.',
+    'No hardcoded state buttons are used here. The dropdown is populated from `data/state_insurance_sample.csv`.',
+    'The system supports either county or geographic_region and continues rendering when some fields are blank.',
     selectedState.notes[0] || 'No source note available for this state.',
   ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
 
   el.insuranceKpis.innerHTML = [
-    { label: 'Verified Counties', value: selectedState.counties.length },
+    { label: 'Geographies', value: selectedState.locations.length },
     { label: 'Total Enrollment', value: wholeNumber(selectedState.total_enrollment) },
     { label: 'Plans', value: selectedState.plan_count },
     { label: 'Parent Orgs', value: selectedState.parent_org_count },
@@ -1071,7 +1083,7 @@ function renderInsuranceView() {
   `).join('');
 
   el.insuranceSourceMeta.innerHTML = [
-    `<div class="metric-row"><span>Primary source/year</span><strong>${escapeHtml(selectedState.source_years.join(', '))}</strong></div>`,
+    `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
     ...selectedState.source_urls.map((url) => `
       <div class="note-card">
         <strong>Verified source</strong>
@@ -1080,13 +1092,13 @@ function renderInsuranceView() {
     `),
   ].join('');
 
-  el.insuranceCountyTable.innerHTML = selectedState.counties.map((county) => `
+  el.insuranceCountyTable.innerHTML = selectedState.locations.map((location) => `
     <tr>
-      <td>${escapeHtml(county.county)}</td>
-      <td>${wholeNumber(county.total_enrollment)}</td>
-      <td>${wholeNumber(county.plan_count)}</td>
-      <td>${wholeNumber(county.parent_org_count)}</td>
-      <td>${escapeHtml(county.source_years.join(', '))}</td>
+      <td>${escapeHtml(location.location_label)}</td>
+      <td>${wholeNumber(location.total_enrollment)}</td>
+      <td>${wholeNumber(location.row_count)}</td>
+      <td>${wholeNumber(location.parent_orgs.length)}</td>
+      <td>${escapeHtml(location.source_years.join(', ') || 'N/A')}</td>
     </tr>
   `).join('');
 
@@ -1097,17 +1109,27 @@ function renderInsuranceView() {
       <td>${escapeHtml(row.plan_name)}</td>
       <td>${escapeHtml(row.parent_org)}</td>
       <td>${wholeNumber(row.total_enrollment)}</td>
-      <td><a href="${escapeHtml(row.source_url)}" target="_blank" rel="noreferrer">${escapeHtml(row.source_year)}</a></td>
+      <td>${row.source_url ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noreferrer">${escapeHtml(row.source_year || 'Source')}</a>` : escapeHtml(row.source_year || 'N/A')}</td>
     </tr>
   `).join('');
 
-  el.insuranceSourceCatalog.innerHTML = insurance.sourceCatalog.map((source) => `
-    <div class="note-card">
-      <strong>${escapeHtml(source.title)}</strong>
-      <div class="table-note">${escapeHtml(source.kind || '')}</div>
-      <div><a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.url)}</a></div>
-    </div>
-  `).join('');
+  const sourceCards = Array.from(new Set(selectedState.rows
+    .filter((row) => row.source_url || row.source_year)
+    .map((row) => JSON.stringify({
+      url: row.source_url,
+      year: row.source_year,
+      note: row.notes,
+    })))).map((entry) => JSON.parse(entry));
+
+  el.insuranceSourceCatalog.innerHTML = sourceCards.length
+    ? sourceCards.map((source) => `
+      <div class="note-card">
+        <strong>Source ${escapeHtml(source.year || 'N/A')}</strong>
+        <div class="table-note">${escapeHtml(source.note || 'No note provided')}</div>
+        <div>${source.url ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.url)}</a>` : 'No source URL provided'}</div>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No source URL or year is available for this state.</div>';
 
   renderInsuranceMap(selectedState).catch((error) => {
     console.error(error);
