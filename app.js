@@ -1066,6 +1066,7 @@ function renderInsuranceView() {
 
   el.insuranceStatus.innerHTML = [
     'No hardcoded state buttons are used here. The dropdown is populated from `data/state_insurance_sample.csv`.',
+    'Renderer path: insurance.js -> renderInsuranceView().',
     'The system supports either county or geographic_region and continues rendering when some fields are blank.',
     selectedState.notes[0] || 'No source note available for this state.',
   ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
@@ -1083,6 +1084,7 @@ function renderInsuranceView() {
   `).join('');
 
   el.insuranceSourceMeta.innerHTML = [
+    '<div class="metric-row"><span>CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
     `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
     ...selectedState.source_urls.map((url) => `
       <div class="note-card">
