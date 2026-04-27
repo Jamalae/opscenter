@@ -1025,7 +1025,21 @@ async function renderInsuranceMap(selectedState) {
   setTimeout(() => insuranceMap.invalidateSize(), 0);
 }
 
-function renderInsuranceView() {
+async function renderInsuranceView() {
+  if (!model) return;
+
+  if (!model.insurance || !Array.isArray(model.insurance.states)) {
+    try {
+      model.insurance = await OpsInsurance.loadData();
+    } catch (error) {
+      model.insurance = {
+        states: [],
+        rows: [],
+        error: error?.message || 'Insurance data load failed.',
+      };
+    }
+  }
+
   const insurance = model.insurance || {
     states: [],
     rows: [],
@@ -1055,10 +1069,6 @@ function renderInsuranceView() {
       ${escapeHtml(entry.label)}
     </option>
   `).join('');
-  el.insuranceStateSelect.onchange = (event) => {
-    state.insuranceState = event.target.value;
-    renderInsuranceView();
-  };
 
   el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
   el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
@@ -1202,7 +1212,9 @@ function render() {
   renderIntakeView();
   renderStaffView();
   renderHubstaffView();
-  renderInsuranceView();
+  if (state.view === 'insurance') {
+    renderInsuranceView();
+  }
 }
 
 function bind() {
@@ -1225,6 +1237,10 @@ function bind() {
   el.searchInput.addEventListener('input', (event) => {
     state.search = event.target.value;
     render();
+  });
+  el.insuranceStateSelect.addEventListener('change', (event) => {
+    state.insuranceState = event.target.value;
+    renderInsuranceView();
   });
   el.clearFilters.addEventListener('click', () => {
     resetFilters();
