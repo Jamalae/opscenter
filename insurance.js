@@ -1,6 +1,49 @@
 const OpsInsurance = (() => {
   const csvUrl = './data/state_insurance_sample.csv';
   const geojsonPath = './data/insurance/geo/us-counties-fips.geojson';
+  const validStates = {
+    AL: 'Alabama',
+    AK: 'Alaska',
+    AZ: 'Arizona',
+    AR: 'Arkansas',
+    CA: 'California',
+    CO: 'Colorado',
+    CT: 'Connecticut',
+    DC: 'District of Columbia',
+    DE: 'Delaware',
+    FL: 'Florida',
+    GA: 'Georgia',
+    HI: 'Hawaii',
+    IA: 'Iowa',
+    ID: 'Idaho',
+    IL: 'Illinois',
+    IN: 'Indiana',
+    KS: 'Kansas',
+    KY: 'Kentucky',
+    LA: 'Louisiana',
+    MA: 'Massachusetts',
+    MD: 'Maryland',
+    ME: 'Maine',
+    MI: 'Michigan',
+    MN: 'Minnesota',
+    MO: 'Missouri',
+    MS: 'Mississippi',
+    NC: 'North Carolina',
+    NJ: 'New Jersey',
+    NM: 'New Mexico',
+    NV: 'Nevada',
+    NY: 'New York',
+    OH: 'Ohio',
+    OR: 'Oregon',
+    PA: 'Pennsylvania',
+    SC: 'South Carolina',
+    TN: 'Tennessee',
+    TX: 'Texas',
+    UT: 'Utah',
+    VA: 'Virginia',
+    WA: 'Washington',
+    WI: 'Wisconsin',
+  };
   const requiredFields = [
     'state',
     'county',
@@ -82,6 +125,17 @@ const OpsInsurance = (() => {
     return match ? match[1] : '';
   }
 
+  function normalizeStateValue(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const compact = raw.replace(/\s+/g, ' ').trim();
+    const upper = compact.toUpperCase();
+    if (/^[A-Z]{2}$/.test(upper) && validStates[upper]) {
+      return upper;
+    }
+    return null;
+  }
+
   function normalizeRow(row) {
     requiredFields.forEach((field) => {
       if (!(field in row)) {
@@ -90,7 +144,8 @@ const OpsInsurance = (() => {
     });
 
     return {
-      state: String(row.state || '').trim().toUpperCase(),
+      raw_state: String(row.state || '').trim(),
+      state: normalizeStateValue(row.state),
       county: String(row.county || '').trim(),
       program_type: String(row.program_type || '').trim(),
       plan_name: String(row.plan_name || '').trim(),
@@ -187,17 +242,25 @@ const OpsInsurance = (() => {
         geojsonPath,
         rows: [],
         states: [],
+        validation: {
+          validStateCount: 0,
+          invalidRowCount: 0,
+          invalidStateValues: [],
+        },
       };
     }
 
     const headers = parsed[0].map((header) => String(header || '').trim());
-    const dataRows = parsed.slice(1).map((cells) => {
+    const normalizedRows = parsed.slice(1).map((cells) => {
       const row = {};
       headers.forEach((header, index) => {
         row[header] = cells[index] ?? '';
       });
       return normalizeRow(row);
     });
+
+    const invalidRows = normalizedRows.filter((row) => !row.state);
+    const dataRows = normalizedRows.filter((row) => row.state);
 
     const grouped = dataRows.reduce((acc, row) => {
       if (!row.state) return acc;
@@ -215,6 +278,15 @@ const OpsInsurance = (() => {
       geojsonPath,
       rows: dataRows,
       states,
+      validation: {
+        validStateCount: states.length,
+        invalidRowCount: invalidRows.length,
+        invalidStateValues: Array.from(new Set(
+          invalidRows
+            .map((row) => row.raw_state)
+            .filter(Boolean)
+        )).sort(),
+      },
     };
   }
 

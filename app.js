@@ -74,6 +74,7 @@ const el = {
   hubstaffMetricsTable: document.getElementById('hubstaffMetricsTable'),
   hubstaffNotes: document.getElementById('hubstaffNotes'),
   insuranceStateSelect: document.getElementById('insuranceStateSelect'),
+  insuranceValidationBanner: document.getElementById('insuranceValidationBanner'),
   insuranceSelectionSummary: document.getElementById('insuranceSelectionSummary'),
   insuranceStatus: document.getElementById('insuranceStatus'),
   insuranceKpis: document.getElementById('insuranceKpis'),
@@ -947,11 +948,18 @@ function insuranceColor(value, breaks) {
   return palette[Math.min(colorIndex, palette.length - 1)];
 }
 
-async function renderInsuranceMap(selectedState) {
+async function renderInsuranceMap(selectedStateCode) {
   if (state.view !== 'insurance') return;
-  if (!selectedState || !el.insuranceCountyMap) return;
+  if (!selectedStateCode || !el.insuranceCountyMap) return;
   if (typeof L === 'undefined') {
     el.insuranceCountyMap.innerHTML = '<div class="empty-state">Leaflet did not load, so the county map could not be rendered.</div>';
+    return;
+  }
+
+  const insuranceStates = model?.insurance?.states || [];
+  const selectedState = insuranceStates.find((entry) => entry.state === selectedStateCode);
+  if (!selectedState) {
+    el.insuranceCountyMap.innerHTML = `<div class="empty-state">No insurance map data is available for ${escapeHtml(selectedStateCode)}.</div>`;
     return;
   }
 
@@ -1025,19 +1033,47 @@ async function renderInsuranceMap(selectedState) {
   setTimeout(() => insuranceMap.invalidateSize(), 0);
 }
 
-function renderInsuranceView() {
+async function renderInsuranceView() {
+  if (!model) return;
+
+  if (!model.insurance || !Array.isArray(model.insurance.states)) {
+    try {
+      model.insurance = await OpsInsurance.loadData();
+    } catch (error) {
+      model.insurance = {
+        states: [],
+        rows: [],
+        error: error?.message || 'Insurance data load failed.',
+      };
+    }
+  }
+
   const insurance = model.insurance || {
     states: [],
     rows: [],
     error: 'Insurance data is not loaded yet.',
   };
+  const validation = insurance.validation || {
+    validStateCount: 0,
+    invalidRowCount: 0,
+    invalidStateValues: [],
+  };
 
   if (!insurance.states.length) {
+    el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
     el.insuranceSelectionSummary.textContent = 'No verified insurance rows are loaded yet.';
     el.insuranceStateSelect.innerHTML = '<option value="all">No states available</option>';
-    el.insuranceStatus.innerHTML = `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`;
+    el.insuranceStatus.innerHTML = [
+      `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`,
+      `<div class="note-card">Valid states loaded: ${escapeHtml(validation.validStateCount)}</div>`,
+      `<div class="note-card">Invalid rows rejected: ${escapeHtml(validation.invalidRowCount)}</div>`,
+    ].join('');
     el.insuranceKpis.innerHTML = '';
-    el.insuranceSourceMeta.innerHTML = '';
+    el.insuranceSourceMeta.innerHTML = [
+      '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
+      `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
+      `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
+    ].join('');
     el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">No county insurance rows are available.</td></tr>';
     el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">No verified plan rows are available.</td></tr>';
     el.insuranceSourceCatalog.innerHTML = '';
@@ -1049,31 +1085,33 @@ function renderInsuranceView() {
     state.insuranceState = insurance.states[0].state;
   }
   const selectedState = insuranceLookup[state.insuranceState];
+  console.log('Selected state:', state.insuranceState);
+  el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
 
   el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
     <option value="${escapeHtml(entry.state)}" ${entry.state === state.insuranceState ? 'selected' : ''}>
       ${escapeHtml(entry.label)}
     </option>
   `).join('');
-  el.insuranceStateSelect.onchange = (event) => {
-    state.insuranceState = event.target.value;
-    renderInsuranceView();
-  };
 
   el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
   el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
   el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ') || 'N/A'} · rows are loaded from external CSV files`;
 
   el.insuranceStatus.innerHTML = [
-    'No hardcoded state buttons are used here. The dropdown is populated from `data/state_insurance_sample.csv`.',
+    `No hardcoded state buttons are used here. The dropdown is populated dynamically from the master CSV at data/state_insurance_sample.csv with ${validation.validStateCount} valid states.`,
+    'Renderer path: insurance.js -> renderInsuranceView().',
     'The system supports either county or geographic_region and continues rendering when some fields are blank.',
+    `Invalid rows rejected during state validation: ${validation.invalidRowCount}.`,
     selectedState.notes[0] || 'No source note available for this state.',
   ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
 
   el.insuranceKpis.innerHTML = [
+    { label: 'Valid States', value: validation.validStateCount },
+    { label: 'Invalid Rows Rejected', value: validation.invalidRowCount },
     { label: 'Geographies', value: selectedState.locations.length },
     { label: 'Total Enrollment', value: wholeNumber(selectedState.total_enrollment) },
-    { label: 'Plans', value: selectedState.plan_count },
+    { label: 'Plan Rows', value: selectedState.plan_count },
     { label: 'Parent Orgs', value: selectedState.parent_org_count },
   ].map((card) => `
     <div class="mini-kpi">
@@ -1083,7 +1121,16 @@ function renderInsuranceView() {
   `).join('');
 
   el.insuranceSourceMeta.innerHTML = [
+    `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
+    `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
+    '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
     `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
+    validation.invalidStateValues.length ? `
+      <div class="note-card">
+        <strong>Rejected state values</strong>
+        <div>${escapeHtml(validation.invalidStateValues.slice(0, 8).join(', '))}${validation.invalidStateValues.length > 8 ? ' …' : ''}</div>
+      </div>
+    ` : '',
     ...selectedState.source_urls.map((url) => `
       <div class="note-card">
         <strong>Verified source</strong>
@@ -1131,7 +1178,13 @@ function renderInsuranceView() {
     `).join('')
     : '<div class="empty-state">No source URL or year is available for this state.</div>';
 
-  renderInsuranceMap(selectedState).catch((error) => {
+  console.log('Insurance debug:', {
+    dropdownValue: el.insuranceStateSelect.value,
+    insuranceState: state.insuranceState,
+    renderInsuranceMapArg: state.insuranceState,
+  });
+
+  renderInsuranceMap(state.insuranceState).catch((error) => {
     console.error(error);
     el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   });
@@ -1200,7 +1253,9 @@ function render() {
   renderIntakeView();
   renderStaffView();
   renderHubstaffView();
-  renderInsuranceView();
+  if (state.view === 'insurance') {
+    renderInsuranceView();
+  }
 }
 
 function bind() {
@@ -1223,6 +1278,15 @@ function bind() {
   el.searchInput.addEventListener('input', (event) => {
     state.search = event.target.value;
     render();
+  });
+  el.insuranceStateSelect.addEventListener('change', (event) => {
+    state.insuranceState = event.target.value;
+    console.log('Insurance debug:', {
+      dropdownValue: event.target.value,
+      insuranceState: state.insuranceState,
+      renderInsuranceMapArg: state.insuranceState,
+    });
+    renderInsuranceView();
   });
   el.clearFilters.addEventListener('click', () => {
     resetFilters();
