@@ -1045,13 +1045,26 @@ async function renderInsuranceView() {
     rows: [],
     error: 'Insurance data is not loaded yet.',
   };
+  const validation = insurance.validation || {
+    validStateCount: 0,
+    invalidRowCount: 0,
+    invalidStateValues: [],
+  };
 
   if (!insurance.states.length) {
     el.insuranceSelectionSummary.textContent = 'No verified insurance rows are loaded yet.';
     el.insuranceStateSelect.innerHTML = '<option value="all">No states available</option>';
-    el.insuranceStatus.innerHTML = `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`;
+    el.insuranceStatus.innerHTML = [
+      `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`,
+      `<div class="note-card">Valid states loaded: ${escapeHtml(validation.validStateCount)}</div>`,
+      `<div class="note-card">Invalid rows rejected: ${escapeHtml(validation.invalidRowCount)}</div>`,
+    ].join('');
     el.insuranceKpis.innerHTML = '';
-    el.insuranceSourceMeta.innerHTML = '';
+    el.insuranceSourceMeta.innerHTML = [
+      '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
+      `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
+      `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
+    ].join('');
     el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">No county insurance rows are available.</td></tr>';
     el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">No verified plan rows are available.</td></tr>';
     el.insuranceSourceCatalog.innerHTML = '';
@@ -1075,16 +1088,19 @@ async function renderInsuranceView() {
   el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ') || 'N/A'} · rows are loaded from external CSV files`;
 
   el.insuranceStatus.innerHTML = [
-    `No hardcoded state buttons are used here. The dropdown is populated dynamically from data/state_insurance_sample.csv with ${insurance.states.length} states.`,
+    `No hardcoded state buttons are used here. The dropdown is populated dynamically from the master CSV at data/state_insurance_sample.csv with ${validation.validStateCount} valid states.`,
     'Renderer path: insurance.js -> renderInsuranceView().',
     'The system supports either county or geographic_region and continues rendering when some fields are blank.',
+    `Invalid rows rejected during state validation: ${validation.invalidRowCount}.`,
     selectedState.notes[0] || 'No source note available for this state.',
   ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
 
   el.insuranceKpis.innerHTML = [
+    { label: 'Valid States', value: validation.validStateCount },
+    { label: 'Invalid Rows Rejected', value: validation.invalidRowCount },
     { label: 'Geographies', value: selectedState.locations.length },
     { label: 'Total Enrollment', value: wholeNumber(selectedState.total_enrollment) },
-    { label: 'Plans', value: selectedState.plan_count },
+    { label: 'Plan Rows', value: selectedState.plan_count },
     { label: 'Parent Orgs', value: selectedState.parent_org_count },
   ].map((card) => `
     <div class="mini-kpi">
@@ -1094,9 +1110,16 @@ async function renderInsuranceView() {
   `).join('');
 
   el.insuranceSourceMeta.innerHTML = [
-    `<div class="metric-row"><span>CSV state count</span><strong>${escapeHtml(insurance.states.length)}</strong></div>`,
-    '<div class="metric-row"><span>CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
+    `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
+    `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
+    '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
     `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
+    validation.invalidStateValues.length ? `
+      <div class="note-card">
+        <strong>Rejected state values</strong>
+        <div>${escapeHtml(validation.invalidStateValues.slice(0, 8).join(', '))}${validation.invalidStateValues.length > 8 ? ' …' : ''}</div>
+      </div>
+    ` : '',
     ...selectedState.source_urls.map((url) => `
       <div class="note-card">
         <strong>Verified source</strong>
