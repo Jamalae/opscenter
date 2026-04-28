@@ -74,6 +74,7 @@ const el = {
   hubstaffMetricsTable: document.getElementById('hubstaffMetricsTable'),
   hubstaffNotes: document.getElementById('hubstaffNotes'),
   insuranceStateSelect: document.getElementById('insuranceStateSelect'),
+  insuranceValidationBanner: document.getElementById('insuranceValidationBanner'),
   insuranceSelectionSummary: document.getElementById('insuranceSelectionSummary'),
   insuranceStatus: document.getElementById('insuranceStatus'),
   insuranceKpis: document.getElementById('insuranceKpis'),
@@ -1052,6 +1053,7 @@ async function renderInsuranceView() {
   };
 
   if (!insurance.states.length) {
+    el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
     el.insuranceSelectionSummary.textContent = 'No verified insurance rows are loaded yet.';
     el.insuranceStateSelect.innerHTML = '<option value="all">No states available</option>';
     el.insuranceStatus.innerHTML = [
@@ -1076,6 +1078,7 @@ async function renderInsuranceView() {
     state.insuranceState = insurance.states[0].state;
   }
   const selectedState = insuranceLookup[state.insuranceState];
+  el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
 
   el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
     <option value="${escapeHtml(entry.state)}" ${entry.state === state.insuranceState ? 'selected' : ''}>

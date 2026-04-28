@@ -9,53 +9,41 @@ const OpsInsurance = (() => {
     CA: 'California',
     CO: 'Colorado',
     CT: 'Connecticut',
+    DC: 'District of Columbia',
     DE: 'Delaware',
     FL: 'Florida',
     GA: 'Georgia',
     HI: 'Hawaii',
+    IA: 'Iowa',
     ID: 'Idaho',
     IL: 'Illinois',
     IN: 'Indiana',
-    IA: 'Iowa',
     KS: 'Kansas',
     KY: 'Kentucky',
     LA: 'Louisiana',
-    ME: 'Maine',
-    MD: 'Maryland',
     MA: 'Massachusetts',
+    MD: 'Maryland',
+    ME: 'Maine',
     MI: 'Michigan',
     MN: 'Minnesota',
-    MS: 'Mississippi',
     MO: 'Missouri',
-    MT: 'Montana',
-    NE: 'Nebraska',
-    NV: 'Nevada',
-    NH: 'New Hampshire',
+    MS: 'Mississippi',
+    NC: 'North Carolina',
     NJ: 'New Jersey',
     NM: 'New Mexico',
+    NV: 'Nevada',
     NY: 'New York',
-    NC: 'North Carolina',
-    ND: 'North Dakota',
     OH: 'Ohio',
-    OK: 'Oklahoma',
     OR: 'Oregon',
     PA: 'Pennsylvania',
-    RI: 'Rhode Island',
     SC: 'South Carolina',
-    SD: 'South Dakota',
     TN: 'Tennessee',
     TX: 'Texas',
     UT: 'Utah',
-    VT: 'Vermont',
     VA: 'Virginia',
     WA: 'Washington',
-    WV: 'West Virginia',
     WI: 'Wisconsin',
-    WY: 'Wyoming',
   };
-  const stateNameLookup = Object.fromEntries(
-    Object.entries(validStates).map(([code, name]) => [name.toLowerCase(), code])
-  );
   const requiredFields = [
     'state',
     'county',
@@ -145,9 +133,7 @@ const OpsInsurance = (() => {
     if (/^[A-Z]{2}$/.test(upper) && validStates[upper]) {
       return upper;
     }
-
-    const lowered = compact.toLowerCase();
-    return stateNameLookup[lowered] || null;
+    return null;
   }
 
   function normalizeRow(row) {
