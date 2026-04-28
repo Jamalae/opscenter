@@ -1081,8 +1081,10 @@ async function renderInsuranceView() {
   }
 
   const insuranceLookup = Object.fromEntries(insurance.states.map((entry) => [entry.state, entry]));
-  if (state.insuranceState === 'all' || !insuranceLookup[state.insuranceState]) {
-    state.insuranceState = insurance.states[0].state;
+  const validStates = insurance.states.map((entry) => entry.state);
+  if (!validStates.includes(state.insuranceState)) {
+    state.insuranceState = validStates[0];
+    console.log('Reset state to:', state.insuranceState);
   }
   const selectedState = insuranceLookup[state.insuranceState];
   console.log('Selected state:', state.insuranceState);
@@ -1093,6 +1095,7 @@ async function renderInsuranceView() {
       ${escapeHtml(entry.label)}
     </option>
   `).join('');
+  el.insuranceStateSelect.value = state.insuranceState;
 
   el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
   el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
