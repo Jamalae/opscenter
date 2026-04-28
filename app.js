@@ -948,11 +948,18 @@ function insuranceColor(value, breaks) {
   return palette[Math.min(colorIndex, palette.length - 1)];
 }
 
-async function renderInsuranceMap(selectedState) {
+async function renderInsuranceMap(selectedStateCode) {
   if (state.view !== 'insurance') return;
-  if (!selectedState || !el.insuranceCountyMap) return;
+  if (!selectedStateCode || !el.insuranceCountyMap) return;
   if (typeof L === 'undefined') {
     el.insuranceCountyMap.innerHTML = '<div class="empty-state">Leaflet did not load, so the county map could not be rendered.</div>';
+    return;
+  }
+
+  const insuranceStates = model?.insurance?.states || [];
+  const selectedState = insuranceStates.find((entry) => entry.state === selectedStateCode);
+  if (!selectedState) {
+    el.insuranceCountyMap.innerHTML = `<div class="empty-state">No insurance map data is available for ${escapeHtml(selectedStateCode)}.</div>`;
     return;
   }
 
@@ -1078,6 +1085,7 @@ async function renderInsuranceView() {
     state.insuranceState = insurance.states[0].state;
   }
   const selectedState = insuranceLookup[state.insuranceState];
+  console.log('Selected state:', state.insuranceState);
   el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
 
   el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
@@ -1170,7 +1178,13 @@ async function renderInsuranceView() {
     `).join('')
     : '<div class="empty-state">No source URL or year is available for this state.</div>';
 
-  renderInsuranceMap(selectedState).catch((error) => {
+  console.log('Insurance debug:', {
+    dropdownValue: el.insuranceStateSelect.value,
+    insuranceState: state.insuranceState,
+    renderInsuranceMapArg: state.insuranceState,
+  });
+
+  renderInsuranceMap(state.insuranceState).catch((error) => {
     console.error(error);
     el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   });
@@ -1267,6 +1281,11 @@ function bind() {
   });
   el.insuranceStateSelect.addEventListener('change', (event) => {
     state.insuranceState = event.target.value;
+    console.log('Insurance debug:', {
+      dropdownValue: event.target.value,
+      insuranceState: state.insuranceState,
+      renderInsuranceMapArg: state.insuranceState,
+    });
     renderInsuranceView();
   });
   el.clearFilters.addEventListener('click', () => {
