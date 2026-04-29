@@ -157,11 +157,29 @@ function badgeStatus(status) {
   return `<span class="badge ${className}">${escapeHtml(value)}</span>`;
 }
 
+// Match a row's raw `state` value (which may be "AZ", "Arizona",
+// "AZ, FL", "FL NY GA", "MAINE", etc.) against a selected 2-letter code.
+function stateMatchesFilter(rawState, selectedCode) {
+  if (selectedCode === 'all') return true;
+  const validStates = OpsInsurance.validStates || {};
+  const nameToCode = {};
+  Object.keys(validStates).forEach((code) => {
+    nameToCode[validStates[code].toLowerCase()] = code;
+  });
+  const pieces = OpsSheets.utils.splitStates(rawState || '');
+  if (pieces.length) {
+    if (pieces.includes(selectedCode)) return true;
+  }
+  // Fall back to interpreting the raw value as a full state name.
+  const code = nameToCode[String(rawState || '').trim().toLowerCase()];
+  return code === selectedCode;
+}
+
 function matchesFilters(textParts, values) {
   const query = state.search.trim().toLowerCase();
   const searchable = textParts.join(' ').toLowerCase();
   return (!query || searchable.includes(query))
-    && (state.stateFilter === 'all' || values.state === state.stateFilter)
+    && stateMatchesFilter(values.state, state.stateFilter)
     && (state.specialtyFilter === 'all' || values.specialty === state.specialtyFilter)
     && (state.statusFilter === 'all' || values.status === state.statusFilter)
     && (state.sourceFilter === 'all' || values.source === state.sourceFilter);
@@ -971,12 +989,29 @@ async function renderInsuranceMap(selectedStateCode) {
     insuranceGeoJson = await response.json();
   }
 
+  // Fast lookups for shading: prefer county_fips when present; fall back to
+  // county name (lowercased) since the current CSV does not carry FIPS codes.
   const countyLookup = Object.fromEntries(
     selectedState.locations
       .filter((location) => location.county_fips)
       .map((location) => [location.county_fips, location])
   );
-  const stateFips = selectedState.rows.find((row) => row.county_fips)?.county_fips?.slice(0, 2) || '';
+  const countyNameLookup = Object.fromEntries(
+    selectedState.locations
+      .filter((location) => location.county)
+      .map((location) => [String(location.county).trim().toLowerCase(), location])
+  );
+
+  // Resolve the 2-digit FIPS prefix for this state. We use the static map
+  // exposed by OpsInsurance.stateFips first and only fall back to row data.
+  const stateFipsMap = (model.insurance && model.insurance.stateFips) || OpsInsurance.stateFips || {};
+  const stateFips = stateFipsMap[selectedStateCode]
+    || (selectedState.rows.find((row) => row.county_fips)?.county_fips?.slice(0, 2) || '');
+
+  if (!stateFips) {
+    el.insuranceCountyMap.innerHTML = `<div class="empty-state">No FIPS prefix is configured for ${escapeHtml(selectedStateCode)}, so the county map cannot be drawn.</div>`;
+    return;
+  }
   const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === stateFips);
   const breaks = buildInsuranceBreaks(selectedState.locations.map((location) => location.total_enrollment));
 
@@ -1000,7 +1035,8 @@ async function renderInsuranceMap(selectedStateCode) {
     features: stateFeatures,
   }, {
     style(feature) {
-      const county = countyLookup[feature.id];
+      const county = countyLookup[feature.id]
+        || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
       return {
         color: '#d6e2ff',
         weight: 1,
@@ -1009,7 +1045,8 @@ async function renderInsuranceMap(selectedStateCode) {
       };
     },
     onEachFeature(feature, layer) {
-      const location = countyLookup[feature.id];
+      const location = countyLookup[feature.id]
+        || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
       const countyName = feature.properties.NAME;
       const plans = location && location.plan_names.length
         ? location.plan_names.slice(0, 3).join(', ')
@@ -1219,7 +1256,35 @@ function priorityScore(priority) {
 }
 
 function initFilters() {
-  fillSelect(el.stateFilter, 'All states', model.filterValues.states);
+  // Limit the state filter to the 29 states our company is actually licensed
+  // in. Sheet rows can contain multi-state strings ("TX, FL"), "Unknown",
+  // typos, or out-of-footprint codes (and even non-state values like
+  // "FNP-C,1099"). splitStates() + a name→code fallback + the validStates
+  // whitelist drops all of those.
+  const validStateMap = OpsInsurance.validStates || {};
+  const splitStates = OpsSheets.utils.splitStates;
+  const nameToCode = {};
+  Object.keys(validStateMap).forEach((code) => {
+    nameToCode[validStateMap[code].toLowerCase()] = code;
+  });
+  const seen = new Set();
+  (model.filterValues.states || []).forEach((value) => {
+    // Try splitStates first ("AZ, FL" → ["AZ","FL"]).
+    splitStates(value).forEach((code) => {
+      if (validStateMap[code]) seen.add(code);
+    });
+    // Then treat the raw value as a possible full name ("California").
+    const code = nameToCode[String(value || '').trim().toLowerCase()];
+    if (code) seen.add(code);
+  });
+  // Show full names in the dropdown, sorted by name; keep the 2-letter
+  // code as the option value so the filter stays stable.
+  const companyStates = Array.from(seen)
+    .map((code) => ({ code, name: validStateMap[code] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  el.stateFilter.innerHTML = ['<option value="all">All states</option>']
+    .concat(companyStates.map((s) => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.name)}</option>`))
+    .join('');
   fillSelect(el.specialtyFilter, 'All specialties', model.filterValues.specialties);
   fillSelect(el.statusFilter, 'All statuses', model.filterValues.statuses);
   fillSelect(el.sourceFilter, 'All sources', model.filterValues.sources.slice(1));

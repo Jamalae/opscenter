@@ -1,35 +1,25 @@
 const OpsInsurance = (() => {
   const csvUrl = './data/state_insurance_sample.csv';
   const geojsonPath = './data/insurance/geo/us-counties-fips.geojson';
+  // The 29 states our company actually operates in. This is the single
+  // source of truth for "valid" states throughout the insurance subsystem.
   const validStates = {
-    AL: 'Alabama',
-    AK: 'Alaska',
     AZ: 'Arizona',
-    AR: 'Arkansas',
     CA: 'California',
     CO: 'Colorado',
     CT: 'Connecticut',
     DC: 'District of Columbia',
-    DE: 'Delaware',
     FL: 'Florida',
     GA: 'Georgia',
-    HI: 'Hawaii',
-    IA: 'Iowa',
-    ID: 'Idaho',
     IL: 'Illinois',
     IN: 'Indiana',
-    KS: 'Kansas',
     KY: 'Kentucky',
-    LA: 'Louisiana',
     MA: 'Massachusetts',
     MD: 'Maryland',
-    ME: 'Maine',
     MI: 'Michigan',
     MN: 'Minnesota',
     MO: 'Missouri',
-    MS: 'Mississippi',
     NC: 'North Carolina',
-    NJ: 'New Jersey',
     NM: 'New Mexico',
     NV: 'Nevada',
     NY: 'New York',
@@ -43,6 +33,18 @@ const OpsInsurance = (() => {
     VA: 'Virginia',
     WA: 'Washington',
     WI: 'Wisconsin',
+  };
+
+  // 2-digit FIPS prefixes for the 29 company states. Used to filter the
+  // county GeoJSON layer by state, since the CSV does not currently carry
+  // per-row FIPS codes in `geographic_region`.
+  const stateFips = {
+    AZ: '04', CA: '06', CO: '08', CT: '09', DC: '11',
+    FL: '12', GA: '13', IL: '17', IN: '18', KY: '21',
+    MA: '25', MD: '24', MI: '26', MN: '27', MO: '29',
+    NC: '37', NM: '35', NV: '32', NY: '36', OH: '39',
+    OR: '41', PA: '42', SC: '45', TN: '47', TX: '48',
+    UT: '49', VA: '51', WA: '53', WI: '55',
   };
   const requiredFields = [
     'state',
@@ -218,7 +220,10 @@ const OpsInsurance = (() => {
       }))
       .sort((a, b) => b.total_enrollment - a.total_enrollment || a.location_label.localeCompare(b.location_label));
 
-    const stateName = new Intl.DisplayNames(['en'], { type: 'region' }).of(stateCode) || stateCode;
+    // Use the curated US-state name map. Intl.DisplayNames({type:'region'}) is
+    // a *country* lookup, so it would turn AZ → Azerbaijan, GA → Georgia
+    // (country), IN → India, CO → Colombia, etc.
+    const stateName = validStates[stateCode] || stateCode;
     return {
       state: stateCode,
       label: stateName,
@@ -242,6 +247,8 @@ const OpsInsurance = (() => {
         geojsonPath,
         rows: [],
         states: [],
+        stateFips,
+        validStates,
         validation: {
           validStateCount: 0,
           invalidRowCount: 0,
@@ -278,6 +285,8 @@ const OpsInsurance = (() => {
       geojsonPath,
       rows: dataRows,
       states,
+      stateFips,
+      validStates,
       validation: {
         validStateCount: states.length,
         invalidRowCount: invalidRows.length,
@@ -292,5 +301,7 @@ const OpsInsurance = (() => {
 
   return {
     loadData,
+    stateFips,
+    validStates,
   };
 })();
