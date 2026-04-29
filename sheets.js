@@ -1,7 +1,7 @@
 const OpsSheets = (() => {
   const WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml';
   const WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
-  const HUBSTAFF_JSON_URL = '<Apps Script Web App URL>';
+  const HUBSTAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub?gid=861294478&single=true&output=csv';
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
@@ -92,6 +92,51 @@ const OpsSheets = (() => {
         throw new Error(`HTTP ${response.status}`);
       }
       return await response.text();
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [], cell = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i], n = text[i+1];
+      if (inQ) {
+        if (c === '"' && n === '"') { cell += '"'; i++; }
+        else if (c === '"') { inQ = false; }
+        else { cell += c; }
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === ',') { row.push(cell); cell = ''; }
+        else if (c === '\r') {}
+        else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+        else cell += c;
+      }
+    }
+    if (cell.length || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  async function fetchCsv(url) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}cachebust=${Date.now()}`, {
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = await response.text();
+      const matrix = parseCsv(text);
+      if (!matrix.length) return [];
+      const headers = matrix[0].map(h => String(h || '').trim());
+      return matrix.slice(1)
+        .filter(r => r && r.some(c => c && String(c).trim()))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] != null ? r[i] : ''; });
+          return obj;
+        });
     } finally {
       window.clearTimeout(timeout);
     }
@@ -258,7 +303,7 @@ const OpsSheets = (() => {
   }
 
   function hubstaffJsonConfigured() {
-    return HUBSTAFF_JSON_URL && !/[<>]/.test(HUBSTAFF_JSON_URL);
+    return HUBSTAFF_CSV_URL && !/[<>]/.test(HUBSTAFF_CSV_URL);
   }
 
   function splitStates(value) {
@@ -430,7 +475,7 @@ const OpsSheets = (() => {
     return {
       configured: hubstaffJsonConfigured(),
       source: sourceState,
-      sourceUrl: HUBSTAFF_JSON_URL,
+      sourceUrl: HUBSTAFF_CSV_URL,
       sourceError,
       loadedAt: latestUpdate,
       stale,
@@ -526,7 +571,7 @@ const OpsSheets = (() => {
       hubstaffModel = {
         configured: false,
         source: 'not_configured',
-        sourceUrl: HUBSTAFF_JSON_URL,
+        sourceUrl: HUBSTAFF_CSV_URL,
         sourceError: '',
         loadedAt: null,
         stale: false,
@@ -541,15 +586,14 @@ const OpsSheets = (() => {
       };
     } else {
       try {
-        const payload = await fetchJson(HUBSTAFF_JSON_URL);
-        const rows = Array.isArray(payload) ? payload : Array.isArray(payload.rows) ? payload.rows : [];
+        const rows = await fetchCsv(HUBSTAFF_CSV_URL);
         hubstaffModel = buildHubstaffModel(rows, 'live', '');
       } catch (error) {
         hubstaffModel = {
           configured: true,
           source: 'unavailable',
-          sourceUrl: HUBSTAFF_JSON_URL,
-          sourceError: cleanText(error.message || 'Unable to load Hubstaff JSON'),
+          sourceUrl: HUBSTAFF_CSV_URL,
+          sourceError: cleanText(error.message || 'Unable to load Hubstaff CSV'),
           loadedAt: null,
           stale: false,
           staleReason: '',
@@ -569,7 +613,7 @@ const OpsSheets = (() => {
 
   return {
     TAB_CONFIG,
-    HUBSTAFF_JSON_URL,
+    HUBSTAFF_CSV_URL,
     WORKBOOK_PUBLISHED_URL,
     loadWorkbookData,
     utils: {
