@@ -408,9 +408,17 @@
         <article class="card">
           <div class="card-head">
             <h2 id="insuranceMapTitle">County Enrollment Map</h2>
-            <span class="muted" id="insuranceMapSub">Verified rows from external data files only</span>
+            <div class="card-head-actions">
+              <span class="muted" id="insuranceMapSub">Verified rows from external data files only</span>
+              <div class="map-mode-toggle" role="tablist" aria-label="Color counties by">
+                <button type="button" class="mode-btn active" data-mode="enrollment">Total Enrollment</button>
+                <button type="button" class="mode-btn" data-mode="priority">Marketing Priority</button>
+              </div>
+            </div>
           </div>
           <div id="insuranceCountyMap" class="insurance-map"></div>
+          <div id="insuranceMapLegend" class="map-legend"></div>
+          <div id="insuranceMarketingSummary" class="stack"></div>
         </article>
       </div>
 

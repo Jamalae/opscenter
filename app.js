@@ -7,6 +7,7 @@ const state = {
   search: '',
   selectedCoverageState: 'all',
   insuranceState: 'all',
+  mapMode: 'enrollment', // 'enrollment' or 'priority'
 };
 
 let model = null;
@@ -85,6 +86,9 @@ const el = {
   insuranceCountyTable: document.getElementById('insuranceCountyTable'),
   insuranceSourceCatalog: document.getElementById('insuranceSourceCatalog'),
   insurancePlanTable: document.getElementById('insurancePlanTable'),
+  insuranceMapLegend: document.getElementById('insuranceMapLegend'),
+  insuranceMarketingSummary: document.getElementById('insuranceMarketingSummary'),
+  mapModeToggle: document.querySelector('.map-mode-toggle'),
 };
 
 function uniq(values) {
@@ -1014,6 +1018,18 @@ async function renderInsuranceMap(selectedStateCode) {
   }
   const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === stateFips);
   const breaks = buildInsuranceBreaks(selectedState.locations.map((location) => location.total_enrollment));
+  const mode = state.mapMode === 'priority' ? 'priority' : 'enrollment';
+
+  // Marketing-priority palette: red (no in-network) → yellow → green (high in-network share).
+  // Choosing 5 buckets to match the existing enrollment palette length.
+  const priorityPalette = ['#7a1f1f', '#a64a2a', '#c8861f', '#9bbf3a', '#3f9d5a'];
+  function priorityColor(share) {
+    if (share <= 0) return priorityPalette[0];
+    if (share < 0.2) return priorityPalette[1];
+    if (share < 0.4) return priorityPalette[2];
+    if (share < 0.7) return priorityPalette[3];
+    return priorityPalette[4];
+  }
 
   if (!insuranceMap) {
     insuranceMap = L.map(el.insuranceCountyMap, {
@@ -1037,29 +1053,47 @@ async function renderInsuranceMap(selectedStateCode) {
     style(feature) {
       const county = countyLookup[feature.id]
         || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
+      let fillColor = '#16213d';
+      let fillOpacity = 0.15;
+      if (county) {
+        fillOpacity = 0.82;
+        if (mode === 'priority') {
+          fillColor = priorityColor(county.in_network_share || 0);
+        } else {
+          fillColor = insuranceColor(county.total_enrollment, breaks);
+        }
+      }
       return {
         color: '#d6e2ff',
         weight: 1,
-        fillOpacity: county ? 0.82 : 0.15,
-        fillColor: county ? insuranceColor(county.total_enrollment, breaks) : '#16213d',
+        fillOpacity,
+        fillColor,
       };
     },
     onEachFeature(feature, layer) {
       const location = countyLookup[feature.id]
         || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
       const countyName = feature.properties.NAME;
-      const plans = location && location.plan_names.length
-        ? location.plan_names.slice(0, 3).join(', ')
-        : 'No plan names available';
-      const orgs = location && location.parent_orgs.length
-        ? location.parent_orgs.slice(0, 2).join(', ')
-        : 'No parent org available';
-      const detail = location
-        ? `${wholeNumber(location.total_enrollment)} total enrollment across ${location.row_count} rows`
-        : 'No verified insurance rows loaded yet';
-      layer.bindTooltip(
-        `<strong>${escapeHtml(countyName)}</strong><br>${escapeHtml(detail)}<br>Plans: ${escapeHtml(plans)}<br>Parents: ${escapeHtml(orgs)}`
-      );
+      if (!location) {
+        layer.bindTooltip(`<strong>${escapeHtml(countyName)}</strong><br>No verified insurance rows loaded yet`);
+        return;
+      }
+      const sharePct = Math.round((location.in_network_share || 0) * 100);
+      const inNetParents = (location.in_network_parent_orgs || []).slice(0, 3).join(', ') || '—';
+      const outOfNetParents = (location.out_of_network_parent_orgs || []).slice(0, 3).join(', ') || '—';
+      const top = (location.plan_names || []).slice(0, 3).join(', ') || '—';
+      const tooltipBody = mode === 'priority'
+        ? `<strong>${escapeHtml(countyName)}</strong>
+           <br><b>${sharePct}%</b> of enrollment on plans you accept
+           <br>Addressable: ${wholeNumber(location.in_network_enrollment || 0)}
+           <br>Out-of-network: ${wholeNumber(location.out_of_network_enrollment || 0)}
+           <br>In-network parents: ${escapeHtml(inNetParents)}
+           <br>Gap parents: ${escapeHtml(outOfNetParents)}`
+        : `<strong>${escapeHtml(countyName)}</strong>
+           <br>${wholeNumber(location.total_enrollment)} total enrollment across ${location.row_count} rows
+           <br>Plans: ${escapeHtml(top)}
+           <br>Parents: ${escapeHtml((location.parent_orgs || []).slice(0, 2).join(', ') || '—')}`;
+      layer.bindTooltip(tooltipBody);
     },
   }).addTo(insuranceMap);
 
@@ -1068,6 +1102,79 @@ async function renderInsuranceMap(selectedStateCode) {
     insuranceMap.fitBounds(bounds, { padding: [16, 16] });
   }
   setTimeout(() => insuranceMap.invalidateSize(), 0);
+
+  // Legend reflects whichever mode is active
+  if (el.insuranceMapLegend) {
+    if (mode === 'priority') {
+      el.insuranceMapLegend.innerHTML = `
+        <div class="legend-row"><span>% of enrollment on plans you accept:</span></div>
+        <div class="legend-bar">
+          ${priorityPalette.map((c) => `<span style="background:${c}"></span>`).join('')}
+        </div>
+        <div class="legend-row"><span>0%</span><span style="margin:0 0.6rem">→</span><span>100%</span></div>
+      `;
+    } else {
+      el.insuranceMapLegend.innerHTML = `
+        <div class="legend-row"><span>Total enrollment per county:</span></div>
+        <div class="legend-bar">
+          <span style="background:#213a6b"></span>
+          <span style="background:#295598"></span>
+          <span style="background:#3f73bb"></span>
+          <span style="background:#5b8fd0"></span>
+          <span style="background:#7fafe8"></span>
+        </div>
+        <div class="legend-row"><span>low</span><span style="margin:0 0.6rem">→</span><span>high</span></div>
+      `;
+    }
+  }
+}
+
+// State-level marketing summary: total addressable enrollment, top in-network
+// parent orgs, top "gap" parent orgs (high enrollment, not contracted).
+function renderMarketingSummary(selectedState) {
+  if (!el.insuranceMarketingSummary) return;
+  if (!selectedState || !selectedState.locations) {
+    el.insuranceMarketingSummary.innerHTML = '';
+    return;
+  }
+  const totalEnrollment = selectedState.locations.reduce((s, l) => s + (l.total_enrollment || 0), 0);
+  const inNet = selectedState.locations.reduce((s, l) => s + (l.in_network_enrollment || 0), 0);
+  const outOfNet = totalEnrollment - inNet;
+  const sharePct = totalEnrollment > 0 ? Math.round((inNet / totalEnrollment) * 100) : 0;
+
+  // Aggregate by parent_org across all rows in the state
+  const parentTotals = {};
+  selectedState.rows.forEach((row) => {
+    if (!row.parent_org) return;
+    if (!parentTotals[row.parent_org]) {
+      parentTotals[row.parent_org] = { total: 0, in_network: false };
+    }
+    parentTotals[row.parent_org].total += row.total_enrollment || 0;
+    if (row.in_network) parentTotals[row.parent_org].in_network = true;
+  });
+  const parentRows = Object.entries(parentTotals)
+    .map(([parent, v]) => ({ parent, total: v.total, in_network: v.in_network }))
+    .sort((a, b) => b.total - a.total);
+  const inNetTop = parentRows.filter((p) => p.in_network).slice(0, 5);
+  const gapTop = parentRows.filter((p) => !p.in_network).slice(0, 5);
+
+  el.insuranceMarketingSummary.innerHTML = `
+    <div class="metric-row"><span>Total enrollment</span><strong>${wholeNumber(totalEnrollment)}</strong></div>
+    <div class="metric-row"><span>Addressable (in-network)</span><strong>${wholeNumber(inNet)} · ${sharePct}%</strong></div>
+    <div class="metric-row"><span>Out-of-network</span><strong>${wholeNumber(outOfNet)}</strong></div>
+    <div class="note-card">
+      <strong>Top in-network parent orgs</strong>
+      ${inNetTop.length
+        ? inNetTop.map((p) => `<div class="metric-row"><span>${escapeHtml(p.parent)}</span><strong>${wholeNumber(p.total)}</strong></div>`).join('')
+        : '<div class="empty-state">No parent orgs marked "in-network" yet — edit data/contracted_plans.csv to set status.</div>'}
+    </div>
+    <div class="note-card">
+      <strong>Gap list — high enrollment, not yet contracted</strong>
+      ${gapTop.length
+        ? gapTop.map((p) => `<div class="metric-row"><span>${escapeHtml(p.parent)}</span><strong>${wholeNumber(p.total)}</strong></div>`).join('')
+        : '<div class="empty-state">All major parent orgs in this state are already in-network.</div>'}
+    </div>
+  `;
 }
 
 async function renderInsuranceView() {
@@ -1224,6 +1331,8 @@ async function renderInsuranceView() {
     renderInsuranceMapArg: state.insuranceState,
   });
 
+  renderMarketingSummary(selectedState);
+
   renderInsuranceMap(state.insuranceState).catch((error) => {
     console.error(error);
     el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
@@ -1349,13 +1458,23 @@ function bind() {
   });
   el.insuranceStateSelect.addEventListener('change', (event) => {
     state.insuranceState = event.target.value;
-    console.log('Insurance debug:', {
-      dropdownValue: event.target.value,
-      insuranceState: state.insuranceState,
-      renderInsuranceMapArg: state.insuranceState,
-    });
     renderInsuranceView();
   });
+  // Map mode toggle (Total Enrollment / Marketing Priority)
+  if (el.mapModeToggle) {
+    el.mapModeToggle.querySelectorAll('.mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        if (mode !== state.mapMode) {
+          state.mapMode = mode;
+          el.mapModeToggle.querySelectorAll('.mode-btn').forEach((b) => {
+            b.classList.toggle('active', b === btn);
+          });
+          renderInsuranceView();
+        }
+      });
+    });
+  }
   el.clearFilters.addEventListener('click', () => {
     resetFilters();
     render();

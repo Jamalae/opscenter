@@ -562,6 +562,72 @@ th {
   border: 1px solid rgba(112, 141, 230, 0.16);
 }
 
+.map-mode-toggle {
+  display: inline-flex;
+  background: rgba(112, 141, 230, 0.08);
+  border: 1px solid rgba(112, 141, 230, 0.2);
+  border-radius: 999px;
+  padding: 2px;
+  margin-left: 0.5rem;
+}
+
+.map-mode-toggle .mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.map-mode-toggle .mode-btn:hover {
+  color: #e8eefc;
+}
+
+.map-mode-toggle .mode-btn.active {
+  background: rgba(125, 181, 255, 0.18);
+  color: #e8eefc;
+  font-weight: 500;
+}
+
+.map-legend {
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.map-legend .legend-bar {
+  display: flex;
+  height: 10px;
+  width: 220px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(112, 141, 230, 0.2);
+}
+
+.map-legend .legend-bar span {
+  flex: 1;
+}
+
+.map-legend .legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.map-legend .legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .insurance-map a,
 .note-card a,
 td a {

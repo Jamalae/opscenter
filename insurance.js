@@ -1,5 +1,6 @@
 const OpsInsurance = (() => {
   const csvUrl = './data/state_insurance_sample.csv';
+  const contractedCsvUrl = './data/contracted_plans.csv';
   const geojsonPath = './data/insurance/geo/us-counties-fips.geojson';
   // The 29 states our company actually operates in. This is the single
   // source of truth for "valid" states throughout the insurance subsystem.
@@ -195,6 +196,16 @@ const OpsInsurance = (() => {
       group.total_enrollment += row.total_enrollment || 0;
       group.medicaid_enrollment += row.medicaid_enrollment || 0;
       group.dual_enrollment += row.dual_enrollment || 0;
+      // Marketing-priority aggregates: sum the enrollment of rows we're
+      // contracted with so the map can color counties by addressable %.
+      if (row.in_network) {
+        group.in_network_enrollment = (group.in_network_enrollment || 0) + (row.total_enrollment || 0);
+        if (row.parent_org) group.in_network_parent_orgs = (group.in_network_parent_orgs || new Set()).add(row.parent_org);
+        if (row.plan_name) group.in_network_plan_names = (group.in_network_plan_names || new Set()).add(row.plan_name);
+      } else {
+        group.out_of_network_enrollment = (group.out_of_network_enrollment || 0) + (row.total_enrollment || 0);
+        if (row.parent_org) group.out_of_network_parent_orgs = (group.out_of_network_parent_orgs || new Set()).add(row.parent_org);
+      }
       group.rows.push(row);
       if (row.source_year) group.source_years.add(row.source_year);
       if (row.source_url) group.source_urls.add(row.source_url);
@@ -211,6 +222,14 @@ const OpsInsurance = (() => {
         total_enrollment: group.total_enrollment,
         medicaid_enrollment: group.medicaid_enrollment,
         dual_enrollment: group.dual_enrollment,
+        in_network_enrollment: group.in_network_enrollment || 0,
+        out_of_network_enrollment: group.out_of_network_enrollment || 0,
+        in_network_share: group.total_enrollment > 0
+          ? (group.in_network_enrollment || 0) / group.total_enrollment
+          : 0,
+        in_network_parent_orgs: Array.from(group.in_network_parent_orgs || []).sort(),
+        out_of_network_parent_orgs: Array.from(group.out_of_network_parent_orgs || []).sort(),
+        in_network_plan_names: Array.from(group.in_network_plan_names || []).sort(),
         row_count: group.rows.length,
         plan_names: Array.from(group.plan_names).sort(),
         parent_orgs: Array.from(group.parent_orgs).sort(),
@@ -238,8 +257,64 @@ const OpsInsurance = (() => {
     };
   }
 
+  // ── Contracted plans ───────────────────────────────────────────────────
+  // Reads data/contracted_plans.csv. Each row is (parent_org, plan_name,
+  // status, notes). status of "in-network" means we accept rows from this
+  // plan/parent for marketing-priority calculations. plan_name blank means
+  // the rule applies to every plan from the parent_org.
+  async function loadContractedPlans() {
+    let text;
+    try {
+      text = await fetchText(contractedCsvUrl);
+    } catch (error) {
+      // File missing or unreachable — treat as no contracts configured.
+      return { rows: [], inNetworkLookup: () => false };
+    }
+    const parsed = parseCsv(text);
+    if (!parsed.length) {
+      return { rows: [], inNetworkLookup: () => false };
+    }
+    const headers = parsed[0].map((h) => String(h || '').trim().toLowerCase());
+    const rows = parsed.slice(1).map((cells) => {
+      const row = {};
+      headers.forEach((h, i) => { row[h] = cells[i] ?? ''; });
+      return {
+        parent_org: String(row.parent_org || '').trim(),
+        plan_name: String(row.plan_name || '').trim(),
+        status: String(row.status || '').trim().toLowerCase(),
+        notes: String(row.notes || '').trim(),
+      };
+    });
+
+    // Build fast lookup: returns true if a master-CSV row is in-network.
+    const parentOnly = new Set();
+    const parentPlanPair = new Set();
+    rows.forEach((row) => {
+      if (row.status !== 'in-network') return;
+      if (row.plan_name) {
+        parentPlanPair.add(`${row.parent_org.toLowerCase()}||${row.plan_name.toLowerCase()}`);
+      } else {
+        parentOnly.add(row.parent_org.toLowerCase());
+      }
+    });
+
+    function inNetworkLookup(parentOrg, planName) {
+      const p = String(parentOrg || '').trim().toLowerCase();
+      const n = String(planName || '').trim().toLowerCase();
+      if (!p) return false;
+      if (parentOnly.has(p)) return true;
+      if (parentPlanPair.has(`${p}||${n}`)) return true;
+      return false;
+    }
+
+    return { rows, inNetworkLookup };
+  }
+
   async function loadData() {
-    const text = await fetchText(csvUrl);
+    const [text, contracted] = await Promise.all([
+      fetchText(csvUrl),
+      loadContractedPlans(),
+    ]);
     const parsed = parseCsv(text);
     if (!parsed.length) {
       return {
@@ -249,6 +324,7 @@ const OpsInsurance = (() => {
         states: [],
         stateFips,
         validStates,
+        contractedPlans: contracted.rows,
         validation: {
           validStateCount: 0,
           invalidRowCount: 0,
@@ -263,7 +339,9 @@ const OpsInsurance = (() => {
       headers.forEach((header, index) => {
         row[header] = cells[index] ?? '';
       });
-      return normalizeRow(row);
+      const norm = normalizeRow(row);
+      norm.in_network = contracted.inNetworkLookup(norm.parent_org, norm.plan_name);
+      return norm;
     });
 
     const invalidRows = normalizedRows.filter((row) => !row.state);
@@ -287,6 +365,7 @@ const OpsInsurance = (() => {
       states,
       stateFips,
       validStates,
+      contractedPlans: contracted.rows,
       validation: {
         validStateCount: states.length,
         invalidRowCount: invalidRows.length,

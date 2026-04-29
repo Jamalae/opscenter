@@ -1,0 +1,18 @@
+parent_org,plan_name,status,notes
+Centene,,unknown,"Replace status with: in-network, out-of-network, or pursuing. Leaving plan_name blank applies to all plans from this parent_org."
+Molina Healthcare,,unknown,
+Elevance Health,,unknown,Anthem / BCBS plans
+UnitedHealth Group,,unknown,Includes Optum and UHC Community Plan
+Aetna (CVS Health),,unknown,
+Humana,,unknown,
+Kaiser Foundation Health Plan,,unknown,
+Healthfirst (NYC nonprofit),,unknown,
+UPMC Health Plan,,unknown,
+Blue Cross Blue Shield of Minnesota,,unknown,
+Health Care Service Corporation,,unknown,HCSC = BCBSIL / BCBSTX / BCBSNM
+Cigna,,unknown,Add a row even if parent_org doesn't appear in master CSV
+Quartet Health,,referrer,"Tag referral aggregators as 'referrer' so they don't affect marketing color."
+Headway,,referrer,
+Path Mental Health,,referrer,
+Alma,,referrer,
+SonderMind,,referrer,
