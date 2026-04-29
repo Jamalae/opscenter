@@ -1,8 +1,7 @@
 const OpsSheets = (() => {
   const WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml';
   const WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
-  const HUBSTAFF_WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pubhtml';
-  const HUBSTAFF_WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub';
+  const HUBSTAFF_JSON_URL = '<Apps Script Web App URL>';
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
@@ -12,12 +11,6 @@ const OpsSheets = (() => {
     { id: 'currentWorkforce', label: 'Current Workforce', sheetName: 'Current Work force', gid: '1575031700' },
     { id: 'resumePool', label: 'Resume Pool', sheetName: 'Resume Pool', gid: '624754739' },
     { id: 'newHiring', label: 'New Hiring', sheetName: 'New Hiring', gid: '1396856298' },
-  ];
-
-  const HUBSTAFF_TAB_CONFIG = [
-    { id: 'weeklyKpi', label: 'Hubstaff Weekly KPI', sheetName: 'Weekly_KPI', gid: '356491693', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
-    { id: 'rawImport', label: 'Hubstaff Raw Import', sheetName: 'Raw_Import', gid: '861294478', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
-    { id: 'exceptions', label: 'Hubstaff Exceptions', sheetName: 'Exceptions', gid: '1400853667', csvBase: HUBSTAFF_WORKBOOK_CSV_BASE },
   ];
 
   function buildCsvUrl(gid, csvBase = WORKBOOK_CSV_BASE) {
@@ -99,6 +92,23 @@ const OpsSheets = (() => {
         throw new Error(`HTTP ${response.status}`);
       }
       return await response.text();
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  async function fetchJson(url) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}cachebust=${Date.now()}`, {
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.json();
     } finally {
       window.clearTimeout(timeout);
     }
@@ -247,23 +257,8 @@ const OpsSheets = (() => {
     };
   }
 
-  function normalizeHubstaffExceptionRow(row) {
-    return {
-      employeeName: cleanText(row['VA Name'] || row.employee_name || row.name),
-      issue: cleanText(row.Issue),
-      actionNeeded: cleanText(row['Action Needed']),
-    };
-  }
-
-  function normalizeHubstaffWeeklyKpiRow(row) {
-    return {
-      employeeName: cleanText(row['VA Name']),
-      totalHours: Number(row['Total Hours'] || 0),
-      avgActivityPercent: Number(row['Avg Activity %'] || 0),
-      corePercent: Number(row['Core %'] || 0),
-      nonCorePercent: Number(row['Non-Core %'] || 0),
-      output: cleanText(row['Output (Calls / Emails / Referrals)']),
-    };
+  function hubstaffJsonConfigured() {
+    return HUBSTAFF_JSON_URL && !/[<>]/.test(HUBSTAFF_JSON_URL);
   }
 
   function splitStates(value) {
@@ -386,35 +381,27 @@ const OpsSheets = (() => {
     return issues;
   }
 
-  function buildHubstaffModel(rawTabs) {
-    const rawRows = (rawTabs.rawImport || [])
+  function buildHubstaffModel(rawRows, sourceState = 'live', sourceError = '') {
+    const rows = (rawRows || [])
       .filter((row) => row.employee_name || row.team_name || row.tracked_hours)
       .map(normalizeHubstaffRawRow);
-    const weeklyRows = (rawTabs.weeklyKpi || [])
-      .filter((row) => row['VA Name'] || row['Total Hours'] || row['Avg Activity %'])
-      .map(normalizeHubstaffWeeklyKpiRow);
-    const exceptionRows = (rawTabs.exceptions || [])
-      .filter((row) => row['VA Name'] || row.Issue || row['Action Needed'])
-      .map(normalizeHubstaffExceptionRow);
 
-    const employeeCount = uniq(rawRows.map((row) => row.employeeName)).length;
-    const trackedHours = rawRows.reduce((sum, row) => sum + row.trackedHours, 0);
-    const payrollEstimate = rawRows.reduce((sum, row) => sum + row.payrollEstimate, 0);
-    const activityRows = rawRows.filter((row) => Number.isFinite(row.activityPercent));
+    const employeeCount = uniq(rows.map((row) => row.employeeName)).length;
+    const trackedHours = rows.reduce((sum, row) => sum + row.trackedHours, 0);
+    const payrollEstimate = rows.reduce((sum, row) => sum + row.payrollEstimate, 0);
+    const activityRows = rows.filter((row) => Number.isFinite(row.activityPercent));
     const activityRate = activityRows.length
       ? activityRows.reduce((sum, row) => sum + row.activityPercent, 0) / activityRows.length
       : 0;
-    const latestUpdate = rawRows
+    const latestUpdate = rows
       .map((row) => row.sourceUpdatedAt)
       .filter(Boolean)
       .sort((a, b) => a - b)
       .pop() || null;
-    const staleThresholdMs = 36 * 60 * 60 * 1000;
+    const staleThresholdMs = 24 * 60 * 60 * 1000;
     const stale = !latestUpdate || (Date.now() - latestUpdate.getTime()) > staleThresholdMs;
-    const lowActivityCount = rawRows.filter((row) => row.activityPercent > 0 && row.activityPercent < 50).length;
-    const noActivityCount = rawRows.filter((row) => row.activityPercent === 0).length;
-    const attendanceIssues = rawRows.filter((row) => row.attendanceStatus && row.attendanceStatus !== 'No flag').length;
-    const topEmployees = Object.values(rawRows.reduce((acc, row) => {
+    const attendanceIssues = rows.filter((row) => row.attendanceStatus && row.attendanceStatus !== 'No flag').length;
+    const topEmployees = Object.values(rows.reduce((acc, row) => {
       const key = row.employeeName || 'Unknown';
       if (!acc[key]) {
         acc[key] = {
@@ -441,31 +428,28 @@ const OpsSheets = (() => {
       .slice(0, 5);
 
     return {
-      configured: true,
-      source: 'live',
-      workbookUrl: HUBSTAFF_WORKBOOK_PUBLISHED_URL,
+      configured: hubstaffJsonConfigured(),
+      source: sourceState,
+      sourceUrl: HUBSTAFF_JSON_URL,
+      sourceError,
       loadedAt: latestUpdate,
       stale,
       staleReason: stale
         ? (latestUpdate
-          ? 'Hubstaff snapshot is older than 36 hours.'
+          ? 'Hubstaff snapshot is older than 24 hours.'
           : 'Hubstaff rows are missing a usable source_updated_at timestamp.')
         : '',
       employeeCount,
       trackedHours,
       activityRate,
       payrollEstimate,
-      lowActivityCount,
-      noActivityCount,
       attendanceIssues,
-      rows: rawRows,
-      weeklyKpis: weeklyRows,
-      exceptions: exceptionRows,
+      rows,
       topEmployees,
     };
   }
 
-  function buildModel(rawTabs, sourceMeta) {
+  function buildModel(rawTabs, sourceMeta, hubstaffModel) {
     const dataset = {
       candidatePool: rawTabs.candidatePool.map(normalizeCandidatePoolRow),
       interviews: rawTabs.interviews.map(normalizeInterviewRow),
@@ -493,7 +477,7 @@ const OpsSheets = (() => {
       loadedAt: new Date(),
       workbookUrl: WORKBOOK_PUBLISHED_URL,
       sourceMeta,
-      hubstaff: buildHubstaffModel(rawTabs.hubstaff || {}),
+      hubstaff: hubstaffModel,
       dataset,
       issues,
       metrics: {
@@ -528,10 +512,7 @@ const OpsSheets = (() => {
   }
 
   async function loadWorkbookData() {
-    const [primaryResults, hubstaffResults] = await Promise.all([
-      Promise.all(TAB_CONFIG.map(loadTab)),
-      Promise.all(HUBSTAFF_TAB_CONFIG.map(loadTab)),
-    ]);
+    const primaryResults = await Promise.all(TAB_CONFIG.map(loadTab));
     const rawTabs = {};
     const sourceMeta = [];
 
@@ -540,16 +521,55 @@ const OpsSheets = (() => {
       sourceMeta.push(meta);
     });
 
-    rawTabs.hubstaff = {};
-    hubstaffResults.forEach(({ rows, meta }) => {
-      rawTabs.hubstaff[meta.id] = rows;
-    });
+    let hubstaffModel;
+    if (!hubstaffJsonConfigured()) {
+      hubstaffModel = {
+        configured: false,
+        source: 'not_configured',
+        sourceUrl: HUBSTAFF_JSON_URL,
+        sourceError: '',
+        loadedAt: null,
+        stale: false,
+        staleReason: '',
+        employeeCount: 0,
+        trackedHours: 0,
+        activityRate: 0,
+        payrollEstimate: 0,
+        attendanceIssues: 0,
+        rows: [],
+        topEmployees: [],
+      };
+    } else {
+      try {
+        const payload = await fetchJson(HUBSTAFF_JSON_URL);
+        const rows = Array.isArray(payload) ? payload : Array.isArray(payload.rows) ? payload.rows : [];
+        hubstaffModel = buildHubstaffModel(rows, 'live', '');
+      } catch (error) {
+        hubstaffModel = {
+          configured: true,
+          source: 'unavailable',
+          sourceUrl: HUBSTAFF_JSON_URL,
+          sourceError: cleanText(error.message || 'Unable to load Hubstaff JSON'),
+          loadedAt: null,
+          stale: false,
+          staleReason: '',
+          employeeCount: 0,
+          trackedHours: 0,
+          activityRate: 0,
+          payrollEstimate: 0,
+          attendanceIssues: 0,
+          rows: [],
+          topEmployees: [],
+        };
+      }
+    }
 
-    return buildModel(rawTabs, sourceMeta);
+    return buildModel(rawTabs, sourceMeta, hubstaffModel);
   }
 
   return {
     TAB_CONFIG,
+    HUBSTAFF_JSON_URL,
     WORKBOOK_PUBLISHED_URL,
     loadWorkbookData,
     utils: {

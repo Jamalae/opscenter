@@ -852,7 +852,7 @@ function renderStaffView() {
 function renderHubstaffView() {
   const hubstaff = model?.hubstaff || {
     configured: false,
-    source: 'loading',
+    source: 'not_configured',
     loadedAt: null,
     stale: false,
     staleReason: '',
@@ -860,29 +860,35 @@ function renderHubstaffView() {
     trackedHours: 0,
     activityRate: 0,
     payrollEstimate: 0,
+    attendanceIssues: 0,
     rows: [],
+    topEmployees: [],
   };
   const sourceConfigured = Boolean(hubstaff && hubstaff.configured);
   const isLoading = hubstaff.source === 'loading';
-  const isEmpty = sourceConfigured && (!hubstaff.rows || hubstaff.rows.length === 0);
+  const isUnavailable = hubstaff.source === 'unavailable';
+  const isEmpty = sourceConfigured && !isLoading && !isUnavailable && (!hubstaff.rows || hubstaff.rows.length === 0);
   const employeeCount = model?.hubstaff?.employeeCount || 0;
   const trackedHours = model?.hubstaff?.trackedHours || 0;
   const activityRate = model?.hubstaff?.activityRate || 0;
   const payrollEstimate = model?.hubstaff?.payrollEstimate || 0;
   const topEmployees = hubstaff.topEmployees || [];
-  const exceptions = hubstaff.exceptions || [];
-  const weeklyKpis = hubstaff.weeklyKpis || [];
+  const rows = hubstaff.rows || [];
 
   el.hubstaffSummary.textContent = isLoading
     ? 'Loading Hubstaff source…'
+    : isUnavailable
+    ? 'Hubstaff source could not be loaded'
     : sourceConfigured
-    ? `${employeeCount} tracked team members · ${trackedHours} hours loaded`
+    ? isEmpty
+      ? 'Hubstaff source is connected, but returned no rows'
+      : `${employeeCount} active team members · ${trackedHours.toFixed(1)} tracked hours`
     : 'Hubstaff tab is ready, but the live account source is not configured yet';
   el.hubstaffTimestamp.textContent = `Last updated: ${formatDateTime(hubstaff.loadedAt)}`;
 
   el.hubstaffKpis.innerHTML = [
-    { label: 'Tracked Team Members', value: employeeCount },
-    { label: 'Hours Synced', value: trackedHours },
+    { label: 'Active Team Members', value: employeeCount },
+    { label: 'Tracked Hours', value: trackedHours.toFixed(1) },
     { label: 'Avg Activity', value: sourceConfigured ? percent(activityRate) : 'N/A' },
     { label: 'Payroll Estimate', value: sourceConfigured ? money(payrollEstimate) : 'N/A' },
   ].map((card) => `
@@ -895,17 +901,19 @@ function renderHubstaffView() {
   el.hubstaffStatus.innerHTML = [
     isLoading
       ? 'Loading state: waiting for the Hubstaff source response.'
+      : isUnavailable
+        ? `Hubstaff JSON could not be loaded: ${hubstaff.sourceError || 'Unknown error.'}`
       : sourceConfigured
         ? isEmpty
-          ? 'Empty state: the Hubstaff source is connected, but it returned no rows for the current snapshot.'
-          : `Hubstaff data is connected from Google Sheets with ${hubstaff.rows.length} imported rows.`
+          ? 'Empty state: the Hubstaff JSON endpoint is connected, but it returned no rows for the current snapshot.'
+          : `Hubstaff data is connected from Apps Script JSON with ${rows.length} imported rows.`
         : 'Empty state: no Hubstaff source is connected yet. The tab is in place so we can add it without changing the site structure again.',
     hubstaff.stale
       ? `Stale-data flag: ${hubstaff.staleReason || 'the last available Hubstaff data may be out of date.'}`
       : 'Stale-data flag: current snapshot is considered fresh.',
     sourceConfigured
-      ? `Low activity rows: ${hubstaff.lowActivityCount || 0} · Zero-activity rows: ${hubstaff.noActivityCount || 0} · Attendance issues: ${hubstaff.attendanceIssues || 0}`
-      : 'The safest GitHub Pages pattern is to load Hubstaff data from a published CSV/Sheet snapshot or a lightweight serverless proxy, not from a private token directly in browser code.',
+      ? `Attendance issues: ${hubstaff.attendanceIssues || 0} · JSON endpoint: ${hubstaff.sourceUrl || 'Not set'}`
+      : 'The safest GitHub Pages pattern is to load Hubstaff data from a sanitized Apps Script JSON endpoint, not from private Hubstaff credentials in browser code.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   el.hubstaffReadiness.innerHTML = sourceConfigured
@@ -918,35 +926,44 @@ function renderHubstaffView() {
       `).join('')
       : '<div class="empty-state">No employee-level Hubstaff rollups are available yet.</div>'
     : [
-      'Needed: which Hubstaff dataset you want exposed first: hours, activity, payroll, schedules, or attendance exceptions.',
-      'Needed: a GitHub Pages-safe source. Best options are a published Google Sheet export, a CSV snapshot, or a small API proxy.',
-      'Needed: column mapping for employee name, team, hours, activity, pay rate, and date range.',
+      'Set `HUBSTAFF_JSON_URL` in `sheets.js` to the published Apps Script Web App endpoint.',
+      'The endpoint should return sanitized JSON rows only, never Hubstaff tokens or refresh credentials.',
+      'Expected fields: employee_name, team_name, date, tracked_hours, activity_percent, pay_rate, payroll_estimate, attendance_status, source_updated_at.',
     ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
-  el.hubstaffMetricsTable.innerHTML = [
-    ['Hours by employee', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${topEmployees.length} top employees ranked by tracked hours` : 'Daily or weekly tracked time by person'],
-    ['Activity score', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${hubstaff.lowActivityCount || 0} low-activity rows under 50% activity` : 'Average activity and low-activity flags'],
-    ['Attendance exceptions', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${exceptions.length} exception rows in the published Exceptions tab` : 'Missed shifts, no time, or under-target hours'],
-    ['Payroll rollup', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? money(payrollEstimate) : 'Estimated payroll totals by employee or team'],
-    ['Team utilization', isLoading ? 'Loading' : sourceConfigured ? 'Ready' : 'Awaiting source', sourceConfigured ? `${weeklyKpis.length} weekly KPI summary rows available` : 'Capacity view against expected staffing levels'],
-  ].map((row) => `
+  if (isLoading) {
+    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">Loading Hubstaff rows…</td></tr>';
+  } else if (isUnavailable) {
+    el.hubstaffMetricsTable.innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(hubstaff.sourceError || 'Hubstaff JSON could not be loaded.')}</td></tr>`;
+  } else if (isEmpty) {
+    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">No Hubstaff rows were returned by the JSON endpoint.</td></tr>';
+  } else if (!sourceConfigured) {
+    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">Configure `HUBSTAFF_JSON_URL` to load Hubstaff rows.</td></tr>';
+  } else {
+    el.hubstaffMetricsTable.innerHTML = rows.map((row) => `
     <tr>
-      <td>${escapeHtml(row[0])}</td>
-      <td>${badgeStatus(row[1])}</td>
-      <td>${escapeHtml(row[2])}</td>
+      <td>${escapeHtml(row.employeeName)}</td>
+      <td>${escapeHtml(row.teamName || 'Unassigned')}</td>
+      <td>${escapeHtml(row.dateLabel || 'N/A')}</td>
+      <td>${escapeHtml(row.trackedHours.toFixed(1))}</td>
+      <td>${escapeHtml(percent(row.activityPercent))}</td>
+      <td>${escapeHtml(money(row.payrollEstimate))}</td>
+      <td>${escapeHtml(row.attendanceStatus || 'No flag')}</td>
+      <td>${escapeHtml(row.sourceUpdatedAtLabel || 'N/A')}</td>
     </tr>
   `).join('');
+  }
 
   el.hubstaffNotes.innerHTML = [
     sourceConfigured
-      ? `Live source: ${hubstaff.workbookUrl || 'Published Google Sheet'}`
-      : 'If you already export Hubstaff into Google Sheets, I can add that sheet as another source in `sheets.js` and make this tab live with the same static-site architecture.',
+      ? `Live source: ${hubstaff.sourceUrl || 'Apps Script JSON endpoint'}`
+      : 'Hubstaff is now designed for an Apps Script JSON backend rather than direct Hubstaff browser access.',
     sourceConfigured
-      ? `Rows imported from Raw_Import: ${hubstaff.rows.length}. Weekly KPI rows: ${weeklyKpis.length}. Exception rows: ${exceptions.length}.`
-      : 'If you want direct Hubstaff API data, we should not embed private API credentials in this front-end. That would require a secure backend or serverless function.',
+      ? `Rows loaded: ${rows.length}. Last updated field comes from source_updated_at on the JSON rows.`
+      : 'Do not place Hubstaff API keys, refresh tokens, or access tokens in this website code.',
     sourceConfigured
-      ? 'If names still look like Hubstaff IDs instead of real people, update the n8n transform to write readable employee and team names into the Google Sheet.'
-      : 'If you want a fast first pass, send the Hubstaff export link or sample CSV headers and I can wire the tab to real metrics next.',
+      ? 'If the endpoint changes shape, keep the expected field names stable so the static site does not need a secrets-bearing update.'
+      : 'Once the Apps Script Web App URL is set, the tab will fetch the sanitized JSON directly from GitHub Pages.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 }
 
