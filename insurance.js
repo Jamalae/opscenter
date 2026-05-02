@@ -1,6 +1,7 @@
 const OpsInsurance = (() => {
   const csvUrl = './data/state_insurance_sample.csv';
   const cmsCsvUrl = './data/cms_medicare_advantage.csv';
+  const marketplaceCsvUrl = './data/cms_marketplace.csv';
   const contractedCsvUrl = './data/contracted_plans.csv';
   const geojsonPath = './data/insurance/geo/us-counties-fips.geojson';
   // The 29 states our company actually operates in. This is the single
@@ -361,17 +362,19 @@ const OpsInsurance = (() => {
   }
 
   async function loadData() {
-    const [primary, cms, contracted] = await Promise.all([
+    const [primary, cms, marketplace, contracted] = await Promise.all([
       loadMasterCsv(csvUrl),
       loadMasterCsv(cmsCsvUrl),
+      loadMasterCsv(marketplaceCsvUrl),
       loadContractedPlans(),
     ]);
 
-    // Combine: primary (Medicaid MCO) + CMS (Medicare Advantage). Both
-    // share the master schema. Each row gets in_network annotated against
-    // the contracted_plans rules, scoped by state.
-    const allRows = [...primary.rows, ...cms.rows];
-    const invalidRows = [...primary.invalid, ...cms.invalid];
+    // Combine: primary (Medicaid MCO) + CMS (Medicare Advantage)
+    // + marketplace (Health Insurance Marketplace QHPs). All share the
+    // master schema. Each row gets in_network annotated against the
+    // contracted_plans rules, scoped by state.
+    const allRows = [...primary.rows, ...cms.rows, ...marketplace.rows];
+    const invalidRows = [...primary.invalid, ...cms.invalid, ...marketplace.invalid];
     if (!allRows.length) {
       return {
         loadedAt: new Date(),
