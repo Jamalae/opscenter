@@ -1,5 +1,6 @@
 const OpsInsurance = (() => {
   const csvUrl = './data/state_insurance_sample.csv';
+  const cmsCsvUrl = './data/cms_medicare_advantage.csv';
   const contractedCsvUrl = './data/contracted_plans.csv';
   const geojsonPath = './data/insurance/geo/us-counties-fips.geojson';
   // The 29 states our company actually operates in. This is the single
@@ -282,41 +283,96 @@ const OpsInsurance = (() => {
         parent_org: String(row.parent_org || '').trim(),
         plan_name: String(row.plan_name || '').trim(),
         status: String(row.status || '').trim().toLowerCase(),
+        state: String(row.state || '').trim().toUpperCase(),
         notes: String(row.notes || '').trim(),
       };
     });
 
-    // Build fast lookup: returns true if a master-CSV row is in-network.
-    const parentOnly = new Set();
-    const parentPlanPair = new Set();
+    // Normalize org names so "Centene" matches "Centene Corporation",
+    // "UnitedHealth Group" matches "UnitedHealth Group, Inc.", and
+    // "Aetna (CVS Health)" matches "Aetna Inc." — strip parens, common
+    // legal suffixes, and non-alphanumerics, then lowercase.
+    function compactName(s) {
+      return String(s || '').toLowerCase()
+        .replace(/\([^)]*\)/g, ' ')
+        .replace(/\b(inc|incorporated|llc|corp|corporation|co|company|the|of|p\.?c\.?|holdings?|group|insurance|health\s+plans?|holding)\b/g, ' ')
+        .replace(/[^a-z0-9]/g, '');
+    }
+
+    // Pre-compute compact form for each in-network rule. We index by state
+    // (or 'GLOBAL' for nationwide rules) so per-row lookups stay fast.
+    const stateRules = {};      // state → [{ parent, plan }]
+    const globalRules = [];     // [{ parent, plan }]
     rows.forEach((row) => {
       if (row.status !== 'in-network') return;
-      if (row.plan_name) {
-        parentPlanPair.add(`${row.parent_org.toLowerCase()}||${row.plan_name.toLowerCase()}`);
+      const rule = {
+        parent: compactName(row.parent_org),
+        plan: compactName(row.plan_name),
+      };
+      if (!rule.parent) return;
+      if (row.state) {
+        (stateRules[row.state] = stateRules[row.state] || []).push(rule);
       } else {
-        parentOnly.add(row.parent_org.toLowerCase());
+        globalRules.push(rule);
       }
     });
 
-    function inNetworkLookup(parentOrg, planName) {
-      const p = String(parentOrg || '').trim().toLowerCase();
-      const n = String(planName || '').trim().toLowerCase();
+    function ruleMatches(rule, p, n) {
+      // parent must align — prefix-or-substring on the compact form.
+      if (rule.parent !== p && !p.includes(rule.parent) && !rule.parent.includes(p)) return false;
+      // plan-level rules also require plan match (ditto fuzzy).
+      if (rule.plan && rule.plan !== n && !n.includes(rule.plan) && !rule.plan.includes(n)) return false;
+      return true;
+    }
+
+    function inNetworkLookup(parentOrg, planName, stateCode) {
+      const p = compactName(parentOrg);
+      const n = compactName(planName);
+      const s = String(stateCode || '').trim().toUpperCase();
       if (!p) return false;
-      if (parentOnly.has(p)) return true;
-      if (parentPlanPair.has(`${p}||${n}`)) return true;
+      const candidates = (s && stateRules[s] ? stateRules[s] : []).concat(globalRules);
+      for (let i = 0; i < candidates.length; i++) {
+        if (ruleMatches(candidates[i], p, n)) return true;
+      }
       return false;
     }
 
     return { rows, inNetworkLookup };
   }
 
+  // Helper: fetch + parse one CSV that follows the master schema. Returns
+  // an array of normalized row objects. Missing files are tolerated.
+  async function loadMasterCsv(url) {
+    let text;
+    try { text = await fetchText(url); }
+    catch (e) { return { rows: [], invalid: [], error: e.message }; }
+    const parsed = parseCsv(text);
+    if (!parsed.length) return { rows: [], invalid: [] };
+    const headers = parsed[0].map((h) => String(h || '').trim());
+    const rows = parsed.slice(1).map((cells) => {
+      const row = {};
+      headers.forEach((h, i) => { row[h] = cells[i] ?? ''; });
+      return normalizeRow(row);
+    });
+    return {
+      rows: rows.filter((r) => r.state),
+      invalid: rows.filter((r) => !r.state),
+    };
+  }
+
   async function loadData() {
-    const [text, contracted] = await Promise.all([
-      fetchText(csvUrl),
+    const [primary, cms, contracted] = await Promise.all([
+      loadMasterCsv(csvUrl),
+      loadMasterCsv(cmsCsvUrl),
       loadContractedPlans(),
     ]);
-    const parsed = parseCsv(text);
-    if (!parsed.length) {
+
+    // Combine: primary (Medicaid MCO) + CMS (Medicare Advantage). Both
+    // share the master schema. Each row gets in_network annotated against
+    // the contracted_plans rules, scoped by state.
+    const allRows = [...primary.rows, ...cms.rows];
+    const invalidRows = [...primary.invalid, ...cms.invalid];
+    if (!allRows.length) {
       return {
         loadedAt: new Date(),
         geojsonPath,
@@ -327,25 +383,15 @@ const OpsInsurance = (() => {
         contractedPlans: contracted.rows,
         validation: {
           validStateCount: 0,
-          invalidRowCount: 0,
+          invalidRowCount: invalidRows.length,
           invalidStateValues: [],
         },
       };
     }
-
-    const headers = parsed[0].map((header) => String(header || '').trim());
-    const normalizedRows = parsed.slice(1).map((cells) => {
-      const row = {};
-      headers.forEach((header, index) => {
-        row[header] = cells[index] ?? '';
-      });
-      const norm = normalizeRow(row);
-      norm.in_network = contracted.inNetworkLookup(norm.parent_org, norm.plan_name);
+    const dataRows = allRows.map((norm) => {
+      norm.in_network = contracted.inNetworkLookup(norm.parent_org, norm.plan_name, norm.state);
       return norm;
     });
-
-    const invalidRows = normalizedRows.filter((row) => !row.state);
-    const dataRows = normalizedRows.filter((row) => row.state);
 
     const grouped = dataRows.reduce((acc, row) => {
       if (!row.state) return acc;
