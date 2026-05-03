@@ -244,6 +244,49 @@
       </div>
     </section>
 
+    <section class="view" id="view-credentialing">
+      <section class="kpi-grid" id="credentialingKpis"></section>
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Credentialing by Status</h2>
+            <span class="muted">Aggregated from New Hiring · Credentialing column</span>
+          </div>
+          <div id="credentialingByStatus" class="stack"></div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>Stuck / Long-Pending</h2>
+            <span class="muted">Providers waiting longest on credentialing</span>
+          </div>
+          <table>
+            <thead><tr><th>Provider</th><th>State</th><th>Specialty</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody id="credentialingStuckTable"></tbody>
+          </table>
+        </article>
+      </div>
+      <article class="card">
+        <div class="card-head">
+          <h2>All Credentialing In Flight</h2>
+          <span class="muted" id="credentialingSummary"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Provider</th>
+              <th>State</th>
+              <th>Specialty</th>
+              <th>Interview Status</th>
+              <th>Credentialing</th>
+              <th>Referral Source</th>
+              <th>DEA</th>
+            </tr>
+          </thead>
+          <tbody id="credentialingTable"></tbody>
+        </table>
+      </article>
+    </section>
+
     <section class="view" id="view-staff">
       <div class="two-col">
         <article class="card">
@@ -263,6 +306,14 @@
           <div id="coveragePanel" class="stack"></div>
         </article>
       </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>License Expiration Alerts</h2>
+          <span class="muted" id="licenseAlertsSummary">Add a "License Expiration" column to Current Workforce to populate</span>
+        </div>
+        <div id="licenseAlertsPanel" class="stack"></div>
+      </article>
 
       <div class="two-col">
         <article class="card">

@@ -19,6 +19,7 @@ const views = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'ops', label: 'Ops Center' },
   { id: 'intake', label: 'Intake / Referral Reporting' },
+  { id: 'credentialing', label: 'Credentialing Pipeline' },
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
   { id: 'insurance', label: 'State Insurance Maps' },
@@ -89,6 +90,13 @@ const el = {
   insuranceMapLegend: document.getElementById('insuranceMapLegend'),
   insuranceMarketingSummary: document.getElementById('insuranceMarketingSummary'),
   mapModeToggle: document.querySelector('.map-mode-toggle'),
+  credentialingKpis: document.getElementById('credentialingKpis'),
+  credentialingByStatus: document.getElementById('credentialingByStatus'),
+  credentialingStuckTable: document.getElementById('credentialingStuckTable'),
+  credentialingSummary: document.getElementById('credentialingSummary'),
+  credentialingTable: document.getElementById('credentialingTable'),
+  licenseAlertsPanel: document.getElementById('licenseAlertsPanel'),
+  licenseAlertsSummary: document.getElementById('licenseAlertsSummary'),
 };
 
 function uniq(values) {
@@ -554,8 +562,42 @@ function renderIntakeView() {
     `Rows missing referral source: <strong>${intakeRows.filter((item) => !item.referralSource).length}</strong>`,
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
-  el.referralSourcePanel.innerHTML = referralSources.length
-    ? renderMetricList(referralSources.slice(0, 6), 'rows')
+  // Referral source tracking with conversion rates: for each source, count
+  // total candidates, how many reached "completed/hired/active" credentialing,
+  // and surface a conversion %.
+  const sourceStats = {};
+  (model.dataset.newHiring || []).forEach((row) => {
+    const src = (row.referralSource || '').trim() || 'Unspecified';
+    if (!sourceStats[src]) sourceStats[src] = { count: 0, converted: 0, states: new Set() };
+    sourceStats[src].count += 1;
+    if (row.state) sourceStats[src].states.add(row.state);
+    const cred = String(row.credentialing || '').toLowerCase();
+    const intv = String(row.interviewStatus || '').toLowerCase();
+    if (/complete|active|approved|hired|done/.test(cred) || /completed|selected|hired/.test(intv)) {
+      sourceStats[src].converted += 1;
+    }
+  });
+  const sourceRows = Object.entries(sourceStats)
+    .map(([src, s]) => ({
+      source: src,
+      count: s.count,
+      converted: s.converted,
+      conversion: s.count > 0 ? Math.round((s.converted / s.count) * 100) : 0,
+      states: s.states.size,
+    }))
+    .sort((a, b) => b.count - a.count);
+  el.referralSourcePanel.innerHTML = sourceRows.length
+    ? `
+      <div class="metric-row" style="font-weight:600;border-bottom:1px solid rgba(112,141,230,0.16);padding-bottom:0.4rem">
+        <span>Source</span><strong>Candidates · Converted (%) · States</strong>
+      </div>
+      ${sourceRows.slice(0, 10).map((r) => `
+        <div class="metric-row">
+          <span>${escapeHtml(r.source)}</span>
+          <strong>${r.count} · ${r.converted} (${r.conversion}%) · ${r.states}</strong>
+        </div>
+      `).join('')}
+    `
     : '<div class="empty-state">No referral source data is populated yet.</div>';
 
   el.interviewTable.innerHTML = interviews.length
@@ -583,6 +625,84 @@ function renderIntakeView() {
       </tr>
     `).join('')
     : '<tr><td colspan="6" class="empty-state">No intake rows match the current filters.</td></tr>';
+}
+
+// Credentialing pipeline view: aggregate New Hiring rows by their
+// `credentialing` field, surface stuck records, and show the full in-flight
+// table. Status buckets are inferred from common values.
+function renderCredentialingView() {
+  if (!model || !el.credentialingTable) return;
+  const rows = (model.dataset.newHiring || []).filter((r) => r.credentialing || r.interviewStatus);
+
+  function classify(c) {
+    const s = String(c || '').toLowerCase();
+    if (!s) return 'Not started';
+    if (/complete|done|active|approved/.test(s)) return 'Complete';
+    if (/denied|reject/.test(s)) return 'Denied';
+    if (/pending|in.?process|in.?progress|review|submit/.test(s)) return 'In progress';
+    if (/wait|hold|stuck|delay/.test(s)) return 'Stuck';
+    return 'Other';
+  }
+
+  const buckets = {};
+  rows.forEach((r) => {
+    const b = classify(r.credentialing);
+    buckets[b] = (buckets[b] || 0) + 1;
+  });
+
+  el.credentialingKpis.innerHTML = [
+    { label: 'In flight', value: rows.length, tone: 'good', detail: 'Total candidates with credentialing tracked' },
+    { label: 'Complete', value: buckets['Complete'] || 0, tone: 'good', detail: 'Ready to bill' },
+    { label: 'In progress', value: buckets['In progress'] || 0, tone: 'warn', detail: 'Active applications' },
+    { label: 'Stuck / Pending', value: (buckets['Stuck'] || 0) + (buckets['Other'] || 0), tone: 'warn', detail: 'Need follow-up' },
+    { label: 'Denied', value: buckets['Denied'] || 0, tone: 'bad', detail: 'Rejected or REQ Denied' },
+    { label: 'Not started', value: buckets['Not started'] || 0, tone: 'muted', detail: 'No credentialing field set' },
+  ].map((card) => `
+    <article class="kpi ${card.tone}">
+      <div class="kpi-label">${escapeHtml(card.label)}</div>
+      <div class="kpi-value">${escapeHtml(card.value)}</div>
+      <div class="kpi-detail">${escapeHtml(card.detail)}</div>
+    </article>
+  `).join('');
+
+  el.credentialingByStatus.innerHTML = Object.entries(buckets)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `<div class="metric-row"><span>${escapeHtml(k)}</span><strong>${v}</strong></div>`)
+    .join('') || '<div class="empty-state">No credentialing rows yet.</div>';
+
+  // Stuck = anything not Complete, not Denied, with a credentialing value
+  const stuck = rows
+    .filter((r) => {
+      const cls = classify(r.credentialing);
+      return cls === 'Stuck' || cls === 'Other' || cls === 'In progress';
+    })
+    .sort((a, b) => String(a.credentialing).localeCompare(String(b.credentialing)));
+  el.credentialingStuckTable.innerHTML = stuck.length
+    ? stuck.slice(0, 12).map((r) => `
+      <tr>
+        <td>${escapeHtml(r.name || '—')}</td>
+        <td>${escapeHtml(r.state || '—')}</td>
+        <td>${escapeHtml(r.specialty || '—')}</td>
+        <td>${badgeStatus(r.credentialing || 'Pending')}</td>
+        <td class="table-note">${escapeHtml(r.interviewStatus || '')}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty-state">No stuck or pending credentialing rows.</td></tr>';
+
+  el.credentialingSummary.textContent = `${rows.length} candidates · ${buckets['Complete'] || 0} complete · ${buckets['In progress'] || 0} in progress`;
+  el.credentialingTable.innerHTML = rows.length
+    ? rows.map((r) => `
+      <tr>
+        <td>${escapeHtml(r.name || '—')}</td>
+        <td>${escapeHtml(r.state || '—')}</td>
+        <td>${escapeHtml(r.specialty || '—')}</td>
+        <td>${badgeStatus(r.interviewStatus || 'Open')}</td>
+        <td>${badgeStatus(r.credentialing || 'Missing')}</td>
+        <td>${escapeHtml(r.referralSource || '—')}</td>
+        <td>${escapeHtml(r.dea || '—')}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="7" class="empty-state">No credentialing data is loaded yet.</td></tr>';
 }
 
 function renderStaffView() {
@@ -703,6 +823,74 @@ function renderStaffView() {
   el.coveragePanel.innerHTML = states.length
     ? renderMetricList(states.slice(0, 8), 'licenses')
     : '<div class="empty-state">No workforce state coverage is available.</div>';
+
+  // License expiration alerts: bucket workforce rows by days-to-expiration.
+  // Workforce rows must include a populated `licenseExpiration` (parsed from
+  // the optional "License Expiration" sheet column).
+  if (el.licenseAlertsPanel) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const withDate = workforce
+      .filter((w) => w.licenseExpiration instanceof Date && !Number.isNaN(w.licenseExpiration.valueOf()))
+      .map((w) => {
+        const days = Math.round((w.licenseExpiration - today) / 86400000);
+        return { ...w, daysToExpiration: days };
+      })
+      .sort((a, b) => a.daysToExpiration - b.daysToExpiration);
+
+    const expired = withDate.filter((w) => w.daysToExpiration < 0);
+    const within30 = withDate.filter((w) => w.daysToExpiration >= 0 && w.daysToExpiration <= 30);
+    const within60 = withDate.filter((w) => w.daysToExpiration > 30 && w.daysToExpiration <= 60);
+    const within90 = withDate.filter((w) => w.daysToExpiration > 60 && w.daysToExpiration <= 90);
+
+    if (el.licenseAlertsSummary) {
+      el.licenseAlertsSummary.textContent = withDate.length
+        ? `${expired.length} expired · ${within30.length} ≤30 days · ${within60.length} 31–60 days · ${within90.length} 61–90 days`
+        : 'Add a "License Expiration" column to Current Workforce to populate.';
+    }
+
+    function fmtRow(w, tone) {
+      const dueLabel = w.daysToExpiration < 0
+        ? `Expired ${Math.abs(w.daysToExpiration)}d ago`
+        : `${w.daysToExpiration}d`;
+      return `
+        <div class="metric-row">
+          <span>
+            ${escapeHtml(w.providerName || '—')}
+            <span class="table-note">${escapeHtml(w.licensedState || '')} · ${escapeHtml(w.licenseNumber || '')}</span>
+          </span>
+          <strong class="${tone}">${escapeHtml(dueLabel)} · ${escapeHtml(w.licenseExpirationLabel || '')}</strong>
+        </div>
+      `;
+    }
+
+    const sections = [];
+    if (expired.length) {
+      sections.push(`<div class="note-card"><strong>Expired (act now)</strong>${expired.map((w) => fmtRow(w, 'status-blocked')).join('')}</div>`);
+    }
+    if (within30.length) {
+      sections.push(`<div class="note-card"><strong>Expiring within 30 days</strong>${within30.map((w) => fmtRow(w, 'status-warning')).join('')}</div>`);
+    }
+    if (within60.length) {
+      sections.push(`<div class="note-card"><strong>Expiring 31–60 days</strong>${within60.map((w) => fmtRow(w, 'status-warning')).join('')}</div>`);
+    }
+    if (within90.length) {
+      sections.push(`<div class="note-card"><strong>Expiring 61–90 days</strong>${within90.map((w) => fmtRow(w)).join('')}</div>`);
+    }
+
+    if (!withDate.length) {
+      el.licenseAlertsPanel.innerHTML = `
+        <div class="empty-state">
+          No license expiration dates loaded yet.<br>
+          To activate alerts: add a column called <code>License Expiration</code> to the
+          Current Workforce sheet (date format MM/DD/YYYY or YYYY-MM-DD) and refresh.
+        </div>
+      `;
+    } else if (!sections.length) {
+      el.licenseAlertsPanel.innerHTML = '<div class="empty-state">No licenses expire in the next 90 days. ✓</div>';
+    } else {
+      el.licenseAlertsPanel.innerHTML = sections.join('');
+    }
+  }
 
   el.workforceTable.innerHTML = workforce.length
     ? workforce.slice(0, 18).map((item) => `
@@ -1445,6 +1633,7 @@ function render() {
   renderSystemHealth();
   renderIssuesQueue();
   renderIntakeView();
+  renderCredentialingView();
   renderStaffView();
   renderHubstaffView();
   if (state.view === 'insurance') {

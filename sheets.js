@@ -251,6 +251,12 @@ const OpsSheets = (() => {
       licenseNumber: cleanText(row['License Number']),
       specialty: cleanText(row.Speciality),
       contractType: cleanText(row['Contract Type']),
+      // Optional: add a "License Expiration" column to the Current Workforce
+      // sheet (date format YYYY-MM-DD or MM/DD/YYYY). When populated, the
+      // alerts panel in Staff Metrics will surface licenses expiring within
+      // 30/60/90 days. Missing values are silently tolerated.
+      licenseExpirationLabel: cleanText(row['License Expiration'] || row['License Expiry'] || row['Expiration']),
+      licenseExpiration: parseDate(row['License Expiration'] || row['License Expiry'] || row['Expiration']),
       source: 'Current Workforce',
     };
   }
