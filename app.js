@@ -659,9 +659,9 @@ function renderCredentialingView() {
     { label: 'Not started', value: buckets['Not started'] || 0, tone: 'muted', detail: 'No credentialing field set' },
   ].map((card) => `
     <article class="kpi ${card.tone}">
-      <div class="kpi-label">${escapeHtml(card.label)}</div>
-      <div class="kpi-value">${escapeHtml(card.value)}</div>
-      <div class="kpi-detail">${escapeHtml(card.detail)}</div>
+      <div class="k">${escapeHtml(card.label)}</div>
+      <div class="v">${escapeHtml(card.value)}</div>
+      <div class="d">${escapeHtml(card.detail)}</div>
     </article>
   `).join('');
 
