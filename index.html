@@ -558,6 +558,93 @@
         </table>
       </article>
     </section>
+
+    <!-- ═══ Marketing View ═══ -->
+    <section class="view" id="view-marketing">
+      <section class="kpi-grid" id="marketingKpis"></section>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Social Media Performance</h2>
+            <span class="muted" id="marketingSummary">Loading marketing data…</span>
+          </div>
+          <div id="marketingPlatformBreakdown" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Account Performance</h2>
+            <span class="muted">3 Tele Companies — Instagram, Facebook, TikTok</span>
+          </div>
+          <div id="marketingAccountBreakdown" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Weekly Trend</h2>
+            <span class="muted">Posts and engagement over last 8 weeks</span>
+          </div>
+          <div id="marketingWeeklyTrend" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Content Calendar Status</h2>
+            <span class="muted">Queue from Google Sheet content planner</span>
+          </div>
+          <div id="marketingCalendarStatus" class="stack"></div>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Recent Posts</h2>
+          <span class="muted" id="marketingPostCount"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Account</th>
+              <th>Platform</th>
+              <th>Content</th>
+              <th>Impressions</th>
+              <th>Reach</th>
+              <th>Likes</th>
+              <th>Comments</th>
+              <th>Shares</th>
+            </tr>
+          </thead>
+          <tbody id="marketingPostTable"></tbody>
+        </table>
+      </article>
+
+      <!-- ═══ State Marketing Priority Matrix ═══ -->
+      <article class="card">
+        <div class="card-head">
+          <h2>State Marketing Priority Matrix</h2>
+          <span class="muted">Cross-referencing insurance enrollment, credentialing pipeline, and workforce presence</span>
+        </div>
+        <section class="mini-kpi-grid" id="marketingPriorityKpis"></section>
+        <div id="marketingPriorityExplainer" class="stack"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Priority</th>
+              <th>Providers</th>
+              <th>Credentialing</th>
+              <th>Enrollment</th>
+              <th>Rationale</th>
+            </tr>
+          </thead>
+          <tbody id="marketingPriorityTable"></tbody>
+        </table>
+      </article>
+    </section>
   </main>
 
   <script
@@ -567,6 +654,7 @@
   ></script>
   <script src="./sheets.js"></script>
   <script src="./insurance.js"></script>
+  <script src="./marketing.js"></script>
   <script src="./app.js"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
