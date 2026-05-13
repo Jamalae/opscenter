@@ -23,6 +23,7 @@ const views = [
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
   { id: 'insurance', label: 'State Insurance Maps' },
+  { id: 'marketing', label: 'Marketing' },
 ];
 
 const el = {
@@ -97,6 +98,18 @@ const el = {
   credentialingTable: document.getElementById('credentialingTable'),
   licenseAlertsPanel: document.getElementById('licenseAlertsPanel'),
   licenseAlertsSummary: document.getElementById('licenseAlertsSummary'),
+  // Marketing view
+  marketingKpis: document.getElementById('marketingKpis'),
+  marketingSummary: document.getElementById('marketingSummary'),
+  marketingPlatformBreakdown: document.getElementById('marketingPlatformBreakdown'),
+  marketingAccountBreakdown: document.getElementById('marketingAccountBreakdown'),
+  marketingWeeklyTrend: document.getElementById('marketingWeeklyTrend'),
+  marketingCalendarStatus: document.getElementById('marketingCalendarStatus'),
+  marketingPostCount: document.getElementById('marketingPostCount'),
+  marketingPostTable: document.getElementById('marketingPostTable'),
+  marketingPriorityKpis: document.getElementById('marketingPriorityKpis'),
+  marketingPriorityExplainer: document.getElementById('marketingPriorityExplainer'),
+  marketingPriorityTable: document.getElementById('marketingPriorityTable'),
 };
 
 function uniq(values) {
@@ -1639,6 +1652,9 @@ function render() {
   if (state.view === 'insurance') {
     renderInsuranceView();
   }
+  if (state.view === 'marketing') {
+    renderMarketingView();
+  }
 }
 
 function bind() {
@@ -1717,6 +1733,8 @@ async function loadData() {
     const liveCount = model.sourceMeta.filter((item) => item.source === 'live').length;
     const cacheCount = model.sourceMeta.filter((item) => item.source === 'cache').length;
     el.liveStatus.textContent = `● ${liveCount} live tabs · ${cacheCount} cached tabs · refreshed ${formatDate(model.loadedAt)}`;
+    // Load marketing data in parallel (non-blocking)
+    loadMarketingData();
   } catch (error) {
     console.error(error);
     el.liveStatus.textContent = '● Workbook load failed';
@@ -1725,6 +1743,227 @@ async function loadData() {
   }
 }
 
+
+// ─── Marketing View ────────────────────────────────────────────────
+
+let marketingModel = null;
+
+async function loadMarketingData() {
+  if (!el.marketingSummary) return;
+  el.marketingSummary.textContent = 'Loading marketing data…';
+  try {
+    marketingModel = await OpsMarketing.loadData();
+    renderMarketingView();
+    const src = marketingModel.sources;
+    const parts = Object.entries(src).map(([k, v]) => k + ': ' + v).join(' · ');
+    el.marketingSummary.textContent = marketingModel.kpis.totalPosts + ' posts tracked · ' + parts + ' · refreshed ' + formatDateTime(marketingModel.loadedAt);
+  } catch (err) {
+    console.error('Marketing load error:', err);
+    el.marketingSummary.textContent = 'Marketing data unavailable — ensure the sheet is published to web';
+    renderMarketingEmpty();
+  }
+}
+
+function renderMarketingEmpty() {
+  if (el.marketingKpis) el.marketingKpis.innerHTML = '<article class="kpi caution"><div class="k">Data Source</div><div class="v">Not Connected</div><div class="d">Publish the marketing Google Sheet to web to enable this view</div></article>';
+  if (el.marketingPostTable) el.marketingPostTable.innerHTML = '<tr><td colspan="9" class="empty-state">Marketing sheet not published yet. Go to the Google Sheet → File → Share → Publish to web.</td></tr>';
+}
+
+function renderMarketingView() {
+  if (!marketingModel) { renderMarketingEmpty(); return; }
+  var k = marketingModel.kpis;
+  renderMarketingKpis(k);
+  renderPlatformBreakdown(marketingModel.platforms);
+  renderAccountBreakdown(marketingModel.accounts);
+  renderWeeklyTrend(marketingModel.weeklyTrend);
+  renderCalendarStatus(marketingModel.calendarByStatus, marketingModel.calendar);
+  renderRecentPosts(marketingModel.recentPosts);
+  renderMarketingPriorityMatrix();
+}
+
+function renderMarketingKpis(k) {
+  if (!el.marketingKpis) return;
+  var cards = [
+    { label: 'Total Posts', value: wholeNumber(k.totalPosts), detail: 'Across 3 tele companies', tone: '' },
+    { label: 'Impressions', value: wholeNumber(k.totalImpressions), detail: 'Total views of posts', tone: '' },
+    { label: 'Reach', value: wholeNumber(k.totalReach), detail: 'Unique accounts reached', tone: '' },
+    { label: 'Engagement Rate', value: percent(k.engagementRate), detail: wholeNumber(k.totalEngagements) + ' total engagements', tone: k.engagementRate >= 5 ? 'good' : k.engagementRate >= 2 ? '' : 'caution' },
+    { label: 'Likes', value: wholeNumber(k.totalLikes), detail: 'All platforms', tone: '' },
+    { label: 'Comments', value: wholeNumber(k.totalComments), detail: 'Conversation starters', tone: '' },
+    { label: 'Shares', value: wholeNumber(k.totalShares), detail: 'Organic amplification', tone: '' },
+    { label: 'Clicks', value: wholeNumber(k.totalClicks), detail: 'Profile / link clicks', tone: '' },
+  ];
+  el.marketingKpis.innerHTML = cards.map(function(c) {
+    return '<article class="kpi ' + c.tone + '"><div class="k">' + escapeHtml(c.label) + '</div><div class="v">' + escapeHtml(c.value) + '</div><div class="d">' + escapeHtml(c.detail) + '</div></article>';
+  }).join('');
+}
+
+function renderPlatformBreakdown(platforms) {
+  if (!el.marketingPlatformBreakdown) return;
+  var entries = Object.entries(platforms);
+  if (!entries.length) { el.marketingPlatformBreakdown.innerHTML = '<p class="muted">No platform data available yet.</p>'; return; }
+  el.marketingPlatformBreakdown.innerHTML = entries.map(function(e) {
+    var plat = e[0], d = e[1];
+    var eng = d.likes + d.comments + d.shares + d.clicks;
+    var rate = d.impressions > 0 ? (eng / d.impressions * 100).toFixed(1) : '0.0';
+    return '<div class="insight-row"><div><strong style="text-transform:capitalize;">' + escapeHtml(plat) + '</strong><div class="table-note">' + d.posts + ' posts · ' + wholeNumber(d.impressions) + ' impressions</div></div><div style="text-align:right;"><strong>' + wholeNumber(d.reach) + '</strong> reach<div class="table-note">' + rate + '% engagement · ' + wholeNumber(d.likes) + ' likes</div></div></div>';
+  }).join('');
+}
+
+function renderAccountBreakdown(accounts) {
+  if (!el.marketingAccountBreakdown) return;
+  var entries = Object.entries(accounts);
+  if (!entries.length) { el.marketingAccountBreakdown.innerHTML = '<p class="muted">No account data available yet.</p>'; return; }
+  var acctLabels = { 'tele-therapeutics-health': 'Tele Therapeutics Health', 'well-america-health': 'Well America Health', 'therapyscentral': 'Therapys Central' };
+  el.marketingAccountBreakdown.innerHTML = entries.map(function(e) {
+    var acct = e[0], d = e[1];
+    var eng = d.likes + d.comments + d.shares + d.clicks;
+    var rate = d.impressions > 0 ? (eng / d.impressions * 100).toFixed(1) : '0.0';
+    var label = acctLabels[acct] || acct;
+    return '<div class="insight-row"><div><strong>' + escapeHtml(label) + '</strong><div class="table-note">' + d.posts + ' posts · ' + wholeNumber(d.impressions) + ' impressions</div></div><div style="text-align:right;"><strong>' + rate + '%</strong> engagement<div class="table-note">' + wholeNumber(d.likes) + ' likes · ' + wholeNumber(d.comments) + ' comments · ' + wholeNumber(d.shares) + ' shares</div></div></div>';
+  }).join('');
+}
+
+function renderWeeklyTrend(weeks) {
+  if (!el.marketingWeeklyTrend) return;
+  if (!weeks.length) { el.marketingWeeklyTrend.innerHTML = '<p class="muted">No weekly data.</p>'; return; }
+  var maxPosts = Math.max.apply(null, weeks.map(function(w) { return w.posts; }).concat([1]));
+  el.marketingWeeklyTrend.innerHTML = '<div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding:8px 0;">' + weeks.map(function(w) {
+    var h = Math.max((w.posts / maxPosts) * 100, 4);
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:11px;opacity:0.7;">' + w.posts + '</span><div style="width:100%;height:' + h + 'px;background:var(--accent,#3b82f6);border-radius:4px 4px 0 0;min-height:4px;" title="' + w.impressions + ' impressions, ' + w.engagement + ' engagements"></div><span style="font-size:10px;opacity:0.5;">' + w.label + '</span></div>';
+  }).join('') + '</div><div class="table-note" style="margin-top:8px;">Posts per week · Hover bars for details</div>';
+}
+
+function renderCalendarStatus(byStatus, calendar) {
+  if (!el.marketingCalendarStatus) return;
+  var entries = Object.entries(byStatus);
+  if (!entries.length) { el.marketingCalendarStatus.innerHTML = '<p class="muted">No content calendar data. Publish the Social media reels tab.</p>'; return; }
+  var total = calendar.length;
+  el.marketingCalendarStatus.innerHTML = '<div class="table-note" style="margin-bottom:8px;">' + total + ' items in content queue for 3 tele companies</div>' + entries.map(function(e) {
+    var status = e[0], count = e[1];
+    var pct = (count / total * 100).toFixed(0);
+    return '<div class="insight-row"><div>' + badgeStatus(status) + '<span class="table-note" style="margin-left:8px;">' + count + ' items (' + pct + '%)</span></div><div style="flex:1;margin-left:12px;background:var(--bg-inset,#0f172a);border-radius:4px;height:8px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:var(--accent,#3b82f6);border-radius:4px;"></div></div></div>';
+  }).join('');
+}
+
+function renderRecentPosts(posts) {
+  if (!el.marketingPostTable) return;
+  if (el.marketingPostCount) { el.marketingPostCount.textContent = posts.length + ' most recent posts'; }
+  if (!posts.length) { el.marketingPostTable.innerHTML = '<tr><td colspan="9" class="empty-state">No post data available. Ensure the marketing sheet is published to web.</td></tr>'; return; }
+  var acctLabels = { 'tele-therapeutics-health': 'Tele Therapeutics', 'well-america-health': 'Well America', 'therapyscentral': 'Therapys Central' };
+  el.marketingPostTable.innerHTML = posts.map(function(p) {
+    var date = p.publishedAt ? formatDate(p.publishedAt) : '—';
+    var acctLabel = acctLabels[p.account] || p.account;
+    var contentSnippet = (p.content || '').length > 60 ? p.content.substring(0, 57) + '…' : (p.content || '—');
+    var platformClass = p.platform === 'instagram' ? 'status-approved' : p.platform === 'facebook' ? 'status-warning' : 'status-open';
+    return '<tr><td>' + escapeHtml(date) + '</td><td>' + escapeHtml(acctLabel) + '</td><td><span class="badge ' + platformClass + '">' + escapeHtml(p.platform || 'unknown') + '</span></td><td title="' + escapeHtml(p.content) + '">' + escapeHtml(contentSnippet) + '</td><td>' + wholeNumber(p.impressions) + '</td><td>' + wholeNumber(p.reach) + '</td><td>' + wholeNumber(p.likes) + '</td><td>' + wholeNumber(p.comments) + '</td><td>' + wholeNumber(p.shares) + '</td></tr>';
+  }).join('');
+}
+
+// ─── State Marketing Priority Matrix ────────────────────────────────
+
+function renderMarketingPriorityMatrix() {
+  if (!el.marketingPriorityTable || !model) return;
+
+  var workforce = model.dataset && model.dataset.currentWorkforce ? model.dataset.currentWorkforce : [];
+  var newHiring = model.dataset && model.dataset.newHiring ? model.dataset.newHiring : [];
+  var finalHires = model.dataset && model.dataset.finalHires ? model.dataset.finalHires : [];
+  var insuranceData = model.insurance && model.insurance.rows ? model.insurance.rows : [];
+
+  var stateData = {};
+  var validStates = OpsInsurance && OpsInsurance.validStates ? OpsInsurance.validStates : {};
+
+  // Count active providers per state
+  workforce.forEach(function(w) {
+    var codes = OpsSheets.utils.splitStates(w.licensedState || '');
+    codes.forEach(function(code) {
+      if (!stateData[code]) stateData[code] = { providers: 0, credentialing: 0, enrollment: 0, hiring: 0 };
+      stateData[code].providers++;
+    });
+  });
+
+  // Count credentialing in-progress per state
+  newHiring.forEach(function(h) {
+    var cred = (h.credentialing || '').toLowerCase();
+    if (cred && cred.indexOf('n/a') === -1 && cred.indexOf('not') === -1 && cred.indexOf('complete') === -1 && cred.indexOf('done') === -1) {
+      var codes = OpsSheets.utils.splitStates(h.state || '');
+      codes.forEach(function(code) {
+        if (!stateData[code]) stateData[code] = { providers: 0, credentialing: 0, enrollment: 0, hiring: 0 };
+        stateData[code].credentialing++;
+      });
+    }
+  });
+
+  // Count hiring pipeline per state
+  newHiring.concat(finalHires).forEach(function(h) {
+    var codes = OpsSheets.utils.splitStates(h.state || h.states || '');
+    codes.forEach(function(code) {
+      if (!stateData[code]) stateData[code] = { providers: 0, credentialing: 0, enrollment: 0, hiring: 0 };
+      stateData[code].hiring++;
+    });
+  });
+
+  // Aggregate insurance enrollment per state
+  insuranceData.forEach(function(row) {
+    var code = (row.state || '').toUpperCase().trim();
+    if (code && code.length === 2) {
+      if (!stateData[code]) stateData[code] = { providers: 0, credentialing: 0, enrollment: 0, hiring: 0 };
+      stateData[code].enrollment += Number(row.enrollment || row.totalEnrollment || 0);
+    }
+  });
+
+  // Score each state and classify
+  var scored = Object.entries(stateData).map(function(e) {
+    var code = e[0], d = e[1];
+    var stateName = validStates[code] || code;
+    var providerScore = Math.min(d.providers / 5, 1) * 40;
+    var credScore = Math.min(d.credentialing / 3, 1) * 20;
+    var enrollScore = Math.min(d.enrollment / 50000, 1) * 30;
+    var hiringScore = Math.min(d.hiring / 5, 1) * 10;
+    var totalScore = providerScore + credScore + enrollScore + hiringScore;
+
+    var priority, rationale;
+    if (d.providers >= 2 && d.credentialing >= 1 && d.enrollment > 0) {
+      priority = 'Ready to Market';
+      rationale = d.providers + ' active providers, ' + d.credentialing + ' credentialing, ' + wholeNumber(d.enrollment) + ' enrolled';
+    } else if (d.credentialing >= 1 || (d.providers >= 1 && d.enrollment > 0)) {
+      priority = 'Coming Soon';
+      rationale = d.providers + ' providers, ' + d.credentialing + ' in credentialing pipeline';
+    } else if (d.enrollment > 10000) {
+      priority = 'Opportunity';
+      rationale = 'High enrollment (' + wholeNumber(d.enrollment) + ') but limited provider presence';
+    } else {
+      priority = 'Monitor';
+      rationale = d.providers + ' providers, ' + wholeNumber(d.enrollment) + ' enrollment';
+    }
+
+    return { code: code, name: stateName, providers: d.providers, credentialing: d.credentialing, enrollment: d.enrollment, hiring: d.hiring, score: totalScore, priority: priority, rationale: rationale };
+  }).sort(function(a, b) { return b.score - a.score; });
+
+  // Priority KPIs
+  var ready = scored.filter(function(s) { return s.priority === 'Ready to Market'; }).length;
+  var coming = scored.filter(function(s) { return s.priority === 'Coming Soon'; }).length;
+  var opportunity = scored.filter(function(s) { return s.priority === 'Opportunity'; }).length;
+
+  if (el.marketingPriorityKpis) {
+    el.marketingPriorityKpis.innerHTML = '<div class="mini-kpi"><span class="mini-kpi-val">' + ready + '</span><span class="mini-kpi-label">Ready to Market</span></div><div class="mini-kpi"><span class="mini-kpi-val">' + coming + '</span><span class="mini-kpi-label">Coming Soon</span></div><div class="mini-kpi"><span class="mini-kpi-val">' + opportunity + '</span><span class="mini-kpi-label">Opportunity</span></div><div class="mini-kpi"><span class="mini-kpi-val">' + scored.length + '</span><span class="mini-kpi-label">Total States</span></div>';
+  }
+
+  if (el.marketingPriorityExplainer) {
+    el.marketingPriorityExplainer.innerHTML = '<div class="note-card"><strong>How priorities are calculated:</strong> Active provider presence (40%) + credentialing pipeline (20%) + insurance enrollment volume (30%) + hiring pipeline (10%). States with active credentialed providers and enrollment data are prioritized for social media ad spend and organic content.</div>';
+  }
+
+  if (!scored.length) {
+    el.marketingPriorityTable.innerHTML = '<tr><td colspan="6" class="empty-state">No state data to score. Load workforce and insurance data first.</td></tr>';
+    return;
+  }
+
+  var priorityTone = { 'Ready to Market': 'status-approved', 'Coming Soon': 'status-warning', 'Opportunity': 'status-open', 'Monitor': 'status-blocked' };
+
+  el.marketingPriorityTable.innerHTML = scored.slice(0, 25).map(function(s) {
+    return '<tr><td><strong>' + escapeHtml(s.code) + '</strong> ' + escapeHtml(s.name) + '</td><td><span class="badge ' + (priorityTone[s.priority] || '') + '">' + escapeHtml(s.priority) + '</span></td><td>' + s.providers + '</td><td>' + s.credentialing + '</td><td>' + wholeNumber(s.enrollment) + '</td><td class="table-note">' + escapeHtml(s.rationale) + '</td></tr>';
+  }).join('');
+}
 bind();
 renderViewNav();
 loadData();
