@@ -1,0 +1,41 @@
+name: Refresh CMS data
+
+on:
+  schedule:
+    - cron: '0 9 3 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run refresh script
+        run: python3 scripts/refresh_cms_data.py
+
+      - name: Show file deltas
+        run: |
+          git status
+          git diff --stat
+
+      - name: Commit if changed
+        run: |
+          if [ -z "$(git status --porcelain data/)" ]; then
+            echo "No data changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/cms_medicare_advantage.csv data/cms_medicare_ffs.csv data/cms_duals.csv
+          git commit -m "Auto-refresh CMS data ($(date -u +%Y-%m-%d))"
+          git push

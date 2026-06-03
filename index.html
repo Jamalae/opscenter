@@ -582,6 +582,37 @@
     </section>
 
     <section class="view" id="view-insurance">
+
+      <!-- Workforce State Coverage Map -->
+      <div class="card" id="workforce-map-card" style="margin-bottom:24px;">
+        <div class="card-head">
+          <h2>Workforce State Coverage</h2>
+          <div class="kpi-row" style="display:flex;gap:18px;flex-wrap:wrap;">
+            <div class="kpi"><span class="kpi-val" id="wf-states">--</span><span class="kpi-lbl">States</span></div>
+            <div class="kpi"><span class="kpi-val" id="wf-active">--</span><span class="kpi-lbl">Active</span></div>
+            <div class="kpi"><span class="kpi-val" id="wf-hiring">--</span><span class="kpi-lbl">Hiring</span></div>
+            <div class="kpi"><span class="kpi-val" id="wf-total">--</span><span class="kpi-lbl">Total</span></div>
+          </div>
+        </div>
+        <div id="wfStateMap" style="width:100%;min-height:350px;background:#0f1225;border-radius:10px;overflow:hidden;"></div>
+        <div id="wfMapLegend" style="display:flex;gap:14px;flex-wrap:wrap;padding:10px 0;font-size:12px;color:#94a3b8;"></div>
+        <p class="muted" id="wfMapSummary" style="font-size:13px;"></p>
+      </div>
+      <div class="card" id="workforce-detail-card" style="display:none;margin-bottom:24px;">
+        <div class="card-head">
+          <h2 id="wfDetailTitle">Select a state</h2>
+          <button class="btn btn-ghost" onclick="closeWfDetail()">Close</button>
+        </div>
+        <p class="muted" id="wfDetailSub"></p>
+        <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
+          <button class="btn btn-sm active" data-wf="all" onclick="wfFilter('all')">All</button>
+          <button class="btn btn-sm" data-wf="active" onclick="wfFilter('active')">Active Workforce</button>
+          <button class="btn btn-sm" data-wf="hiring" onclick="wfFilter('hiring')">Hiring Pipeline</button>
+        </div>
+        <input type="text" id="wfSearch" class="form-control" placeholder="Search by name, specialty..." oninput="wfRenderList()" style="margin-bottom:12px;">
+        <div id="wfEmpList"></div>
+      </div>
+
       <div class="two-col">
         <article class="card">
           <div class="card-head">
@@ -663,6 +694,93 @@
         </table>
       </article>
     </section>
+
+    <!-- ═══ Marketing View ═══ -->
+    <section class="view" id="view-marketing">
+      <section class="kpi-grid" id="marketingKpis"></section>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Social Media Performance</h2>
+            <span class="muted" id="marketingSummary">Loading marketing data…</span>
+          </div>
+          <div id="marketingPlatformBreakdown" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Account Performance</h2>
+            <span class="muted">3 Tele Companies — Instagram, Facebook, TikTok</span>
+          </div>
+          <div id="marketingAccountBreakdown" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Weekly Trend</h2>
+            <span class="muted">Posts and engagement over last 8 weeks</span>
+          </div>
+          <div id="marketingWeeklyTrend" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Content Calendar Status</h2>
+            <span class="muted">Queue from Google Sheet content planner</span>
+          </div>
+          <div id="marketingCalendarStatus" class="stack"></div>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Recent Posts</h2>
+          <span class="muted" id="marketingPostCount"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Account</th>
+              <th>Platform</th>
+              <th>Content</th>
+              <th>Impressions</th>
+              <th>Reach</th>
+              <th>Likes</th>
+              <th>Comments</th>
+              <th>Shares</th>
+            </tr>
+          </thead>
+          <tbody id="marketingPostTable"></tbody>
+        </table>
+      </article>
+
+      <!-- ═══ State Marketing Priority Matrix ═══ -->
+      <article class="card">
+        <div class="card-head">
+          <h2>State Marketing Priority Matrix</h2>
+          <span class="muted">Cross-referencing insurance enrollment, credentialing pipeline, and workforce presence</span>
+        </div>
+        <section class="mini-kpi-grid" id="marketingPriorityKpis"></section>
+        <div id="marketingPriorityExplainer" class="stack"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Priority</th>
+              <th>Providers</th>
+              <th>Credentialing</th>
+              <th>Enrollment</th>
+              <th>Rationale</th>
+            </tr>
+          </thead>
+          <tbody id="marketingPriorityTable"></tbody>
+        </table>
+      </article>
+    </section>
   </main>
 
   <script
@@ -670,8 +788,12 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="./sheets.js"></script>
-  <script src="./insurance.js"></script>
-  <script src="./app.js"></script>
+  <script src="./sheets.js?v=2"></script>
+  <script src="./insurance.js?v=2"></script>
+  <script src="./marketing.js?v=3"></script>
+  <script src="./app.js?v=2"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script src="./workforce-map.js?v=2"></script>
 </body>
 </html>
