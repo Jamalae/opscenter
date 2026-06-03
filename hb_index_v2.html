@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hamilton Behavioral — OpsCenter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#09090f;--bg2:#0e0e18;--bg3:#13131f;--bg4:#18182a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);
+  --text:#dde0f0;--text2:#7a80a0;--text3:#3d4260;
+  --red:#f87171;--yellow:#fbbf24;--green:#34d399;
+  /* MD PA — indigo */
+  --mdpa:#6366f1;--mdpa-glow:rgba(99,102,241,0.15);--mdpa-dim:rgba(99,102,241,0.1);
+  /* Health NJ — green */
+  --hnj:#22c55e;--hnj-glow:rgba(34,197,94,0.15);--hnj-dim:rgba(34,197,94,0.1);
+  /* HBH Operations — amber */
+  --hbops:#f59e0b;--hbops-glow:rgba(245,158,11,0.15);--hbops-dim:rgba(245,158,11,0.1);
+  /* active brand accent — set dynamically */
+  --accent:var(--mdpa);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(99,102,241,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.018) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(9,9,15,0.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-0.5px;}
+.logo-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-left:10px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.live-dot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:5px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.header-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);}
+
+/* BRAND SWITCHER — big tabs at top */
+.brand-switcher{display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--border);background:var(--bg2);}
+.brand-tab{flex:1;padding:18px 28px;cursor:pointer;border:none;background:transparent;transition:all 0.25s;position:relative;text-align:left;border-bottom:3px solid transparent;max-width:380px;}
+.brand-tab.active-mdpa{border-bottom-color:var(--mdpa);background:linear-gradient(180deg,var(--mdpa-dim) 0%,transparent 100%);}
+.brand-tab.active-hnj{border-bottom-color:var(--hnj);background:linear-gradient(180deg,var(--hnj-dim) 0%,transparent 100%);}
+.brand-tab.active-hbops{border-bottom-color:var(--hbops);background:linear-gradient(180deg,var(--hbops-dim) 0%,transparent 100%);}
+.brand-tab:hover:not(.active-mdpa):not(.active-hnj):not(.active-hbops){background:rgba(255,255,255,0.02);}
+.bt-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.bt-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-0.3px;}
+.bt-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px;letter-spacing:0.3px;}
+
+/* MAIN AREA */
+main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:28px 32px 80px;}
+
+/* INNER TABS */
+.tabs{display:flex;gap:4px;margin-bottom:28px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;}
+.tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all 0.2s;}
+.tab.active{background:var(--bg3);color:var(--text);border:1px solid var(--border2);}
+.tab:hover:not(.active){color:var(--text2);}
+.office-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.office-chip{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.6px;text-transform:uppercase;padding:6px 10px;border-radius:999px;border:1px solid rgba(245,158,11,0.22);background:rgba(245,158,11,0.09);color:#f8c56b;}
+.alert-stack{display:grid;gap:10px;}
+.alert-item{padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,0.02);}
+.alert-title{font-size:12px;font-weight:600;color:var(--text);}
+.alert-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:4px;}
+.metric-list{display:grid;gap:9px;}
+.metric-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);}
+.metric-item:last-child{border-bottom:none;}
+.metric-name{font-size:12px;color:var(--text);}
+.metric-value{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+
+.brand-view{display:none;}.brand-view.active{display:block;}
+.inner-view{display:none;}.inner-view.active{display:block;}
+
+/* HERO BANNER */
+.hero{border-radius:14px;padding:22px 28px;margin-bottom:28px;display:grid;align-items:center;gap:24px;}
+.hero-mdpa{background:linear-gradient(135deg,rgba(99,102,241,0.09),rgba(99,102,241,0.02));border:1px solid rgba(99,102,241,0.15);grid-template-columns:1fr auto auto auto auto;}
+.hero-hnj{background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.13);grid-template-columns:1fr auto auto auto auto;}
+.hero-hbops{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px solid rgba(245,158,11,0.15);grid-template-columns:1fr auto auto auto auto;}
+.hero-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+.hero-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-top:4px;}
+.hero-badges{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
+.hero-badge{font-family:'DM Mono',monospace;font-size:9px;padding:3px 10px;border-radius:10px;}
+.hero-stat{text-align:center;padding:0 4px;}
+.hero-stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;}
+.hero-stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+
+/* SECTION HEADER */
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.sh-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);}
+.sh-line{flex:1;height:1px;background:var(--border);}
+
+/* KPI */
+.kpi-grid{display:grid;gap:12px;margin-bottom:28px;}
+.kpi-5{grid-template-columns:repeat(5,1fr);}
+.kpi-4{grid-template-columns:repeat(4,1fr);}
+@media(max-width:1100px){.kpi-5,.kpi-4{grid-template-columns:repeat(3,1fr);}}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 16px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--k-c,#6366f1);opacity:0.75;}
+.kpi:hover{border-color:var(--border2);}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.kpi-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:5px;}
+.kpi-delta{font-family:'DM Mono',monospace;font-size:10px;margin-top:4px;}
+.du{color:var(--green);}.dd{color:var(--red);}.dn{color:var(--text3);}
+
+/* CHARTS */
+.ch2{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:28px;}
+.ch3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:28px;}
+.ch2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+@media(max-width:1000px){.ch2,.ch3,.ch2b{grid-template-columns:1fr;}}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.cc-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:3px;}
+.cc-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:18px;}
+
+/* BRAND CARDS */
+.brand-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+@media(max-width:1000px){.brand-cards{grid-template-columns:1fr 1fr;}}
+.bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.bc:hover{border-color:var(--border2);}
+.bc::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--bc-c,#6366f1);}
+.bc-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding-left:12px;margin-bottom:2px;}
+.bc-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding-left:12px;margin-bottom:16px;}
+.bmr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.bmr:last-child{border-bottom:none;}
+.bml{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+.bmv{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+
+/* TABLE */
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px;}
+.th-row{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.th-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:10px 18px;text-align:left;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+tbody td{padding:11px 18px;font-size:12px;color:var(--text2);}
+tbody td:first-child{color:var(--text);font-weight:500;}
+.mono{font-family:'DM Mono',monospace;font-size:11px;}
+
+/* STATUS */
+.sp{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+.sp-g{background:rgba(52,211,153,0.12);color:#34d399;}
+.sp-w{background:rgba(251,191,36,0.12);color:#fbbf24;}
+.sp-r{background:rgba(248,113,113,0.12);color:#f87171;}
+.sp-i{background:rgba(99,102,241,0.15);color:#818cf8;}
+.sp-h{background:rgba(34,197,94,0.12);color:#22c55e;}
+
+/* INDICATOR DOTS */
+.ind{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.ig{background:#34d399;box-shadow:0 0 5px #34d399;}
+.iw{background:#fbbf24;box-shadow:0 0 5px #fbbf24;}
+.ir{background:#f87171;box-shadow:0 0 5px #f87171;}
+
+/* PROVIDER ROWS */
+.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--border);gap:14px;transition:background 0.15s;}
+.prow:last-child{border-bottom:none;}
+.prow:hover{background:rgba(255,255,255,0.02);}
+.pav{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;}
+.pinfo{flex:1;}
+.pname{font-size:12px;font-weight:500;color:var(--text);}
+.prole{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;}
+.util-w{width:90px;}
+.util-pct{font-family:'DM Mono',monospace;font-size:9px;color:var(--text2);text-align:right;margin-bottom:3px;}
+.util-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.util-fill{height:100%;border-radius:2px;}
+
+/* PIPELINE */
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:900px){.pipeline{grid-template-columns:repeat(2,1fr);}}
+.ps{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.ps-head{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ps-name{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.ps-count{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;}
+.pc{padding:9px 13px;border-bottom:1px solid var(--border);transition:background 0.15s;}
+.pc:last-child{border-bottom:none;}
+.pc:hover{background:rgba(255,255,255,0.02);}
+.pc-name{font-size:11px;color:var(--text);font-weight:500;}
+.pc-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px;}
+
+/* STATE FILTER */
+.sf{display:flex;gap:7px;margin-bottom:18px;}
+.sb{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 13px;border-radius:14px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);transition:all 0.2s;}
+.sb.active-hnj{border-color:var(--hnj);color:var(--hnj);background:rgba(34,197,94,0.08);}
+.sb:hover:not(.active-hnj){border-color:var(--border2);color:var(--text2);}
+
+/* COMP ITEMS */
+.ci{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--border);gap:13px;transition:background 0.15s;}
+.ci:last-child{border-bottom:none;}
+.ci:hover{background:rgba(255,255,255,0.02);}
+.ci-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ci-name{flex:1;font-size:12px;color:var(--text);}
+.ci-due{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+
+/* STAFF */
+.staff-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+.sc-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.sc-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.srow{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:12px;transition:background 0.15s;}
+.srow:last-child{border-bottom:none;}
+.srow:hover{background:rgba(255,255,255,0.02);}
+.sav{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;}
+.si{flex:1;}
+.sname{font-size:12px;font-weight:500;color:var(--text);}
+.srole{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;}
+.prog-w{width:80px;}
+.prog-t{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-f{height:100%;border-radius:2px;}
+.prog-pct{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;margin-bottom:3px;}
+.sval{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);text-align:right;}
+.slabel{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right;}
+.minibar{height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-top:3px;}
+.minibar-f{height:100%;border-radius:2px;}
+
+@keyframes fi{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+.fi{animation:fi 0.3s ease forwards;}
+.fi1{animation-delay:0.04s;opacity:0;}.fi2{animation-delay:0.08s;opacity:0;}.fi3{animation-delay:0.12s;opacity:0;}.fi4{animation-delay:0.16s;opacity:0;}.fi5{animation-delay:0.20s;opacity:0;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:4px">
+    <div class="logo">Hamilton<span id="hdr-accent" style="color:#6366f1">Ops</span></div>
+    <span class="logo-tag" id="hdr-tag">MD PA · Management</span>
+  </div>
+  <div class="header-right">
+    <span class="demo-badge" style="font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:10px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);color:#fbbf24;letter-spacing:1px;text-transform:uppercase">Demo Data</span>
+    <span class="live-badge" style="display:none;font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);color:#22c55e;letter-spacing:1px;text-transform:uppercase">Live</span>
+    <span class="header-time"><span class="live-dot" id="live-dot" style="background:#6366f1;box-shadow:0 0 8px #6366f1"></span><span id="liveTime"></span></span>
+    <button onclick="openSettings()" style="background:transparent;border:1px solid var(--border);color:var(--text2);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">⚙</button>
+  </div>
+</header>
+
+<!-- BRAND SWITCHER -->
+<div class="brand-switcher">
+  <button class="brand-tab active-mdpa" id="btn-mdpa" onclick="switchBrand('mdpa')">
+    <div class="bt-label" style="color:#6366f1">Hamilton Behavioral</div>
+    <div class="bt-name" style="color:var(--text)">MD PA <span id="badge-mdpa" style="display:none;font-family:'DM Mono',monospace;font-size:9px;background:#f87171;color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="bt-sub">Management · All Brands · Executive View</div>
+  </button>
+  <button class="brand-tab" id="btn-hnj" onclick="switchBrand('hnj')">
+    <div class="bt-label" style="color:#22c55e">Hamilton Behavioral</div>
+    <div class="bt-name" style="color:var(--text)">Health NJ <span id="badge-hnj" style="display:none;font-family:'DM Mono',monospace;font-size:9px;background:#f87171;color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="bt-sub">Medicaid · NJ Primary · NY/PA Overflow</div>
+  </button>
+  <button class="brand-tab" id="btn-hbops" onclick="switchBrand('hbops')">
+    <div class="bt-label" style="color:#f59e0b">Hamilton Behavioral</div>
+    <div class="bt-name" style="color:var(--text)">HB Operations <span id="badge-hbops" style="display:none;font-family:'DM Mono',monospace;font-size:9px;background:#f87171;color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="bt-sub">Live Sheets · Visits · Cash · Staff · Pipeline</div>
+  </button>
+</div>
+
+<main>
+
+  <!-- ═══════════ MDPA BRAND VIEW ═══════════ -->
+  <div class="brand-view active" id="bv-mdpa">
+    <div id="alert-banner-mdpa"></div>
+
+    <!-- Hero -->
+    <div class="hero hero-mdpa fi fi1">
+      <div>
+        <div class="hero-title">Hamilton Behavioral MD PA</div>
+        <div class="hero-sub">EXECUTIVE OPERATIONS · ALL BRANDS · CONSOLIDATED</div>
+        <div class="hero-badges">
+          <span class="hero-badge" style="background:rgba(0,212,170,0.1);color:#00d4aa">Teletherapeutics Health</span>
+          <span class="hero-badge" style="background:rgba(0,145,255,0.1);color:#0091ff">Well-America</span>
+          <span class="hero-badge" style="background:rgba(245,166,35,0.1);color:#f5a623">Therapy Central</span>
+          <span class="hero-badge" style="background:rgba(34,197,94,0.1);color:#22c55e">Hamilton Behavioral Health NJ</span>
+        </div>
+      </div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#6366f1" id="mdpa-rev">$0</div><div class="hero-stat-label">Revenue MTD</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#6366f1">78%</div><div class="hero-stat-label">Collections Rate</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#6366f1">47</div><div class="hero-stat-label">Referrals MTD</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f87171">3</div><div class="hero-stat-label">Compliance Alerts</div></div>
+    </div>
+
+    <!-- MDPA Inner Tabs -->
+    <div class="tabs" id="tabs-mdpa">
+      <button class="tab active" onclick="switchInner('mdpa','executive',this)">Executive</button>
+      <button class="tab" onclick="switchInner('mdpa','brands',this)">Brand Performance</button>
+      <button class="tab" onclick="switchInner('mdpa','providers',this)">Providers</button>
+      <button class="tab" onclick="switchInner('mdpa','compliance',this)">Compliance</button>
+      <button class="tab" onclick="switchInner('mdpa','referrals',this)">Referrals</button>
+    </div>
+
+    <!-- Executive -->
+    <div class="inner-view active" id="iv-mdpa-executive">
+      <div class="sh"><span class="sh-title">Key Metrics</span><div class="sh-line"></div></div>
+      <div class="kpi-grid kpi-5">
+        <div class="kpi fi1" style="--k-c:#6366f1"><div class="kpi-label">Total Revenue MTD</div><div class="kpi-val">$284K</div><div class="kpi-sub">All brands</div><div class="kpi-delta du">↑ 12% vs last month</div></div>
+        <div class="kpi fi2" style="--k-c:#34d399"><div class="kpi-label">Collections Rate</div><div class="kpi-val">78%</div><div class="kpi-sub">Claims collected</div><div class="kpi-delta du">↑ 3% MoM</div></div>
+        <div class="kpi fi3" style="--k-c:#fbbf24"><div class="kpi-label">Active Providers</div><div class="kpi-val">14</div><div class="kpi-sub">Across all brands</div><div class="kpi-delta dn">→ No change</div></div>
+        <div class="kpi fi4" style="--k-c:#00d4aa"><div class="kpi-label">Referrals MTD</div><div class="kpi-val">47</div><div class="kpi-sub">Inbound</div><div class="kpi-delta du">↑ 18% MoM</div></div>
+        <div class="kpi fi5" style="--k-c:#f87171"><div class="kpi-label">Compliance Alerts</div><div class="kpi-val">3</div><div class="kpi-sub">Need attention</div><div class="kpi-delta dd">↑ 1 new</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Revenue by Brand — 6 Month Trend</div><div class="cc-sub">Monthly collections</div><canvas id="mdpa-revTrend" height="185"></canvas></div>
+        <div class="cc"><div class="cc-title">Revenue Split</div><div class="cc-sub">Brand contribution MTD</div><canvas id="mdpa-revSplit" height="185"></canvas></div>
+      </div>
+      <div class="ch3">
+        <div class="cc"><div class="cc-title">Cash Flow</div><div class="cc-sub">Submitted vs collected</div><canvas id="mdpa-cashFlow" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Referral Volume</div><div class="cc-sub">By brand MTD</div><canvas id="mdpa-refVol" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Provider Utilization</div><div class="cc-sub">Average by brand</div><canvas id="mdpa-util" height="160"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Brand Performance -->
+    <div class="inner-view" id="iv-mdpa-brands">
+      <div class="sh"><span class="sh-title">Brand Performance</span><div class="sh-line"></div></div>
+      <div class="brand-cards" id="mdpa-brandCards"></div>
+    </div>
+
+    <!-- Providers -->
+    <div class="inner-view" id="iv-mdpa-providers">
+      <div class="sh"><span class="sh-title">Provider Headcount & Utilization</span><div class="sh-line"></div></div>
+      <div class="tw"><div class="th-row"><span class="th-title">All Providers</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">14 active</span></div><div id="mdpa-provList"></div></div>
+    </div>
+
+    <!-- Compliance -->
+    <div class="inner-view" id="iv-mdpa-compliance">
+      <div class="sh"><span class="sh-title">Compliance Tracker</span><div class="sh-line"></div></div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">All Brands — Compliance Status</span><span class="sp sp-w">3 items need attention</span></div>
+        <table><thead><tr><th>Item</th><th>TH</th><th>WA</th><th>TC</th><th>HBH</th><th>Due Date</th><th>Status</th></tr></thead>
+        <tbody id="mdpa-compBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Referrals -->
+    <div class="inner-view" id="iv-mdpa-referrals">
+      <div class="sh"><span class="sh-title">Referral Summary — All Brands</span><div class="sh-line"></div></div>
+      <div class="kpi-grid kpi-4">
+        <div class="kpi" style="--k-c:#6366f1"><div class="kpi-label">Total MTD</div><div class="kpi-val">47</div><div class="kpi-sub">All brands</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">Pending</div><div class="kpi-val">18</div><div class="kpi-sub">Awaiting action</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Converted</div><div class="kpi-val">22</div><div class="kpi-sub">Active patients</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Conv. Rate</div><div class="kpi-val">47%</div><div class="kpi-sub">Referral → patient</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Referrals by Brand — Monthly</div><div class="cc-sub">Inbound volume trend</div><canvas id="mdpa-refBrand" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">By Source</div><div class="cc-sub">All brands combined</div><div id="mdpa-refSrc"></div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- end MDPA -->
+
+  <!-- ═══════════ HNJ BRAND VIEW ═══════════ -->
+  <div class="brand-view" id="bv-hnj">
+    <div id="alert-banner-hnj"></div>
+
+    <!-- Payer badges -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" class="fi fi1">
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">NJ Medicaid (DMAHS)</span>
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">NJ FamilyCare</span>
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">Horizon NJ Health</span>
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">Amerigroup NJ</span>
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">WellCare NJ</span>
+      <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;padding:3px 10px;border-radius:10px;border:1px solid rgba(34,197,94,0.2);color:#22c55e;background:rgba(34,197,94,0.06)">Other Managed Medicaid</span>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero hero-hnj fi fi1">
+      <div>
+        <div class="hero-title">Hamilton Behavioral Health NJ</div>
+        <div class="hero-sub">MEDICAID OPERATIONS · NJ PRIMARY · NY/PA OVERFLOW</div>
+      </div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#22c55e" id="hnj-patients">0</div><div class="hero-stat-label">Active Patients</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#22c55e" id="hnj-rev">$0</div><div class="hero-stat-label">Collections MTD</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#fbbf24">14%</div><div class="hero-stat-label">Denial Rate</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f87171">7</div><div class="hero-stat-label">Pending Auths</div></div>
+    </div>
+
+    <!-- HNJ Inner Tabs -->
+    <div class="tabs" id="tabs-hnj">
+      <button class="tab active" onclick="switchInner('hnj','overview',this)">Overview</button>
+      <button class="tab" onclick="switchInner('hnj','billing',this)">Billing</button>
+      <button class="tab" onclick="switchInner('hnj','intake',this)">Intake Pipeline</button>
+      <button class="tab" onclick="switchInner('hnj','referrals',this)">Referrals</button>
+      <button class="tab" onclick="switchInner('hnj','staff',this)">Staff</button>
+      <button class="tab" onclick="switchInner('hnj','compliance',this)">Compliance</button>
+      <button class="tab" onclick="switchInner('hnj','njmap',this)">NJ Insurance Map</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="inner-view active" id="iv-hnj-overview">
+      <div class="sh"><span class="sh-title">Key Metrics</span><div class="sh-line"></div></div>
+      <div class="kpi-grid kpi-5">
+        <div class="kpi fi1" style="--k-c:#22c55e"><div class="kpi-label">Active Patients</div><div class="kpi-val">148</div><div class="kpi-sub">NJ/NY/PA</div><div class="kpi-delta du">↑ 8 this month</div></div>
+        <div class="kpi fi2" style="--k-c:#22c55e"><div class="kpi-label">Collections MTD</div><div class="kpi-val">$30K</div><div class="kpi-sub">Medicaid billings</div><div class="kpi-delta du">↑ 11% MoM</div></div>
+        <div class="kpi fi3" style="--k-c:#fbbf24"><div class="kpi-label">Denial Rate</div><div class="kpi-val">14%</div><div class="kpi-sub">Medicaid claims</div><div class="kpi-delta dd">↑ 2% MoM</div></div>
+        <div class="kpi fi4" style="--k-c:#22c55e"><div class="kpi-label">Referrals MTD</div><div class="kpi-val">9</div><div class="kpi-sub">Inbound</div><div class="kpi-delta du">↑ 2 MoM</div></div>
+        <div class="kpi fi5" style="--k-c:#f87171"><div class="kpi-label">Pending Auths</div><div class="kpi-val">7</div><div class="kpi-sub">Prior auth needed</div><div class="kpi-delta dn">→ No change</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Collections Trend</div><div class="cc-sub">Medicaid submitted vs collected</div><canvas id="hnj-collTrend" height="185"></canvas></div>
+        <div class="cc"><div class="cc-title">Payer Mix</div><div class="cc-sub">Revenue by Medicaid payer</div><canvas id="hnj-payerMix" height="185"></canvas></div>
+      </div>
+      <div class="ch3">
+        <div class="cc"><div class="cc-title">Patients by State</div><div class="cc-sub">NJ / NY / PA</div><canvas id="hnj-stateChart" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Referral Sources</div><div class="cc-sub">Inbound types</div><canvas id="hnj-refSrc" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Denial Reasons</div><div class="cc-sub">Top claim denials</div><canvas id="hnj-denials" height="160"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Billing -->
+    <div class="inner-view" id="iv-hnj-billing">
+      <div class="sh"><span class="sh-title">Medicaid Billing & Collections</span><div class="sh-line"></div></div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Payer Performance</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">Current period</span></div>
+        <table><thead><tr><th>Payer</th><th>Submitted</th><th>Collected</th><th>Denied</th><th>Pending</th><th>Rate</th><th>Avg Days</th></tr></thead>
+        <tbody id="hnj-payerBody"></tbody></table>
+      </div>
+      <div class="ch2b">
+        <div class="cc"><div class="cc-title">Monthly Claims Volume</div><div class="cc-sub">Submitted vs collected</div><canvas id="hnj-claims" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Denial Breakdown</div><div class="cc-sub">Top denial reasons</div><canvas id="hnj-denials2" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Intake -->
+    <div class="inner-view" id="iv-hnj-intake">
+      <div class="sh"><span class="sh-title">Patient Intake Pipeline</span><div class="sh-line"></div></div>
+      <div class="pipeline" id="hnj-pipeline"></div>
+      <div class="ch2b">
+        <div class="cc"><div class="cc-title">New Patients by Month</div><div class="cc-sub">Intake volume trend</div><canvas id="hnj-intakeChart" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Time to First Appointment</div><div class="cc-sub">Days from referral to first visit</div><canvas id="hnj-ttaChart" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Referrals -->
+    <div class="inner-view" id="iv-hnj-referrals">
+      <div class="sh"><span class="sh-title">Referral Tracker</span><div class="sh-line"></div><button onclick="openRefDrawer()" style="background:#22c55e;border:none;color:#000;padding:7px 16px;border-radius:6px;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0">+ New Referral</button></div>
+      <div class="sf">
+        <button class="sb active-hnj" onclick="filterState('all',this)">All States</button>
+        <button class="sb" onclick="filterState('NJ',this)">New Jersey</button>
+        <button class="sb" onclick="filterState('NY',this)">New York</button>
+        <button class="sb" onclick="filterState('PA',this)">Pennsylvania</button>
+      </div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Recent Referrals</span><span id="hnj-refCount" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)"></span></div>
+        <table><thead><tr><th>ID</th><th>Date</th><th>Patient</th><th>Source</th><th>State</th><th>Payer</th><th>Status</th><th>Days</th></tr></thead>
+        <tbody id="hnj-refBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="inner-view" id="iv-hnj-staff">
+      <div class="sh"><span class="sh-title">Staff Metrics</span><div class="sh-line"></div></div>
+      <div id="hnj-staffArea"></div>
+    </div>
+
+    <!-- Compliance -->
+    <div class="inner-view" id="iv-hnj-compliance">
+      <div class="sh"><span class="sh-title">Compliance & Credentialing</span><div class="sh-line"></div></div>
+      <div class="tw"><div class="th-row"><span class="th-title">NJ Medicaid Compliance Checklist</span><span class="sp sp-w">2 items need review</span></div><div id="hnj-compList"></div></div>
+    </div>
+    <div class="inner-view" id="iv-hnj-njmap"><div id="hb-njMapWrap">
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:12px;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px">
+  <span style="font-family:'DM Mono',monospace;font-size:10px;color:#7a80a0;letter-spacing:1.5px;text-transform:uppercase;align-self:center;margin-right:8px">METRIC:</span>
+  <button class="hb-metric-btn active" data-metric="commercial">Commercial</button>
+  <button class="hb-metric-btn" data-metric="medicare_total">Medicare (total)</button>
+  <button class="hb-metric-btn" data-metric="medicare_advantage">Medicare Advantage</button>
+  <button class="hb-metric-btn" data-metric="medicare_ffs">Medicare FFS</button>
+  <button class="hb-metric-btn" data-metric="medicaid">Medicaid (NJ FamilyCare)</button>
+  <button class="hb-metric-btn" data-metric="marketplace">Marketplace (Get Covered NJ)</button>
+  <button class="hb-metric-btn" data-metric="duals">Duals</button>
+</div>
+<style>
+.hb-metric-btn{background:#1a1d2e;color:#7a80a0;border:1px solid #2a2d3e;border-radius:6px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.5px;cursor:pointer;transition:all 0.15s;}
+.hb-metric-btn:hover{border-color:#22c55e;color:#dde0f0;}
+.hb-metric-btn.active{background:rgba(34,197,94,0.15);color:#22c55e;border-color:#22c55e;}
+</style>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+  <div style="background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px;text-align:center">
+    <div id="hb-kpi1-label" style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Commercially Insured</div>
+    <div id="hb-kpi1-val" style="font-size:28px;font-weight:700;color:#7c6ff7">6.71M</div>
+    <div style="font-size:11px;color:#8b8fa8">Selected metric — NJ statewide</div>
+  </div>
+  <div style="background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px;text-align:center">
+    <div id="hb-kpi2-label" style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Avg Commercial Rate</div>
+    <div id="hb-kpi2-val" style="font-size:28px;font-weight:700;color:#34d399">73.0%</div>
+    <div style="font-size:11px;color:#8b8fa8">Population-weighted</div>
+  </div>
+  <div style="background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px;text-align:center">
+    <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">NJ Population</div>
+    <div style="font-size:28px;font-weight:700;color:#7c6ff7">9.14M</div>
+    <div style="font-size:11px;color:#8b8fa8">Across 21 counties</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px">
+          <div id="hb-njMapTitle" style="font-size:13px;font-weight:600;color:#e2e4f0;margin-bottom:2px">Commercially Insured by County</div>
+          <div id="hb-njMapSub" style="font-size:11px;color:#8b8fa8;margin-bottom:10px">ACS 2019-2023 - % with private health insurance</div>
+          <div id="hb-njMap" style="height:460px;border-radius:6px;overflow:hidden;"></div>
+        </div>
+        <div style="background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:16px;overflow:auto;max-height:560px">
+          <div style="font-size:13px;font-weight:600;color:#e2e4f0;margin-bottom:2px">County Rankings</div>
+          <div style="font-size:11px;color:#8b8fa8;margin-bottom:10px">Highest to lowest</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="color:#8b8fa8;border-bottom:1px solid #2a2d3e">
+              <th style="padding:6px 4px;text-align:left">#</th>
+              <th style="padding:6px 4px;text-align:left">County</th>
+              <th id="hb-njTblRateHdr" style="padding:6px 4px">Bar</th>
+              <th id="hb-njTblInsuredHdr" style="padding:6px 4px;text-align:right">Value</th>
+              <th style="padding:6px 4px;text-align:right">Pop.</th>
+            </tr></thead>
+            <tbody id="hb-njCountyTable"></tbody>
+          </table>
+        </div>
+      </div></div></div>
+
+  </div>
+  <!-- end HNJ -->
+
+  <!-- ═══════════ HBOPS BRAND VIEW (live Google Sheets) ═══════════ -->
+  <div class="brand-view" id="bv-hbops">
+    <div id="alert-banner-hbops"></div>
+
+    <!-- Hero -->
+    <div class="hero hero-hbops fi fi1">
+      <div>
+        <div class="hero-title">Hamilton Behavioral — Operations</div>
+        <div class="hero-sub">LIVE GOOGLE SHEETS · WEEKLY VISITS · CASH FLOW · HEADCOUNT · REFERRALS</div>
+        <div class="hero-badges">
+          <span class="hero-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b">Weekly HB Health</span>
+          <span class="hero-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b">Bank Cash Flow</span>
+          <span class="hero-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b">Front Desk Referrals</span>
+          <span class="hero-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b">+7 more</span>
+        </div>
+      </div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f59e0b" id="hb-avgseen">—</div><div class="hero-stat-label">Avg seen / wk</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f59e0b" id="hb-q1net">—</div><div class="hero-stat-label">Q1 Net Cash</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f59e0b" id="hb-headcount">—</div><div class="hero-stat-label">Active Staff</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" style="color:#f59e0b" id="hb-refs">—</div><div class="hero-stat-label">Referrals MTD</div></div>
+    </div>
+
+    <!-- HBOPS Inner Tabs -->
+    <div class="tabs" id="tabs-hbops">
+      <button class="tab active" onclick="switchInner('hbops','overview',this)">Overview</button>
+      <button class="tab" onclick="switchInner('hbops','visits',this)">Visit Volume</button>
+      <button class="tab" onclick="switchInner('hbops','cash',this)">Cash Flow</button>
+      <button class="tab" onclick="switchInner('hbops','staff',this)">Staff</button>
+      <button class="tab" onclick="switchInner('hbops','credentialing',this)">Credentialing</button>
+      <button class="tab" onclick="switchInner('hbops','referrals',this)">Referrals</button>
+      <button class="tab" onclick="switchInner('hbops','schedule',this)">Schedule</button>
+      <button class="tab" onclick="switchInner('hbops','sheets',this)">Live Sheets</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="inner-view active" id="iv-hbops-overview">
+      <div class="sh"><span class="sh-title">Key Metrics — Live</span><div class="sh-line"></div><span id="hb-loadStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">loading…</span></div>
+      <div class="kpi-grid kpi-5">
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Total Seen — Latest Wk</div><div class="kpi-val" id="hb-kpi-seen">—</div><div class="kpi-sub" id="hb-kpi-seen-sub">latest week</div></div>
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Show Rate</div><div class="kpi-val" id="hb-kpi-showrate">—</div><div class="kpi-sub">seen / scheduled</div></div>
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Cash Net — Q1 2026</div><div class="kpi-val" id="hb-kpi-cash">—</div><div class="kpi-sub" id="hb-kpi-cash-sub">vs prior years</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Q1 Copay (Instamed)</div><div class="kpi-val" id="hb-kpi-copay">—</div><div class="kpi-sub">collected Q1</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">Pipeline Stuck</div><div class="kpi-val" id="hb-kpi-stuck">—</div><div class="kpi-sub">awaiting paperwork</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Weekly Visit Volume</div><div class="cc-sub">Scheduled vs Seen — last 8 weeks</div><canvas id="hb-visitTrend" height="185"></canvas></div>
+        <div class="cc"><div class="cc-title">Cash Flow — 3 Year Comparison</div><div class="cc-sub">Net by quarter</div><canvas id="hb-cashCompare" height="185"></canvas></div>
+      </div>
+      <div class="ch3">
+        <div class="cc"><div class="cc-title">Headcount Mix</div><div class="cc-sub">Full-time / Part-time / IC</div><canvas id="hb-headcountMix" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Referral Pipeline Status</div><div class="cc-sub">Current month</div><canvas id="hb-pipeStatus" height="160"></canvas></div>
+        <div class="cc"><div class="cc-title">Service Line Split</div><div class="cc-sub">Therapy vs Med Mgmt — latest wk</div><canvas id="hb-serviceSplit" height="160"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Visits -->
+    <div class="inner-view" id="iv-hbops-visits">
+      <div class="sh"><span class="sh-title">Weekly Visit Volume — Therapy + Med Management</span><div class="sh-line"></div></div>
+      <div class="ch2b">
+        <div class="cc"><div class="cc-title">Scheduled vs Seen</div><div class="cc-sub">Goal: 1,495 / wk</div><canvas id="hb-vSchedSeen" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Cancellations & No-Shows</div><div class="cc-sub">Weekly trend</div><canvas id="hb-vLost" height="200"></canvas></div>
+      </div>
+      <div class="tw"><div class="th-row"><span class="th-title">Weekly Detail</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">all visits — both lines</span></div>
+        <table><thead><tr><th>Week</th><th style="text-align:right">Scheduled</th><th style="text-align:right">Therapy seen</th><th style="text-align:right">MM seen</th><th style="text-align:right">Total seen</th><th style="text-align:right">Show rate</th><th style="text-align:right">Cancelled</th><th style="text-align:right">No show</th><th style="text-align:right">New</th></tr></thead>
+        <tbody id="hb-visitBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Cash -->
+    <div class="inner-view" id="iv-hbops-cash">
+      <div class="sh"><span class="sh-title">Bank Cash Flow & Copay Collections</span><div class="sh-line"></div></div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Monthly Net — 3 Year</div><div class="cc-sub">2024 / 2025 / 2026</div><canvas id="hb-cashMonthly" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Quarterly Net</div><div class="cc-sub">Side-by-side</div><canvas id="hb-cashQuarter" height="200"></canvas></div>
+      </div>
+      <div class="tw"><div class="th-row"><span class="th-title">Cash Flow Detail</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">in / out / net</span></div>
+        <table><thead><tr><th>Period</th><th style="text-align:right">2026 Net</th><th style="text-align:right">2025 Net</th><th style="text-align:right">2024 Net</th></tr></thead>
+        <tbody id="hb-cashBody"></tbody></table>
+      </div>
+      <div class="tw" style="margin-top:18px"><div class="th-row"><span class="th-title">Instamed Copay — 2026</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">monthly</span></div>
+        <table><thead><tr><th>Month</th><th style="text-align:right">Collected</th></tr></thead>
+        <tbody id="hb-copayBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="inner-view" id="iv-hbops-staff">
+      <div class="sh"><span class="sh-title">Staff Roster & Insurance Enrollment</span><div class="sh-line"></div></div>
+      <div class="kpi-grid kpi-4">
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Active Staff</div><div class="kpi-val" id="hb-st-total">—</div><div class="kpi-sub">all classifications</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Full-time</div><div class="kpi-val" id="hb-st-ft">—</div><div class="kpi-sub" id="hb-st-ft-pct">—</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">Part-time</div><div class="kpi-val" id="hb-st-pt">—</div><div class="kpi-sub" id="hb-st-pt-pct">—</div></div>
+        <div class="kpi" style="--k-c:#0091ff"><div class="kpi-label">Independent Contractor</div><div class="kpi-val" id="hb-st-ic">—</div><div class="kpi-sub" id="hb-st-ic-pct">—</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Roles</div><div class="cc-sub">Therapist / Provider / FD / TMS / Admin</div><canvas id="hb-staffRoles" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Insurance Enrollment</div><div class="cc-sub">By plan tier</div><canvas id="hb-staffInsurance" height="200"></canvas></div>
+      </div>
+      <div class="tw"><div class="th-row"><span class="th-title">Staff Roster</span><span id="hb-staffCount" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)"></span></div>
+        <table><thead><tr><th>Name</th><th>Title</th><th>Classification</th><th>Status</th></tr></thead>
+        <tbody id="hb-staffBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Referrals -->
+    <div class="inner-view" id="iv-hbops-referrals">
+      <div class="sh"><span class="sh-title">Front Desk New Patient Referrals</span><div class="sh-line"></div></div>
+      <div class="kpi-grid kpi-5">
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Total MTD</div><div class="kpi-val" id="hb-ref-total">—</div><div class="kpi-sub">all sources</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Appt Given</div><div class="kpi-val" id="hb-ref-given">—</div><div class="kpi-sub">booked</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">Awaiting Paperwork</div><div class="kpi-val" id="hb-ref-wait">—</div><div class="kpi-sub">stuck in funnel</div></div>
+        <div class="kpi" style="--k-c:#0091ff"><div class="kpi-label">Left Message</div><div class="kpi-val" id="hb-ref-msg">—</div><div class="kpi-sub">awaiting response</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Conversion</div><div class="kpi-val" id="hb-ref-conv">—</div><div class="kpi-sub">given / total</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc"><div class="cc-title">Status Breakdown</div><div class="cc-sub">Current funnel state</div><canvas id="hb-refStatus" height="200"></canvas></div>
+        <div class="cc"><div class="cc-title">Service Type Requested</div><div class="cc-sub">Med Mgmt / Therapy / TMS</div><canvas id="hb-refType" height="200"></canvas></div>
+      </div>
+      <div class="tw"><div class="th-row"><span class="th-title">Recent Referrals</span><span id="hb-refCount2" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)"></span></div>
+        <table><thead><tr><th>Date</th><th>Patient</th><th>Source</th><th>FD Member</th><th>Status</th><th>Type</th></tr></thead>
+        <tbody id="hb-refBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Credentialing -->
+    <div class="inner-view" id="iv-hbops-credentialing">
+      <div class="sh">
+        <span class="sh-title">Hamilton Behavioral Credentialing OpsCenter</span>
+        <div class="sh-line"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">enrollments · licenses · networks · follow-ups</span>
+      </div>
+      <div class="office-chip-row">
+        <span class="office-chip">Elmwood Park</span>
+        <span class="office-chip">Edgewater</span>
+        <span class="office-chip">Newton</span>
+        <span class="office-chip">Oakhurst</span>
+      </div>
+      <div class="kpi-grid kpi-5" style="margin-top:18px">
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Enrollments In Flight</div><div class="kpi-val" id="hb-cred-enrollments">—</div><div class="kpi-sub">submitted or under review</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">Activated Providers</div><div class="kpi-val" id="hb-cred-activated">—</div><div class="kpi-sub">live and billable</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">Expiring Credentials</div><div class="kpi-val" id="hb-cred-expiring">—</div><div class="kpi-sub">next 60 days</div></div>
+        <div class="kpi" style="--k-c:#f87171"><div class="kpi-label">Open Portal Issues</div><div class="kpi-val" id="hb-cred-portalissues">—</div><div class="kpi-sub">login or workflow blockers</div></div>
+        <div class="kpi" style="--k-c:#0091ff"><div class="kpi-label">Overdue Follow-Ups</div><div class="kpi-val" id="hb-cred-followups">—</div><div class="kpi-sub">requires outreach</div></div>
+      </div>
+      <div class="ch2">
+        <div class="cc">
+          <div class="cc-title">Follow-Ups & Alerts</div>
+          <div class="cc-sub">Anything overdue or needing escalation</div>
+          <div id="hb-cred-alerts" class="alert-stack" style="margin-top:14px"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">Coverage Snapshot</div>
+          <div class="cc-sub">Provider and enrollment coverage by office</div>
+          <div id="hb-cred-coverage" class="metric-list" style="margin-top:14px"></div>
+        </div>
+      </div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Enrollments</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">payer applications and follow-up contacts</span></div>
+        <table><thead><tr><th>Payer</th><th>Provider</th><th>Office</th><th>Submitted</th><th>Status</th><th>Insurance Contact</th></tr></thead><tbody id="hb-cred-enrollBody"></tbody></table>
+      </div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Providers</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">NPI, license, office and payer coverage</span></div>
+        <table><thead><tr><th>Provider</th><th>NPI</th><th>License</th><th>Office Coverage</th><th>Credentialed Payers</th></tr></thead><tbody id="hb-cred-providerBody"></tbody></table>
+      </div>
+      <div class="ch2">
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Licenses</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">renewals and expiration tracking</span></div>
+          <table><thead><tr><th>Provider</th><th>Credential</th><th>Expires</th><th>Status</th></tr></thead><tbody id="hb-cred-licenseBody"></tbody></table>
+        </div>
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Documents</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">CAQH, W-9, malpractice, packets</span></div>
+          <table><thead><tr><th>Document</th><th>Owner</th><th>Renewal / Due</th><th>Status</th></tr></thead><tbody id="hb-cred-docBody"></tbody></table>
+        </div>
+      </div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Networks & EAPs</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">contract terms and renewals</span></div>
+        <table><thead><tr><th>Network</th><th>Type</th><th>Term / Renewal</th><th>Status</th><th>Owner</th></tr></thead><tbody id="hb-cred-networkBody"></tbody></table>
+      </div>
+      <div class="ch2">
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Network Activation</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">approved vs billable</span></div>
+          <table><thead><tr><th>Payer</th><th>Provider</th><th>Office</th><th>Approved</th><th>Activation</th><th>Billable</th></tr></thead><tbody id="hb-cred-activationBody"></tbody></table>
+        </div>
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Portals & Issues</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">portal access and blockers</span></div>
+          <table><thead><tr><th>Payer</th><th>Portal</th><th>Known Issue</th><th>Severity</th><th>Owner</th></tr></thead><tbody id="hb-cred-portalBody"></tbody></table>
+        </div>
+      </div>
+      <div class="tw">
+        <div class="th-row"><span class="th-title">Rate Negotiations</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">current reimbursement vs requested</span></div>
+        <table><thead><tr><th>Payer</th><th>CPT</th><th>Current</th><th>Requested</th><th>Status</th></tr></thead><tbody id="hb-cred-rateBody"></tbody></table>
+      </div>
+      <div class="ch2">
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Correspondence Log</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">calls, emails, appeals</span></div>
+          <table><thead><tr><th>Date</th><th>Payer</th><th>Channel</th><th>Subject</th><th>Owner</th><th>Next Action</th></tr></thead><tbody id="hb-cred-correspondenceBody"></tbody></table>
+        </div>
+        <div class="tw">
+          <div class="th-row"><span class="th-title">Audit Log</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">latest changes</span></div>
+          <table><thead><tr><th>When</th><th>Area</th><th>Change</th><th>By</th></tr></thead><tbody id="hb-cred-auditBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="inner-view" id="iv-hbops-schedule">
+      <div class="sh"><span class="sh-title">Provider Weekly Schedule</span><div class="sh-line"></div></div>
+      <div class="tw"><div class="th-row"><span class="th-title">Week At a Glance</span><span id="hb-schedCount" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)"></span></div>
+        <table><thead><tr><th>Provider</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
+        <tbody id="hb-schedBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Live Sheets — embeds & links -->
+    <div class="inner-view" id="iv-hbops-sheets">
+      <div class="sh"><span class="sh-title">Source Google Sheets</span><div class="sh-line"></div></div>
+      <div id="hb-sheetCards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
+    </div>
+
+  </div>
+  <!-- end HBOPS -->
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color='#3d4260';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+Chart.defaults.font.family="'DM Mono',monospace";Chart.defaults.font.size=10;
+
+// Clock
+setInterval(()=>document.getElementById('liveTime').textContent=new Date().toLocaleTimeString(),1000);
+document.getElementById('liveTime').textContent=new Date().toLocaleTimeString();
+
+// Animated counter
+function count(id,target,prefix,suffix,dur){
+  let v=0;const el=document.getElementById(id);if(!el)return;
+  const s=setInterval(()=>{v=Math.min(v+target/60,target);el.textContent=prefix+Math.round(v)+suffix;if(v>=target)clearInterval(s);},dur/60);
+}
+
+// BRAND SWITCHER
+let activeBrand='mdpa';
+function switchBrand(brand){
+  activeBrand=brand;
+  document.querySelectorAll('.brand-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.brand-tab').forEach(b=>b.classList.remove('active-mdpa','active-hnj','active-hbops'));
+  document.getElementById('bv-'+brand).classList.add('active');
+  document.getElementById('btn-'+brand).classList.add('active-'+brand);
+  const accents={mdpa:'#6366f1',hnj:'#22c55e',hbops:'#f59e0b'};
+  const tags={mdpa:'MD PA · Management',hnj:'Health NJ · Medicaid',hbops:'HB Operations · Live'};
+  const acc=accents[brand]||'#6366f1';
+  const tag=tags[brand]||'MD PA · Management';
+  document.getElementById('hdr-accent').style.color=acc;
+  document.getElementById('hdr-tag').textContent=tag;
+  const dot=document.getElementById('live-dot');
+  dot.style.background=acc;dot.style.boxShadow='0 0 8px '+acc;
+  if(brand==='hnj'&&!window._hnjChartsDrawn){drawHnjCharts();window._hnjChartsDrawn=true;}
+  if(brand==='hbops'&&!window._hbopsLoaded){loadHbOps();window._hbopsLoaded=true;}
+}
+
+// INNER TABS
+function switchInner(brand,view,btn){
+  document.querySelectorAll(`#bv-${brand} .inner-view`).forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll(`#tabs-${brand} .tab`).forEach(t=>t.classList.remove('active'));
+  document.getElementById(`iv-${brand}-${view}`).classList.add('active');
+  btn.classList.add('active');
+  // Lazy chart redraws when switching to tabs with charts
+  if(brand==='hnj'&&view==='overview'&&!window._hnjChartsDrawn){
+    setTimeout(()=>{drawHnjCharts();window._hnjChartsDrawn=true;},50);
+  } else if(brand==='hnj'&&(view==='billing'||view==='intake')){
+    setTimeout(()=>{if(!window._hnjChartsDrawn){drawHnjCharts();window._hnjChartsDrawn=true;}},50);
+  }
+}
+
+// ═══ MDPA DATA & CHARTS ═══
+const MONTHS=['Oct','Nov','Dec','Jan','Feb','Mar'];
+const BRAND_C=['#00d4aa','#0091ff','#f5a623','#22c55e'];
+const BRAND_L=['TH','WA','TC','HBH'];
+
+// Animated hero counter
+count('mdpa-rev',284,'$','K',1400);
+
+function drawMdpaCharts(){
+  new Chart(document.getElementById('mdpa-revTrend'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'TH',data:[68,72,61,78,85,94],borderColor:'#00d4aa',backgroundColor:'rgba(0,212,170,0.04)',tension:0.4,fill:true},
+    {label:'WA',data:[88,95,82,98,105,112],borderColor:'#0091ff',backgroundColor:'rgba(0,145,255,0.04)',tension:0.4,fill:true},
+    {label:'TC',data:[32,38,29,41,44,48],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.04)',tension:0.4,fill:true},
+    {label:'HBH',data:[18,22,19,24,27,30],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.04)',tension:0.4,fill:true},
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:8,padding:12}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+v+'K'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('mdpa-revSplit'),{type:'doughnut',data:{labels:BRAND_L,datasets:[{data:[94,112,48,30],backgroundColor:BRAND_C,borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{padding:10,boxWidth:8}}}}});
+
+  new Chart(document.getElementById('mdpa-cashFlow'),{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'Submitted',data:[320,348,298,362,388,402],backgroundColor:'rgba(99,102,241,0.25)',borderColor:'#6366f1',borderWidth:1,borderRadius:3},
+    {label:'Collected',data:[241,265,224,278,299,314],backgroundColor:'rgba(52,211,153,0.25)',borderColor:'#34d399',borderWidth:1,borderRadius:3},
+  ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+v+'K'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('mdpa-refVol'),{type:'bar',data:{labels:BRAND_L,datasets:[{data:[14,16,8,9],backgroundColor:BRAND_C.map(c=>c+'88'),borderColor:BRAND_C,borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('mdpa-util'),{type:'bar',data:{labels:BRAND_L,datasets:[{data:[82,87,71,68],backgroundColor:BRAND_C.map(c=>c+'88'),borderColor:BRAND_C,borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>v+'%'},max:100},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('mdpa-refBrand'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'TH',data:[8,10,7,11,13,14],borderColor:'#00d4aa',tension:0.4},
+    {label:'WA',data:[11,13,9,14,15,16],borderColor:'#0091ff',tension:0.4},
+    {label:'TC',data:[4,5,3,6,7,8],borderColor:'#f5a623',tension:0.4},
+    {label:'HBH',data:[5,6,4,7,8,9],borderColor:'#22c55e',tension:0.4},
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+}
+
+function renderMdpaBrands(){
+  const brands=[
+    {name:'Teletherapeutics Health',sub:'TH · Telehealth',c:'#00d4aa',rev:'$94K',col:'81%',prov:4,pts:18,refs:14,comp:'Good',cs:'sp-g'},
+    {name:'Well-America',sub:'WA · Telehealth',c:'#0091ff',rev:'$112K',col:'83%',prov:5,pts:22,refs:16,comp:'Good',cs:'sp-g'},
+    {name:'Therapy Central',sub:'TC · Telehealth',c:'#f5a623',rev:'$48K',col:'71%',prov:3,pts:9,refs:8,comp:'Review',cs:'sp-w'},
+    {name:'Hamilton Behavioral Health NJ',sub:'HBH · Medicaid · NJ',c:'#22c55e',rev:'$30K',col:'64%',prov:2,pts:11,refs:9,comp:'Review',cs:'sp-w'},
+  ];
+  document.getElementById('mdpa-brandCards').innerHTML=brands.map(b=>`
+    <div class="bc" style="--bc-c:${b.c}">
+      <div class="bc-name">${b.name}</div><div class="bc-sub">${b.sub}</div>
+      <div class="bmr"><span class="bml">Revenue MTD</span><span class="bmv">${b.rev}</span></div>
+      <div class="bmr"><span class="bml">Collections Rate</span><span class="bmv">${b.col}</span></div>
+      <div class="bmr"><span class="bml">Active Providers</span><span class="bmv">${b.prov}</span></div>
+      <div class="bmr"><span class="bml">New Patients MTD</span><span class="bmv">${b.pts}</span></div>
+      <div class="bmr"><span class="bml">Referrals MTD</span><span class="bmv">${b.refs}</span></div>
+      <div class="bmr"><span class="bml">Compliance</span><span class="sp ${b.cs}">${b.comp}</span></div>
+    </div>`).join('');
+}
+
+function renderMdpaProviders(){
+  const providers=[
+    {name:'Dr. Ahmed S.',role:'Psychiatrist',brand:'TH',bc:'#00d4aa',util:88},
+    {name:'Dr. Maya R.',role:'Psychiatrist',brand:'WA',bc:'#0091ff',util:92},
+    {name:'Lisa T., LCSW',role:'Therapist',brand:'TH',bc:'#00d4aa',util:79},
+    {name:'James W., LPC',role:'Therapist',brand:'WA',bc:'#0091ff',util:85},
+    {name:'Dr. Priya K.',role:'Psychiatrist',brand:'TC',bc:'#f5a623',util:71},
+    {name:'Marcus D., LMFT',role:'Therapist',brand:'TC',bc:'#f5a623',util:68},
+    {name:'Dr. Farid N.',role:'Psychiatrist',brand:'HBH',bc:'#22c55e',util:74},
+    {name:'Sandra L., LSW',role:'Social Worker',brand:'HBH',bc:'#22c55e',util:62},
+  ];
+  document.getElementById('mdpa-provList').innerHTML=providers.map(p=>{
+    const uc=p.util>=80?'#34d399':p.util>=65?'#fbbf24':'#f87171';
+    return`<div class="prow">
+      <div class="pav" style="background:${p.bc}22;color:${p.bc}">${p.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div class="pinfo"><div class="pname">${p.name}</div><div class="prole">${p.role}</div></div>
+      <span class="sp" style="background:${p.bc}22;color:${p.bc}">${p.brand}</span>
+      <div class="util-w"><div class="util-pct">${p.util}%</div><div class="util-bar"><div class="util-fill" style="width:${p.util}%;background:${uc}"></div></div></div>
+      <span class="sp sp-g">Active</span>
+    </div>`;}).join('');
+}
+
+function renderMdpaCompliance(){
+  const items=[
+    {item:'HIPAA Training',th:'ig',wa:'ig',tc:'iw',hbh:'ig',due:'Apr 1, 2026',st:'sp-w',sl:'Review'},
+    {item:'Malpractice Insurance',th:'ig',wa:'ig',tc:'ig',hbh:'ig',due:'Jun 15, 2026',st:'sp-g',sl:'OK'},
+    {item:'Provider Credentialing',th:'ig',wa:'iw',tc:'ig',hbh:'iw',due:'Mar 31, 2026',st:'sp-w',sl:'Review'},
+    {item:'CAQH Updates',th:'ig',wa:'ig',tc:'ir',hbh:'ig',due:'Overdue',st:'sp-r',sl:'Overdue'},
+    {item:'DEA Registration',th:'ig',wa:'ig',tc:'ig',hbh:'ig',due:'Dec 2026',st:'sp-g',sl:'OK'},
+    {item:'State Licensure NJ',th:'ig',wa:'ig',tc:'ig',hbh:'ig',due:'Jan 2027',st:'sp-g',sl:'OK'},
+    {item:'NPI Attestation',th:'ig',wa:'ig',tc:'ig',hbh:'iw',due:'Apr 15, 2026',st:'sp-w',sl:'Review'},
+  ];
+  document.getElementById('mdpa-compBody').innerHTML=items.map(r=>`<tr>
+    <td>${r.item}</td>
+    <td style="text-align:center"><span class="ind ${r.th}"></span></td>
+    <td style="text-align:center"><span class="ind ${r.wa}"></span></td>
+    <td style="text-align:center"><span class="ind ${r.tc}"></span></td>
+    <td style="text-align:center"><span class="ind ${r.hbh}"></span></td>
+    <td class="mono" style="color:${r.st==='sp-r'?'#f87171':r.st==='sp-w'?'#fbbf24':'var(--text3)'}">${r.due}</td>
+    <td><span class="sp ${r.st}">${r.sl}</span></td>
+  </tr>`).join('');
+}
+
+function renderMdpaRefSources(){
+  const srcs=[
+    {name:'PCP / Primary Care',count:18,c:'#00d4aa'},
+    {name:'Hospital / ER',count:11,c:'#0091ff'},
+    {name:'Insurance / Managed Care',count:9,c:'#f5a623'},
+    {name:'Self-Referral',count:6,c:'#a855f7'},
+    {name:'Other Provider',count:3,c:'#f87171'},
+  ];
+  const max=18;
+  document.getElementById('mdpa-refSrc').innerHTML=srcs.map(s=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.c};flex-shrink:0;display:inline-block"></span>
+      <div style="flex:1"><div style="font-size:12px;color:var(--text)">${s.name}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:5px"><div style="height:100%;width:${s.count/max*100}%;background:${s.c};border-radius:2px"></div></div>
+      </div>
+      <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:${s.c}">${s.count}</span>
+    </div>`).join('');
+}
+
+// ═══ HNJ DATA & CHARTS ═══
+function drawHnjCharts(){
+  count('hnj-patients',148,'','',1200);
+  count('hnj-rev',30,'$','K',1400);
+
+  new Chart(document.getElementById('hnj-collTrend'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'Submitted',data:[42,46,38,47,52,48],borderColor:'rgba(34,197,94,0.4)',backgroundColor:'rgba(34,197,94,0.04)',tension:0.4,fill:true,borderDash:[4,3]},
+    {label:'Collected',data:[26,29,24,30,33,30],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,fill:true},
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:8,padding:12}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+v+'K'}},x:{grid:{display:false}}}}});
+
+  const PAYERS=['DMAHS','FamilyCare','Horizon NJ','Amerigroup','WellCare','Other'];
+  const PAYER_C=['#22c55e','#16a34a','#4ade80','#86efac','#bbf7d0','#6b7280'];
+  new Chart(document.getElementById('hnj-payerMix'),{type:'doughnut',data:{labels:PAYERS,datasets:[{data:[32,24,18,12,8,6],backgroundColor:PAYER_C,borderColor:'#09090f',borderWidth:3,hoverOffset:4}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{padding:10,boxWidth:8}}}}});
+
+  new Chart(document.getElementById('hnj-stateChart'),{type:'doughnut',data:{labels:['NJ','NY','PA'],datasets:[{data:[78,14,8],backgroundColor:['#22c55e','#4ade80','#86efac'],borderColor:'#09090f',borderWidth:3,hoverOffset:4}]},options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{padding:12,boxWidth:8}}}}});
+
+  new Chart(document.getElementById('hnj-refSrc'),{type:'bar',data:{labels:['PCP','Hospital','Insurance','Self','Other'],datasets:[{data:[4,2,1,1,1],backgroundColor:'rgba(34,197,94,0.35)',borderColor:'#22c55e',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('hnj-denials'),{type:'bar',data:{labels:['Auth req','Eligibility','Coding','Dup','Other'],datasets:[{data:[5,3,2,1,1],backgroundColor:'rgba(248,113,113,0.35)',borderColor:'#f87171',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('hnj-claims'),{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'Submitted',data:[42,46,38,47,52,48],backgroundColor:'rgba(34,197,94,0.18)',borderColor:'#22c55e',borderWidth:1,borderRadius:3},
+    {label:'Collected',data:[26,29,24,30,33,30],backgroundColor:'rgba(34,197,94,0.45)',borderColor:'#16a34a',borderWidth:1,borderRadius:3},
+  ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+v+'K'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('hnj-denials2'),{type:'bar',data:{labels:['Prior Auth','Eligibility','Coding Error','Duplicate','Timely Filing'],datasets:[{label:'Claims',data:[5,3,2,1,1],backgroundColor:'rgba(248,113,113,0.35)',borderColor:'#f87171',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('hnj-intakeChart'),{type:'line',data:{labels:MONTHS,datasets:[{label:'New Patients',data:[8,10,7,11,12,11],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+
+  new Chart(document.getElementById('hnj-ttaChart'),{type:'bar',data:{labels:['1-3 days','4-7 days','8-14 days','15-21 days','21+ days'],datasets:[{label:'Patients',data:[12,28,34,18,8],backgroundColor:'rgba(34,197,94,0.35)',borderColor:'#22c55e',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}}});
+}
+
+function renderHnjPayer(){
+  const payers=[
+    {name:'NJ Medicaid (DMAHS)',sub:42,col:26,den:7,pen:9,rate:62,days:28},
+    {name:'NJ FamilyCare',sub:28,col:19,den:4,pen:5,rate:68,days:24},
+    {name:'Horizon NJ Health',sub:18,col:13,den:2,pen:3,rate:72,days:18},
+    {name:'Amerigroup NJ',sub:14,col:9,den:3,pen:2,rate:64,days:22},
+    {name:'WellCare NJ',sub:10,col:6,den:2,pen:2,rate:60,days:31},
+    {name:'Other',sub:6,col:4,den:0,pen:2,rate:67,days:20},
+  ];
+  const maxS=42;
+  document.getElementById('hnj-payerBody').innerHTML=payers.map(p=>`<tr>
+    <td>${p.name}</td>
+    <td class="mono"><div>$${p.sub}K</div><div class="minibar"><div class="minibar-f" style="width:${p.sub/maxS*100}%;background:#22c55e"></div></div></td>
+    <td class="mono" style="color:#22c55e">$${p.col}K</td>
+    <td class="mono" style="color:#f87171">${p.den}</td>
+    <td class="mono" style="color:#fbbf24">${p.pen}</td>
+    <td><span class="sp ${p.rate>=70?'sp-g':p.rate>=60?'sp-w':'sp-r'}">${p.rate}%</span></td>
+    <td class="mono">${p.days}d</td>
+  </tr>`).join('');
+}
+
+function renderHnjPipeline(){
+  const stages=[
+    {name:'New Referral',c:'#fbbf24',count:7,pts:[{n:'J.D.',m:'NJ Medicaid · PCP'},{n:'M.R.',m:'NJ FamilyCare · Self'},{n:'A.K.',m:'Horizon NJ · Hospital'}]},
+    {name:'Insurance Verify',c:'#0091ff',count:5,pts:[{n:'T.L.',m:'Amerigroup NJ · PCP'},{n:'S.P.',m:'NJ Medicaid · Insurance'}]},
+    {name:'Prior Auth',c:'#f87171',count:4,pts:[{n:'R.M.',m:'WellCare NJ · Auth pending'},{n:'C.B.',m:'NJ Medicaid · Auth sent'}]},
+    {name:'Scheduled',c:'#22c55e',count:8,pts:[{n:'D.H.',m:'Horizon NJ · Mar 18'},{n:'L.N.',m:'NJ FamilyCare · Mar 19'},{n:'F.A.',m:'NJ Medicaid · Mar 21'}]},
+  ];
+  document.getElementById('hnj-pipeline').innerHTML=stages.map(s=>`
+    <div class="ps">
+      <div class="ps-head"><span class="ps-name" style="color:${s.c}">${s.name}</span><span class="ps-count" style="color:${s.c}">${s.count}</span></div>
+      ${s.pts.map(p=>`<div class="pc"><div class="pc-name">${p.n}</div><div class="pc-meta">${p.m}</div></div>`).join('')}
+      ${s.count>s.pts.length?`<div class="pc"><div class="pc-meta" style="color:var(--text3)">+${s.count-s.pts.length} more</div></div>`:''}
+    </div>`).join('');
+}
+
+const REFS=[
+  {id:'REF-001',date:'2026-03-10',patient:'J.D.',source:'PCP',state:'NJ',payer:'NJ Medicaid',status:'pending',days:null},
+  {id:'REF-002',date:'2026-03-09',patient:'M.R.',source:'Hospital',state:'NJ',payer:'Horizon NJ Health',status:'scheduled',days:4},
+  {id:'REF-003',date:'2026-03-08',patient:'A.K.',source:'PCP',state:'NY',payer:'NJ FamilyCare',status:'converted',days:7},
+  {id:'REF-004',date:'2026-03-07',patient:'T.L.',source:'Insurance',state:'NJ',payer:'Amerigroup NJ',status:'pending',days:null},
+  {id:'REF-005',date:'2026-03-06',patient:'S.P.',source:'Self',state:'PA',payer:'WellCare NJ',status:'scheduled',days:6},
+  {id:'REF-006',date:'2026-03-05',patient:'R.M.',source:'PCP',state:'NJ',payer:'NJ Medicaid',status:'converted',days:9},
+  {id:'REF-007',date:'2026-03-04',patient:'C.B.',source:'Hospital',state:'NY',payer:'Horizon NJ Health',status:'pending',days:null},
+  {id:'REF-008',date:'2026-03-03',patient:'D.H.',source:'PCP',state:'NJ',payer:'NJ FamilyCare',status:'converted',days:5},
+  {id:'REF-009',date:'2026-03-01',patient:'L.N.',source:'Other',state:'PA',payer:'Amerigroup NJ',status:'scheduled',days:8},
+];
+const SC={'NJ':'#22c55e','NY':'#4ade80','PA':'#86efac'};
+
+function filterState(state,btn){
+  document.querySelectorAll('.sf .sb').forEach(b=>b.classList.remove('active-hnj'));
+  btn.classList.add('active-hnj');
+  const f=state==='all'?REFS:REFS.filter(r=>r.state===state);
+  document.getElementById('hnj-refCount').textContent=f.length+' referrals';
+  document.getElementById('hnj-refBody').innerHTML=f.map(r=>`<tr>
+    <td class="mono" style="color:var(--text3)">${r.id}</td>
+    <td class="mono">${r.date}</td>
+    <td>${r.patient}</td>
+    <td class="mono">${r.source}</td>
+    <td><span class="sp" style="background:${SC[r.state]}22;color:${SC[r.state]}">${r.state}</span></td>
+    <td class="mono" style="font-size:10px">${r.payer}</td>
+    <td><span class="sp ${r.status==='converted'?'sp-g':r.status==='scheduled'?'sp-i':'sp-w'}">${r.status}</span></td>
+    <td class="mono">${r.days?r.days+'d':'—'}</td>
+  </tr>`).join('');
+}
+
+function renderHnjStaff(){
+  const groups=[
+    {title:'Clinical',badge:'Providers',members:[
+      {name:'Dr. Farid N.',role:'Psychiatrist',metric:'74%',label:'utilization',pct:74},
+      {name:'Sandra L.',role:'Social Worker',metric:'62%',label:'utilization',pct:62},
+    ]},
+    {title:'Operations',badge:'Admin',members:[
+      {name:'Intake Coordinator',role:'Scheduling',metric:'9',label:'referrals/mo',pct:75},
+      {name:'Billing Specialist',role:'Medicaid Billing',metric:'64%',label:'coll. rate',pct:64},
+      {name:'Front Desk',role:'Reception',metric:'94%',label:'ans. rate',pct:94},
+    ]},
+  ];
+  document.getElementById('hnj-staffArea').innerHTML=groups.map(g=>`
+    <div class="staff-card">
+      <div class="sc-head"><span class="sc-title">${g.title}</span><span class="sp sp-h">${g.badge}</span></div>
+      ${g.members.map(m=>`
+        <div class="srow">
+          <div class="sav" style="background:rgba(34,197,94,0.12);color:#22c55e">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+          <div class="si"><div class="sname">${m.name}</div><div class="srole">${m.role}</div></div>
+          <div class="prog-w"><div class="prog-pct">${m.pct}%</div><div class="prog-t"><div class="prog-f" style="width:${m.pct}%;background:#22c55e"></div></div></div>
+          <div><div class="sval">${m.metric}</div><div class="slabel">${m.label}</div></div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function renderHnjCompliance(){
+  const items=[
+    {name:'NJ Medicaid Provider Enrollment',st:'g',due:'Current'},
+    {name:'NJ FamilyCare Credentialing',st:'g',due:'Dec 2026'},
+    {name:'HIPAA Privacy Policies',st:'g',due:'Annual — Oct 2026'},
+    {name:'Medicaid Audit Readiness',st:'w',due:'Review by Apr 2026'},
+    {name:'Prior Auth Procedures',st:'w',due:'Update needed'},
+    {name:'Staff Background Checks',st:'g',due:'Current'},
+    {name:'NJ State Licensure',st:'g',due:'Jan 2027'},
+    {name:'DEA Registration',st:'g',due:'Dec 2026'},
+    {name:'CAQH Provider Profiles',st:'g',due:'Current'},
+  ];
+  const colors={g:'#22c55e',w:'#fbbf24',r:'#f87171'};
+  const pills={g:'sp-g',w:'sp-w',r:'sp-r'};
+  const labels={g:'OK',w:'Review',r:'Overdue'};
+  document.getElementById('hnj-compList').innerHTML=items.map(i=>`
+    <div class="ci">
+      <span class="ci-dot" style="background:${colors[i.st]};box-shadow:0 0 5px ${colors[i.st]}"></span>
+      <span class="ci-name">${i.name}</span>
+      <span class="ci-due">${i.due}</span>
+      <span class="sp ${pills[i.st]}">${labels[i.st]}</span>
+    </div>`).join('');
+}
+
+// INIT
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    drawMdpaCharts();
+    renderMdpaBrands();
+    renderMdpaProviders();
+    renderMdpaCompliance();
+    renderMdpaRefSources();
+    renderHnjPayer();
+    renderHnjPipeline();
+    filterState('all',document.querySelector('.sf .sb'));
+    renderHnjStaff();
+    renderHnjCompliance();
+    runAlerts();
+    animateAllKpis();
+  },60);
+});
+
+// ═══════════════════════════════════════
+// FEATURE 1 — SETTINGS MODAL (Google Sheets)
+// ═══════════════════════════════════════
+const SETTINGS_KEY='hbops_settings';
+let settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
+
+function openSettings(){document.getElementById('settingsModal').classList.add('open');}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('open');}
+function saveSettings(){
+  ['mdpa_financials','mdpa_providers','hnj_billing','hnj_referrals','shared_compliance'].forEach(k=>{
+    const el=document.getElementById('cfg-'+k);if(el)settings[k]=el.value.trim();
+  });
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  closeSettings();
+  updateLiveBadges();
+  alert('Settings saved. Reload the page to pull fresh data from your sheets.');
+}
+
+function updateLiveBadges(){
+  const hasAny=Object.values(settings).some(v=>v&&v.length>10);
+  document.querySelectorAll('.demo-badge').forEach(b=>b.style.display=hasAny?'none':'inline-flex');
+  document.querySelectorAll('.live-badge').forEach(b=>b.style.display=hasAny?'inline-flex':'none');
+}
+
+// ═══════════════════════════════════════
+// FEATURE 2 — ALERTS
+// ═══════════════════════════════════════
+const ALERT_RULES=[
+  {brand:'mdpa',tab:'compliance',check:()=>document.querySelectorAll('#mdpa-compBody .sp-r').length>0,msg:'Overdue compliance item: CAQH Updates — TC'},
+  {brand:'mdpa',tab:'compliance',check:()=>document.querySelectorAll('#mdpa-compBody .sp-w').length>1,msg:'3 compliance items require review across brands'},
+  {brand:'hnj',tab:'billing',check:()=>true,msg:'Denial rate at 14% — above 12% threshold'},
+  {brand:'hnj',tab:'referrals',check:()=>REFS.filter(r=>r.status==='pending').length>3,msg:REFS.filter(r=>r.status==='pending').length+' referrals pending with no status update'},
+];
+
+function runAlerts(){
+  const mdpaAlerts=ALERT_RULES.filter(r=>r.brand==='mdpa'&&r.check());
+  const hnjAlerts=ALERT_RULES.filter(r=>r.brand==='hnj'&&r.check());
+  setBadge('mdpa',mdpaAlerts.length);
+  setBadge('hnj',hnjAlerts.length);
+  renderAlertBanner('mdpa',mdpaAlerts);
+  renderAlertBanner('hnj',hnjAlerts);
+  // Tab-level badges
+  const tabCounts={};
+  ALERT_RULES.filter(r=>r.check()).forEach(r=>{
+    const key=r.brand+'-'+r.tab;
+    tabCounts[key]=(tabCounts[key]||0)+1;
+  });
+  Object.entries(tabCounts).forEach(([key,count])=>{
+    const [brand,tab]=key.split('-');
+    const btn=document.querySelector(`#tabs-${brand} .tab[onclick*="'${tab}'"]`);
+    if(btn&&!btn.querySelector('.tab-badge')){
+      const b=document.createElement('span');
+      b.className='tab-badge';
+      b.textContent=count;
+      btn.appendChild(b);
+    }
+  });
+}
+
+function setBadge(brand,count){
+  const el=document.getElementById('badge-'+brand);
+  if(!el)return;
+  el.textContent=count;
+  el.style.display=count>0?'inline-flex':'none';
+}
+
+function renderAlertBanner(brand,alerts){
+  const el=document.getElementById('alert-banner-'+brand);
+  if(!el)return;
+  if(!alerts.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=`<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px;background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.18);border-radius:10px;margin-bottom:20px">
+    <span style="font-size:16px;flex-shrink:0">⚠️</span>
+    <div style="flex:1">
+      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#f87171;margin-bottom:8px">${alerts.length} Active Alert${alerts.length>1?'s':''}</div>
+      ${alerts.map(a=>`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">→ ${a.msg}</div>`).join('')}
+    </div>
+    <button onclick="this.closest('div').parentElement.style.display='none'" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0">✕</button>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// FEATURE 3 — ADD REFERRAL DRAWER (HNJ)
+// ═══════════════════════════════════════
+let nextRefId=10;
+function openRefDrawer(){document.getElementById('refDrawer').classList.add('open');}
+function closeRefDrawer(){document.getElementById('refDrawer').classList.remove('open');}
+function submitReferral(){
+  const f=id=>document.getElementById('rf-'+id)?.value||'';
+  const ref={
+    id:'REF-0'+String(nextRefId++).padStart(2,'0'),
+    date:f('date')||new Date().toISOString().slice(0,10),
+    patient:f('patient')||'N/A',
+    source:f('source')||'PCP',
+    state:f('state')||'NJ',
+    payer:f('payer')||'NJ Medicaid',
+    status:'pending',
+    days:null,
+  };
+  REFS.unshift(ref);
+  filterState('all',document.querySelector('.sf .sb'));
+  closeRefDrawer();
+  runAlerts();
+  // Show copy notice
+  const notice=document.getElementById('ref-copy-notice');
+  if(notice){notice.style.display='block';setTimeout(()=>notice.style.display='none',5000);}
+}
+
+// ═══════════════════════════════════════
+// FEATURE 4 — ANIMATED KPI COUNTERS + SPARKLINES
+// ═══════════════════════════════════════
+function animateAllKpis(){
+  document.querySelectorAll('.kpi-val[data-target]').forEach(el=>{
+    const target=parseFloat(el.dataset.target);
+    const prefix=el.dataset.prefix||'';
+    const suffix=el.dataset.suffix||'';
+    let v=0;const steps=50;
+    const s=setInterval(()=>{
+      v=Math.min(v+target/steps,target);
+      el.textContent=prefix+(Number.isInteger(target)?Math.round(v):v.toFixed(1))+suffix;
+      if(v>=target)clearInterval(s);
+    },600/steps);
+  });
+  // Draw sparklines
+  document.querySelectorAll('canvas[data-spark]').forEach(canvas=>{
+    const data=JSON.parse(canvas.dataset.spark);
+    const color=canvas.dataset.color||'#6366f1';
+    new Chart(canvas.getContext('2d'),{type:'line',data:{
+      labels:['','','','','',''],
+      datasets:[{data,borderColor:color,backgroundColor:color+'22',borderWidth:1.5,tension:0.4,fill:true,pointRadius:0}]
+    },options:{responsive:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HBOPS — Live Google Sheets integration
+// ═══════════════════════════════════════════════════════════
+const HB_SHEETS=[
+  {key:'weekly',     name:'Weekly HB Health (ALL)',         id:'2PACX-1vRCqdAYegh8KFfCenbbjN8AcZ3OsbLY3OeKip1d9JV488dqsgqwt59vazH42gJQv2GLa-InGmxQEwWO',gid:'0'},
+  {key:'therapy',    name:'Weekly HB Health · Therapy',     id:'2PACX-1vRCqdAYegh8KFfCenbbjN8AcZ3OsbLY3OeKip1d9JV488dqsgqwt59vazH42gJQv2GLa-InGmxQEwWO',gid:'1004825996'},
+  {key:'medmgmt',    name:'Weekly HB Health · Med Mgmt',    id:'2PACX-1vRCqdAYegh8KFfCenbbjN8AcZ3OsbLY3OeKip1d9JV488dqsgqwt59vazH42gJQv2GLa-InGmxQEwWO',gid:'331088351'},
+  {key:'cash',       name:'Bank Cash Flow (3-yr)',          id:'2PACX-1vTFdQepCDRrBqUKb1SoIfFWYTnslDoewOlffJGDMJIyn45sfwONyhVzwSak3SI92BfZ775UGZ-miXWn',gid:'0'},
+  {key:'employees',  name:'Employee Count and Status',      id:'2PACX-1vRz4z6xuQmDykQPmEnXIUB5wxdpV-n7KmFt-MkNjRZvoIqFbwwj9qUmtAcgq7v1DHyL-4_95c5xhvyL',gid:'0'},
+  {key:'insurance',  name:'Employee Insurance Enrollment',  id:'2PACX-1vSDVasXnxhlIvFTWwxo5IZbVbkon1ZwIbyTWNGHBGyimLTvSTCrQaJKFPhcqYmLGKimHHulMc_GuOn2',gid:'0'},
+  {key:'referrals',  name:'Front Desk New Patient Referrals',id:'2PACX-1vQs2Fs-2oHV9ShfBy8Jl1YAwNGJYmrYuTdUXLYEq5-N-5978nTHuOMmpnzGwmptR6bpafPRGAvDrH_I',gid:'563763383'},
+  {key:'copay',      name:'Monthly Copay (Instamed)',       id:'2PACX-1vQKtnCiuOqNWbqZxMUKHhov_vaadhCMaaUJ5l6j1CsA9BMtW0UlrA6m0E-mTDiWkhPnMGM-3blbaWiO',gid:'0'},
+  {key:'schedule',   name:"Provider's Schedule",            id:'2PACX-1vTP6sguMSsAHugC3ED8aP-N2077qr68T6KFV4hpiS_hUEAg_5BVtmipmvUaE-pXTsPWratZiY4jPRf0',gid:'0'},
+  {key:'ringcentral',name:'Ring Central Report',            id:'2PACX-1vREG5oI3W9UJQ7vhsarjC2cGZci3TRS5bIrm3vnyjLzerjwQNsmupATUH2qYW4s1bXDhotSSV8YldAN',gid:'0'},
+  {key:'tmscount',   name:'TMS & Spravato Count',           id:'2PACX-1vTyPvrMH6tt4jlpS6yBrzU-wH2ZY9I_zJXlsatek-gpN-p6RgrnAqpn96sp_Grw2b9L0LOoJf2_-z6o',gid:'0'},
+  {key:'tmspa',      name:'TMS & Spravato Referral & PA',   id:'2PACX-1vQyP3gi36Ixb6vgSlhvnkRMTcojUTg0BasmV05oWkI2JVP9EDPrahSfMqSlH5QZdFBedwwLOYF1pFPH',gid:'0'},
+];
+const HB_DATA={};
+const HB_CRED={
+  offices:['Elmwood Park','Edgewater','Newton','Oakhurst'],
+  enrollments:[
+    {payer:'Horizon BCBSNJ',provider:'Dr. Farid N.',office:'Edgewater',submitted:'2026-05-14',status:'Pending follow-up',contact:'Provider Relations'},
+    {payer:'AmeriHealth NJ',provider:'Sandra L., LSW',office:'Newton',submitted:'2026-04-28',status:'Approved',contact:'Portal case #AJ-4438'},
+    {payer:'Aetna Better Health NJ',provider:'Dr. Maya R.',office:'Elmwood Park',submitted:'2026-05-21',status:'Under review',contact:'Aetna roster team'},
+    {payer:'Magellan',provider:'Marcus D., LMFT',office:'Oakhurst',submitted:'2026-03-30',status:'Denied - appeal',contact:'Behavioral health appeals'},
+    {payer:'Lyra EAP',provider:'Lisa T., LCSW',office:'Edgewater',submitted:'2026-05-07',status:'Pending contract',contact:'Enterprise network manager'}
+  ],
+  providers:[
+    {name:'Dr. Farid N.',npi:'1234567890',license:'25MA12345600',offices:'Edgewater, Oakhurst',payers:'Horizon, AmeriHealth, NJ FamilyCare'},
+    {name:'Sandra L., LSW',npi:'1133557799',license:'44SC09876500',offices:'Newton',payers:'AmeriHealth, Aetna Better Health'},
+    {name:'Dr. Maya R.',npi:'1444556677',license:'25MA88776600',offices:'Elmwood Park, Edgewater',payers:'Horizon, Aetna Better Health'},
+    {name:'Marcus D., LMFT',npi:'1666777888',license:'37FI44332200',offices:'Oakhurst',payers:'Magellan, Spring Health'},
+    {name:'Lisa T., LCSW',npi:'1777888999',license:'44SC22211100',offices:'Edgewater, Newton',payers:'Lyra, Spring Health'}
+  ],
+  licenses:[
+    {provider:'Dr. Farid N.',credential:'NJ Medical License',expires:'2026-08-14',status:'Renew within 90 days'},
+    {provider:'Sandra L., LSW',credential:'NJ Social Work License',expires:'2026-06-28',status:'Renewal due'},
+    {provider:'Dr. Maya R.',credential:'DEA Registration',expires:'2027-01-09',status:'Current'},
+    {provider:'Marcus D., LMFT',credential:'NJ Family Therapy License',expires:'2026-07-12',status:'Renewal packet in progress'},
+    {provider:'Lisa T., LCSW',credential:'CAQH Re-attestation',expires:'2026-06-19',status:'Attestation due'}
+  ],
+  documents:[
+    {document:'CAQH profiles',owner:'Credentialing team',due:'2026-06-19',status:'2 profiles due'},
+    {document:'W-9 packets',owner:'Finance',due:'2026-12-31',status:'Current'},
+    {document:'Malpractice certificates',owner:'Operations',due:'2026-07-01',status:'Broker follow-up'},
+    {document:'Credentialing packets',owner:'Provider onboarding',due:'2026-06-10',status:'Waiting on signatures'}
+  ],
+  networks:[
+    {network:'Lyra',type:'EAP',term:'2026-12-31',status:'Active',owner:'Contracts'},
+    {network:'Spring Health',type:'EAP',term:'2026-09-30',status:'Renewal review',owner:'Credentialing Ops'},
+    {network:'Magellan',type:'Commercial',term:'2027-03-31',status:'Active',owner:'Managed care'},
+    {network:'NJ FamilyCare',type:'Medicaid',term:'2026-11-15',status:'Roster expansion',owner:'Credentialing Ops'}
+  ],
+  activations:[
+    {payer:'AmeriHealth NJ',provider:'Sandra L., LSW',office:'Newton',approved:'2026-05-06',activation:'Activated',billable:'Yes'},
+    {payer:'Horizon BCBSNJ',provider:'Dr. Farid N.',office:'Edgewater',approved:'2026-05-23',activation:'Pending roster load',billable:'No'},
+    {payer:'Aetna Better Health NJ',provider:'Dr. Maya R.',office:'Elmwood Park',approved:'2026-05-29',activation:'Pending welcome letter',billable:'No'},
+    {payer:'Lyra EAP',provider:'Lisa T., LCSW',office:'Edgewater',approved:'2026-04-17',activation:'Activated',billable:'Yes'}
+  ],
+  portals:[
+    {payer:'Horizon BCBSNJ',portal:'NaviNet',issue:'Shared login MFA loops on Monday mornings',severity:'Open',owner:'Credentialing Ops'},
+    {payer:'Aetna Better Health NJ',portal:'Availity',issue:'Roster acknowledgements delayed 5+ business days',severity:'Review',owner:'Payer relations'},
+    {payer:'Magellan',portal:'Provider portal',issue:'Appeal attachment upload rejected for PDF over 5 MB',severity:'Open',owner:'Managed care'},
+    {payer:'Lyra',portal:'Enterprise dashboard',issue:'No active blockers',severity:'Resolved',owner:'Contracts'}
+  ],
+  rates:[
+    {payer:'Horizon BCBSNJ',cpt:'90792',current:'$168',requested:'$185',status:'Requested'},
+    {payer:'Aetna Better Health NJ',cpt:'90837',current:'$112',requested:'$125',status:'In review'},
+    {payer:'Magellan',cpt:'90834',current:'$96',requested:'$110',status:'Appeal package sent'},
+    {payer:'Spring Health',cpt:'90853',current:'$42',requested:'$55',status:'Contract discussion'}
+  ],
+  correspondence:[
+    {date:'2026-06-02',payer:'Horizon BCBSNJ',channel:'Call',subject:'Edgewater roster activation follow-up',owner:'Yasir',next:'2026-06-09'},
+    {date:'2026-06-01',payer:'Magellan',channel:'Email',subject:'Denial appeal packet re-submitted',owner:'Credentialing Ops',next:'2026-06-05'},
+    {date:'2026-05-30',payer:'Aetna Better Health NJ',channel:'Portal',subject:'Elmwood Park application status check',owner:'Yasir',next:'2026-06-06'},
+    {date:'2026-05-29',payer:'Lyra',channel:'Call',subject:'Contract term renewal discussion',owner:'Contracts',next:'2026-06-12'}
+  ],
+  audit:[
+    {when:'2026-06-03 10:12',area:'Licenses',change:'Sandra L. renewal reminder logged',by:'OpsCenter'},
+    {when:'2026-06-02 16:44',area:'Enrollments',change:'Horizon follow-up scheduled for Dr. Farid N.',by:'Yasir'},
+    {when:'2026-06-01 13:08',area:'Rates',change:'Aetna 90837 request updated to $125',by:'Managed care'},
+    {when:'2026-05-30 09:40',area:'Documents',change:'Malpractice certificate requested from broker',by:'Operations'}
+  ]
+};
+
+// Tiny CSV parser (handles quotes + escaped quotes)
+function parseCSV(txt){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i],n=txt[i+1];
+    if(q){
+      if(c==='"'&&n==='"'){cell+='"';i++;}
+      else if(c==='"'){q=false;}
+      else cell+=c;
+    } else {
+      if(c==='"')q=true;
+      else if(c===','){row.push(cell);cell='';}
+      else if(c==='\r'){}
+      else if(c==='\n'){row.push(cell);rows.push(row);row=[];cell='';}
+      else cell+=c;
+    }
+  }
+  if(cell.length||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+
+function csvUrl(s){return `https://docs.google.com/spreadsheets/d/e/${s.id}/pub?single=true&output=csv&gid=${s.gid}`;}
+function htmlUrl(s){return `https://docs.google.com/spreadsheets/d/e/${s.id}/pubhtml?gid=${s.gid}`;}
+function num(s){if(s==null)return null;const n=parseFloat(String(s).replace(/[$,\s]/g,''));return Number.isFinite(n)?n:null;}
+function fmtMoney(n){if(n==null)return '—';const a=Math.abs(n);const sign=n<0?'-':'';if(a>=1e6)return `${sign}$${(a/1e6).toFixed(2)}M`;if(a>=1e3)return `${sign}$${(a/1e3).toFixed(0)}K`;return `${sign}$${a.toFixed(0)}`;}
+function fmtNum(n){if(n==null)return '—';return Math.round(n).toLocaleString();}
+function daysUntil(dateStr){
+  const day=Date.parse(`${dateStr}T00:00:00`);
+  if(!Number.isFinite(day))return null;
+  return Math.ceil((day-Date.now())/86400000);
+}
+function credPill(status){
+  const s=(status||'').toLowerCase();
+  if(/approved|active|activated|current|resolved|yes/.test(s))return 'sp-g';
+  if(/denied|open|appeal|overdue|due/.test(s))return 'sp-r';
+  if(/pending|review|renew|follow-up|follow up|waiting|requested|progress/.test(s))return 'sp-w';
+  return 'sp-i';
+}
+
+async function fetchSheet(s){
+  try{
+    const r=await fetch(csvUrl(s));
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    return parseCSV(txt);
+  }catch(e){
+    console.warn('[HBOPS] failed',s.key,e);
+    return null;
+  }
+}
+
+async function loadHbOps(){
+  const status=document.getElementById('hb-loadStatus');
+  if(status)status.textContent='loading…';
+  renderHbSheetCards();
+  const results=await Promise.all(HB_SHEETS.map(s=>fetchSheet(s).then(d=>[s.key,d])));
+  results.forEach(([k,d])=>{HB_DATA[k]=d;});
+  if(status){
+    const ok=results.filter(([,d])=>d).length;
+    status.textContent=`live · ${ok}/${HB_SHEETS.length} sheets loaded · ${new Date().toLocaleTimeString()}`;
+  }
+  try{renderHbVisits();}catch(e){console.error(e);}
+  try{renderHbCash();}catch(e){console.error(e);}
+  try{renderHbStaff();}catch(e){console.error(e);}
+  try{renderHbReferrals();}catch(e){console.error(e);}
+  try{renderHbSchedule();}catch(e){console.error(e);}
+  try{renderHbCopay();}catch(e){console.error(e);}
+  try{renderHbOverview();}catch(e){console.error(e);}
+  try{renderHbCredentialing();}catch(e){console.error(e);}
+}
+
+function renderHbSheetCards(){
+  const wrap=document.getElementById('hb-sheetCards');if(!wrap)return;
+  wrap.innerHTML=HB_SHEETS.map(s=>`
+    <div class="cc" style="padding:16px">
+      <div class="cc-title" style="margin-bottom:6px">${s.name}</div>
+      <div class="cc-sub" style="margin-bottom:10px">id ${s.id.slice(0,16)}…</div>
+      <div style="display:flex;gap:8px">
+        <a href="${htmlUrl(s)}" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;padding:8px 14px;border-radius:6px;text-decoration:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px">Open Sheet ↗</a>
+        <a href="${csvUrl(s)}" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:8px 14px;border-radius:6px;text-decoration:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px">CSV</a>
+      </div>
+    </div>`).join('');
+}
+
+// ── Visits ────────────────────────────────────────────────
+function parseVisitsAll(rows){
+  if(!rows)return [];
+  let hi=rows.findIndex(r=>r.some(c=>/friday before/i.test(c||'')));
+  if(hi<0)return [];
+  const out=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];if(!r||r.length<3)continue;
+    const week=(r[1]||'').trim();
+    const sched=num(r[2]);
+    if(!week||/^\s*$/.test(week)||sched==null)continue;
+    if(/^\d{4,5}$/.test(week))continue;
+    out.push({week,sched,seenT:num(r[3]),seenM:num(r[4]),total:num(r[5]),cancel:num(r[6]),noshow:num(r[7]),new_:num(r[8]),resched:num(r[11])});
+  }
+  return out;
+}
+function renderHbVisits(){
+  const all=parseVisitsAll(HB_DATA.weekly);
+  if(!all.length)return;
+  const tbody=document.getElementById('hb-visitBody');
+  if(tbody){
+    tbody.innerHTML=all.map(v=>{
+      const showRate=v.total&&v.sched?Math.round(100*v.total/v.sched)+'%':'—';
+      return `<tr><td>${v.week}</td><td style="text-align:right">${fmtNum(v.sched)}</td><td style="text-align:right">${fmtNum(v.seenT)}</td><td style="text-align:right">${fmtNum(v.seenM)}</td><td style="text-align:right;font-weight:700">${fmtNum(v.total)}</td><td style="text-align:right">${showRate}</td><td style="text-align:right">${fmtNum(v.cancel)}</td><td style="text-align:right">${fmtNum(v.noshow)}</td><td style="text-align:right">${fmtNum(v.new_)}</td></tr>`;
+    }).join('');
+  }
+  const labels=all.map(v=>v.week);
+  drawChart('hb-vSchedSeen',{type:'bar',data:{labels,datasets:[
+    {label:'Scheduled',data:all.map(v=>v.sched),backgroundColor:'rgba(245,158,11,0.25)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3},
+    {label:'Total Seen',data:all.map(v=>v.total||0),backgroundColor:'rgba(52,211,153,0.25)',borderColor:'#34d399',borderWidth:1,borderRadius:3},
+  ]},options:barOpts()});
+  drawChart('hb-vLost',{type:'line',data:{labels,datasets:[
+    {label:'Cancelled',data:all.map(v=>v.cancel||0),borderColor:'#f87171',backgroundColor:'rgba(248,113,113,0.06)',tension:0.35,fill:true},
+    {label:'No-show',data:all.map(v=>v.noshow||0),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.06)',tension:0.35,fill:true},
+  ]},options:lineOpts()});
+}
+
+// ── Cash ──────────────────────────────────────────────────
+function parseCash(rows){
+  if(!rows)return null;
+  const months=['January','feb','March','APril','May','June','JUly','August','September','October','Nov','Dec'];
+  const data={2024:{},2025:{},2026:{}};
+  rows.forEach(r=>{
+    if(!r||r.length<12)return;
+    const lbl=(r[0]||'').trim();if(!lbl||lbl==='Month 2026')return;
+    if(months.includes(lbl)||/Qtr$/i.test(lbl)){
+      data[2026][lbl]={in:num(r[1]),out:num(r[2]),net:num(r[3])};
+      data[2025][lbl]={in:num(r[5]),out:num(r[6]),net:num(r[7])};
+      data[2024][lbl]={in:num(r[9]),out:num(r[10]),net:num(r[11])};
+    }
+  });
+  return data;
+}
+function renderHbCash(){
+  const c=parseCash(HB_DATA.cash);if(!c)return;
+  const tbody=document.getElementById('hb-cashBody');
+  const periods=['First Qtr','APril','May','June','2nd Qtr','JUly','August','September','3rd Qtr','October','Nov','Dec','Fth Qtr'];
+  if(tbody){
+    tbody.innerHTML=periods.filter(p=>c[2025][p]||c[2024][p]).map(p=>{
+      const fmt=v=>{if(v==null)return '<span style="color:var(--text3)">—</span>';const cls=v<0?'dd':'du';return `<span class="${cls}">${fmtMoney(v)}</span>`;};
+      return `<tr><td>${p}</td><td style="text-align:right">${fmt(c[2026][p]?.net)}</td><td style="text-align:right">${fmt(c[2025][p]?.net)}</td><td style="text-align:right">${fmt(c[2024][p]?.net)}</td></tr>`;
+    }).join('');
+  }
+  const months=['January','feb','March','APril','May','June','JUly','August','September','October','Nov','Dec'];
+  const labels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ds=y=>months.map(m=>c[y][m]?.net??null);
+  drawChart('hb-cashMonthly',{type:'line',data:{labels,datasets:[
+    {label:'2024',data:ds(2024),borderColor:'#7a80a0',tension:0.35,fill:false,spanGaps:true},
+    {label:'2025',data:ds(2025),borderColor:'#22c55e',tension:0.35,fill:false,spanGaps:true},
+    {label:'2026',data:ds(2026),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',tension:0.35,fill:true,spanGaps:true,borderWidth:2.5},
+  ]},options:moneyLineOpts()});
+  const qlabels=['Q1','Q2','Q3','Q4'];
+  const qkeys=['First Qtr','2nd Qtr','3rd Qtr','Fth Qtr'];
+  const qds=y=>qkeys.map(k=>c[y][k]?.net??null);
+  drawChart('hb-cashQuarter',{type:'bar',data:{labels:qlabels,datasets:[
+    {label:'2024',data:qds(2024),backgroundColor:'rgba(122,128,160,0.4)',borderColor:'#7a80a0',borderWidth:1,borderRadius:3},
+    {label:'2025',data:qds(2025),backgroundColor:'rgba(34,197,94,0.4)',borderColor:'#22c55e',borderWidth:1,borderRadius:3},
+    {label:'2026',data:qds(2026),backgroundColor:'rgba(245,158,11,0.6)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3},
+  ]},options:moneyBarOpts()});
+}
+
+// ── Copay ─────────────────────────────────────────────────
+function renderHbCopay(){
+  const rows=HB_DATA.copay;if(!rows)return;
+  const tbody=document.getElementById('hb-copayBody');if(!tbody)return;
+  const out=[];
+  rows.forEach(r=>{
+    if(!r||r.length<2)return;
+    const lbl=(r[0]||'').trim();const v=num(r[1]);
+    if(!lbl||lbl==='2026'||lbl==='MONTH')return;
+    out.push({lbl,v});
+  });
+  tbody.innerHTML=out.map(o=>`<tr><td>${o.lbl}</td><td style="text-align:right">${o.v?fmtMoney(o.v):'<span style="color:var(--text3)">—</span>'}</td></tr>`).join('');
+}
+
+// ── Staff ─────────────────────────────────────────────────
+function parseStaff(rows){
+  if(!rows)return [];
+  return rows.slice(1).filter(r=>r&&r[0]&&r[0].trim()).map(r=>({
+    first:r[0]?.trim()||'',last:r[1]?.trim()||'',title:(r[2]||'').trim().toUpperCase(),
+    classification:(r[3]||'').trim(),status:(r[4]||'').trim().toLowerCase(),
+  }));
+}
+function renderHbStaff(){
+  const staff=parseStaff(HB_DATA.employees);if(!staff.length)return;
+  const total=staff.length;
+  const ft=staff.filter(s=>/full/i.test(s.classification)).length;
+  const pt=staff.filter(s=>/part/i.test(s.classification)).length;
+  const ic=staff.filter(s=>/contractor|independ/i.test(s.classification)).length;
+  document.getElementById('hb-st-total').textContent=total;
+  document.getElementById('hb-st-ft').textContent=ft;
+  document.getElementById('hb-st-pt').textContent=pt;
+  document.getElementById('hb-st-ic').textContent=ic;
+  document.getElementById('hb-st-ft-pct').textContent=Math.round(100*ft/total)+'% of total';
+  document.getElementById('hb-st-pt-pct').textContent=Math.round(100*pt/total)+'% of total';
+  document.getElementById('hb-st-ic-pct').textContent=Math.round(100*ic/total)+'% of total';
+  document.getElementById('hb-staffCount').textContent=`${total} active`;
+  const roleMap={};staff.forEach(s=>{
+    let r=s.title;
+    if(/THERPIST|THERAPIST/.test(r))r='Therapist';
+    else if(/PROVIDER/.test(r))r='Provider';
+    else if(/FRONT DESK|FRONTDESK/.test(r))r='Front Desk';
+    else if(/TMS/.test(r))r='TMS';
+    else if(/SUPERVISOR/.test(r))r='Supervisor';
+    else if(/ADMIN/.test(r))r='Admin';
+    else if(/MANAGER/.test(r))r='Manager';
+    else r='Other';
+    roleMap[r]=(roleMap[r]||0)+1;
+  });
+  const rEntries=Object.entries(roleMap).sort((a,b)=>b[1]-a[1]);
+  drawChart('hb-staffRoles',{type:'bar',data:{labels:rEntries.map(e=>e[0]),datasets:[{data:rEntries.map(e=>e[1]),backgroundColor:'rgba(245,158,11,0.5)',borderColor:'#f59e0b',borderWidth:1,borderRadius:4}]},options:{...barOpts(),plugins:{legend:{display:false}},indexAxis:'y'}});
+  const ins=HB_DATA.insurance?HB_DATA.insurance.slice(1).filter(r=>r&&r[0]).map(r=>({status:(r[3]||'').toLowerCase(),plan:(r[4]||'').trim()})):[];
+  if(ins.length){
+    const planMap={};ins.forEach(i=>{
+      if(i.status!=='active'){planMap['Not enrolled']=(planMap['Not enrolled']||0)+1;return;}
+      const p=i.plan||'(none)';planMap[p]=(planMap[p]||0)+1;
+    });
+    const pEntries=Object.entries(planMap).sort((a,b)=>b[1]-a[1]);
+    drawChart('hb-staffInsurance',{type:'doughnut',data:{labels:pEntries.map(e=>e[0]),datasets:[{data:pEntries.map(e=>e[1]),backgroundColor:['#f59e0b','#34d399','#0091ff','#fbbf24','#7a80a0','#f87171','#a78bfa'],borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:8,boxWidth:8}}}}});
+  }
+  const tbody=document.getElementById('hb-staffBody');
+  if(tbody){
+    tbody.innerHTML=staff.map(s=>`<tr><td>${s.first} ${s.last}</td><td>${s.title||'—'}</td><td>${s.classification||'—'}</td><td><span class="sp sp-g">${s.status||'active'}</span></td></tr>`).join('');
+  }
+}
+
+// ── Referrals ─────────────────────────────────────────────
+function parseRefs(rows){
+  if(!rows)return [];
+  return rows.slice(1).filter(r=>r&&r[0]&&/^\d/.test(r[0])).map(r=>({
+    date:r[0],patient:r[1],source:r[2],fd:r[3],status:(r[4]||'').trim(),type:(r[5]||'').trim(),
+  }));
+}
+function renderHbReferrals(){
+  const refs=parseRefs(HB_DATA.referrals);if(!refs.length)return;
+  const total=refs.length;
+  const norm=s=>s.replace(/^"+/,'').replace(/"+$/,'').toUpperCase().trim();
+  const given=refs.filter(r=>/^GIVEN/i.test(norm(r.status))).length;
+  const wait=refs.filter(r=>/WAITING/i.test(norm(r.status))).length;
+  const msg=refs.filter(r=>/LEFT MESSAGE|SENT EMAIL/i.test(norm(r.status))).length;
+  document.getElementById('hb-ref-total').textContent=total;
+  document.getElementById('hb-ref-given').textContent=given;
+  document.getElementById('hb-ref-wait').textContent=wait;
+  document.getElementById('hb-ref-msg').textContent=msg;
+  document.getElementById('hb-ref-conv').textContent=total?Math.round(100*given/total)+'%':'—';
+  document.getElementById('hb-refCount2').textContent=`${total} since ${refs[0]?.date||''}`;
+  drawChart('hb-refStatus',{type:'doughnut',data:{labels:['Given','Awaiting paperwork','Left message','Other'],datasets:[{data:[given,wait,msg,Math.max(0,total-given-wait-msg)],backgroundColor:['#34d399','#fbbf24','#0091ff','#7a80a0'],borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{padding:8,boxWidth:8}}}}});
+  const tCounts={MM:0,Therapy:0,TMS:0,Other:0};
+  refs.forEach(r=>{
+    const t=norm(r.type);
+    if(/MED MAN/i.test(t))tCounts.MM++;
+    else if(/THERAPY/i.test(t))tCounts.Therapy++;
+    else if(/TMS/i.test(t))tCounts.TMS++;
+    else tCounts.Other++;
+  });
+  drawChart('hb-refType',{type:'bar',data:{labels:['Med Mgmt','Therapy','TMS','Other'],datasets:[{data:[tCounts.MM,tCounts.Therapy,tCounts.TMS,tCounts.Other],backgroundColor:['#f59e0b','#0091ff','#a78bfa','#7a80a0'],borderColor:['#f59e0b','#0091ff','#a78bfa','#7a80a0'],borderWidth:1,borderRadius:4}]},options:{...barOpts(),plugins:{legend:{display:false}}}});
+  const tbody=document.getElementById('hb-refBody');
+  if(tbody){
+    const recent=refs.slice(-25).reverse();
+    const pillFor=s=>{const u=norm(s);if(/^GIVEN/.test(u))return 'sp-g';if(/WAITING/.test(u))return 'sp-w';if(/LEFT MESSAGE|SENT EMAIL/.test(u))return 'sp-w';return '';};
+    tbody.innerHTML=recent.map(r=>`<tr><td>${r.date}</td><td>${r.patient||''}</td><td>${r.source||''}</td><td>${r.fd||''}</td><td><span class="sp ${pillFor(r.status)}">${r.status||'—'}</span></td><td>${r.type||'—'}</td></tr>`).join('');
+  }
+}
+
+// ── Schedule ──────────────────────────────────────────────
+function renderHbSchedule(){
+  const rows=HB_DATA.schedule;if(!rows)return;
+  const tbody=document.getElementById('hb-schedBody');if(!tbody)return;
+  const out=rows.slice(1).filter(r=>r&&r[1]&&r[1].trim());
+  document.getElementById('hb-schedCount').textContent=`${out.length} providers`;
+  tbody.innerHTML=out.map(r=>`<tr><td style="font-weight:600">${r[1]||''}</td><td>${r[2]||''}</td><td>${r[3]||''}</td><td>${r[4]||''}</td><td>${r[5]||''}</td><td>${r[6]||''}</td><td>${r[7]||''}</td></tr>`).join('');
+}
+
+// ── Overview KPIs ─────────────────────────────────────────
+function renderHbOverview(){
+  const all=parseVisitsAll(HB_DATA.weekly);
+  const cash=parseCash(HB_DATA.cash);
+  const staff=parseStaff(HB_DATA.employees);
+  const refs=parseRefs(HB_DATA.referrals);
+  const recent=all.filter(v=>v.total!=null).slice(-1)[0];
+  if(recent){
+    document.getElementById('hb-kpi-seen').textContent=fmtNum(recent.total);
+    document.getElementById('hb-kpi-seen-sub').textContent='week of '+recent.week;
+    const sr=recent.sched?Math.round(100*recent.total/recent.sched)+'%':'—';
+    document.getElementById('hb-kpi-showrate').textContent=sr;
+    const last4=all.filter(v=>v.total).slice(-4);
+    const avg=last4.length?Math.round(last4.reduce((a,b)=>a+b.total,0)/last4.length):null;
+    if(avg)document.getElementById('hb-avgseen').textContent=fmtNum(avg);
+  }
+  if(cash){
+    const q1=cash[2026]['First Qtr']?.net;
+    if(q1!=null){
+      const el=document.getElementById('hb-kpi-cash');el.textContent=fmtMoney(q1);el.style.color=q1<0?'#f87171':'#34d399';
+      document.getElementById('hb-q1net').textContent=fmtMoney(q1);
+      document.getElementById('hb-kpi-cash-sub').textContent=`'25 Q1: ${fmtMoney(cash[2025]['First Qtr']?.net)} · '24 Q1: ${fmtMoney(cash[2024]['First Qtr']?.net)}`;
+    }
+  }
+  if(HB_DATA.copay){
+    const q1=HB_DATA.copay.find(r=>/1ST QUARTER/i.test(r[0]||''));
+    if(q1)document.getElementById('hb-kpi-copay').textContent=fmtMoney(num(q1[1]));
+  }
+  if(staff.length){document.getElementById('hb-headcount').textContent=staff.length;}
+  if(refs.length){
+    const norm=s=>s.replace(/^"+/,'').replace(/"+$/,'').toUpperCase().trim();
+    const wait=refs.filter(r=>/WAITING/i.test(norm(r.status))).length;
+    document.getElementById('hb-refs').textContent=refs.length;
+    document.getElementById('hb-kpi-stuck').textContent=wait;
+  }
+  if(all.length){
+    const slice=all.slice(-8);
+    drawChart('hb-visitTrend',{type:'line',data:{labels:slice.map(v=>v.week),datasets:[
+      {label:'Scheduled',data:slice.map(v=>v.sched),borderColor:'#7a80a0',backgroundColor:'rgba(122,128,160,0.04)',tension:0.35,fill:true},
+      {label:'Total Seen',data:slice.map(v=>v.total||null),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',tension:0.35,fill:true,spanGaps:true,borderWidth:2.5},
+    ]},options:lineOpts()});
+  }
+  if(cash){
+    const qkeys=['First Qtr','2nd Qtr','3rd Qtr','Fth Qtr'],qlabels=['Q1','Q2','Q3','Q4'];
+    drawChart('hb-cashCompare',{type:'bar',data:{labels:qlabels,datasets:[
+      {label:'2024',data:qkeys.map(k=>cash[2024][k]?.net??null),backgroundColor:'rgba(122,128,160,0.4)',borderColor:'#7a80a0',borderWidth:1,borderRadius:3},
+      {label:'2025',data:qkeys.map(k=>cash[2025][k]?.net??null),backgroundColor:'rgba(34,197,94,0.4)',borderColor:'#22c55e',borderWidth:1,borderRadius:3},
+      {label:'2026',data:qkeys.map(k=>cash[2026][k]?.net??null),backgroundColor:'rgba(245,158,11,0.6)',borderColor:'#f59e0b',borderWidth:1,borderRadius:3},
+    ]},options:moneyBarOpts()});
+  }
+  if(staff.length){
+    const ft=staff.filter(s=>/full/i.test(s.classification)).length;
+    const pt=staff.filter(s=>/part/i.test(s.classification)).length;
+    const ic=staff.filter(s=>/contractor|independ/i.test(s.classification)).length;
+    drawChart('hb-headcountMix',{type:'doughnut',data:{labels:['Full-time','Part-time','IC'],datasets:[{data:[ft,pt,ic],backgroundColor:['#f59e0b','#34d399','#0091ff'],borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:8,boxWidth:8}}}}});
+  }
+  if(refs.length){
+    const norm=s=>s.replace(/^"+/,'').replace(/"+$/,'').toUpperCase().trim();
+    const given=refs.filter(r=>/^GIVEN/i.test(norm(r.status))).length;
+    const wait=refs.filter(r=>/WAITING/i.test(norm(r.status))).length;
+    const msg=refs.filter(r=>/LEFT MESSAGE|SENT EMAIL/i.test(norm(r.status))).length;
+    drawChart('hb-pipeStatus',{type:'doughnut',data:{labels:['Given','Awaiting','Left msg'],datasets:[{data:[given,wait,msg],backgroundColor:['#34d399','#fbbf24','#0091ff'],borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:8,boxWidth:8}}}}});
+  }
+  if(recent&&(recent.seenT||recent.seenM)){
+    drawChart('hb-serviceSplit',{type:'doughnut',data:{labels:['Therapy','Med Mgmt'],datasets:[{data:[recent.seenT||0,recent.seenM||0],backgroundColor:['#0091ff','#f59e0b'],borderColor:'#09090f',borderWidth:3,hoverOffset:5}]},options:{responsive:true,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:8,boxWidth:8}}}}});
+  }
+}
+
+function renderHbCredentialing(){
+  const pendingEnrollments=HB_CRED.enrollments.filter(r=>!/approved/i.test(r.status)).length;
+  const activated=HB_CRED.activations.filter(r=>/yes/i.test(r.billable)).length;
+  const expiring=HB_CRED.licenses.filter(r=>{
+    const days=daysUntil(r.expires);
+    return days!=null&&days<=60;
+  }).length + HB_CRED.documents.filter(r=>{
+    const days=daysUntil(r.due);
+    return days!=null&&days<=60;
+  }).length;
+  const openPortalIssues=HB_CRED.portals.filter(r=>!/resolved/i.test(r.severity)).length;
+  const overdueFollowups=HB_CRED.correspondence.filter(r=>{
+    const days=daysUntil(r.next);
+    return days!=null&&days<0;
+  }).length;
+
+  document.getElementById('hb-cred-enrollments').textContent=pendingEnrollments;
+  document.getElementById('hb-cred-activated').textContent=activated;
+  document.getElementById('hb-cred-expiring').textContent=expiring;
+  document.getElementById('hb-cred-portalissues').textContent=openPortalIssues;
+  document.getElementById('hb-cred-followups').textContent=overdueFollowups;
+
+  const alerts=[
+    ...HB_CRED.licenses
+      .map(item=>({title:`${item.provider} · ${item.credential}`,meta:`Expires ${item.expires} · ${item.status}`,days:daysUntil(item.expires)}))
+      .filter(item=>item.days!=null&&item.days<=60),
+    ...HB_CRED.documents
+      .map(item=>({title:item.document,meta:`Due ${item.due} · ${item.status}`,days:daysUntil(item.due)}))
+      .filter(item=>item.days!=null&&item.days<=45),
+    ...HB_CRED.activations
+      .filter(item=>!/yes/i.test(item.billable))
+      .map(item=>({title:`${item.provider} · ${item.payer}`,meta:`${item.office} · ${item.activation}`,days:0})),
+    ...HB_CRED.portals
+      .filter(item=>!/resolved/i.test(item.severity))
+      .map(item=>({title:`${item.payer} portal`,meta:`${item.issue} · ${item.owner}`,days:0}))
+  ].slice(0,8);
+  document.getElementById('hb-cred-alerts').innerHTML=alerts.map(item=>`
+    <div class="alert-item">
+      <div class="alert-title">${item.title}</div>
+      <div class="alert-meta">${item.meta}</div>
+    </div>`).join('');
+
+  document.getElementById('hb-cred-coverage').innerHTML=HB_CRED.offices.map(office=>{
+    const providers=HB_CRED.providers.filter(row=>row.offices.includes(office)).length;
+    const enrollments=HB_CRED.enrollments.filter(row=>row.office===office).length;
+    return `<div class="metric-item"><span class="metric-name">${office}</span><span class="metric-value">${providers} providers · ${enrollments} enrollments</span></div>`;
+  }).join('');
+
+  document.getElementById('hb-cred-enrollBody').innerHTML=HB_CRED.enrollments.map(row=>`
+    <tr>
+      <td>${row.payer}</td>
+      <td>${row.provider}</td>
+      <td>${row.office}</td>
+      <td>${row.submitted}</td>
+      <td><span class="sp ${credPill(row.status)}">${row.status}</span></td>
+      <td>${row.contact}</td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-providerBody').innerHTML=HB_CRED.providers.map(row=>`
+    <tr>
+      <td>${row.name}</td>
+      <td class="mono">${row.npi}</td>
+      <td class="mono">${row.license}</td>
+      <td>${row.offices}</td>
+      <td>${row.payers}</td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-licenseBody').innerHTML=HB_CRED.licenses.map(row=>`
+    <tr>
+      <td>${row.provider}</td>
+      <td>${row.credential}</td>
+      <td>${row.expires}</td>
+      <td><span class="sp ${credPill(row.status)}">${row.status}</span></td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-docBody').innerHTML=HB_CRED.documents.map(row=>`
+    <tr>
+      <td>${row.document}</td>
+      <td>${row.owner}</td>
+      <td>${row.due}</td>
+      <td><span class="sp ${credPill(row.status)}">${row.status}</span></td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-networkBody').innerHTML=HB_CRED.networks.map(row=>`
+    <tr>
+      <td>${row.network}</td>
+      <td>${row.type}</td>
+      <td>${row.term}</td>
+      <td><span class="sp ${credPill(row.status)}">${row.status}</span></td>
+      <td>${row.owner}</td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-activationBody').innerHTML=HB_CRED.activations.map(row=>`
+    <tr>
+      <td>${row.payer}</td>
+      <td>${row.provider}</td>
+      <td>${row.office}</td>
+      <td>${row.approved}</td>
+      <td><span class="sp ${credPill(row.activation)}">${row.activation}</span></td>
+      <td><span class="sp ${credPill(row.billable)}">${row.billable}</span></td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-portalBody').innerHTML=HB_CRED.portals.map(row=>`
+    <tr>
+      <td>${row.payer}</td>
+      <td>${row.portal}</td>
+      <td>${row.issue}</td>
+      <td><span class="sp ${credPill(row.severity)}">${row.severity}</span></td>
+      <td>${row.owner}</td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-rateBody').innerHTML=HB_CRED.rates.map(row=>`
+    <tr>
+      <td>${row.payer}</td>
+      <td class="mono">${row.cpt}</td>
+      <td>${row.current}</td>
+      <td>${row.requested}</td>
+      <td><span class="sp ${credPill(row.status)}">${row.status}</span></td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-correspondenceBody').innerHTML=HB_CRED.correspondence.map(row=>`
+    <tr>
+      <td>${row.date}</td>
+      <td>${row.payer}</td>
+      <td>${row.channel}</td>
+      <td>${row.subject}</td>
+      <td>${row.owner}</td>
+      <td>${row.next}</td>
+    </tr>`).join('');
+  document.getElementById('hb-cred-auditBody').innerHTML=HB_CRED.audit.map(row=>`
+    <tr>
+      <td>${row.when}</td>
+      <td>${row.area}</td>
+      <td>${row.change}</td>
+      <td>${row.by}</td>
+    </tr>`).join('');
+}
+
+// Chart helpers
+function drawChart(id,cfg){
+  const el=document.getElementById(id);if(!el)return;
+  if(el._chart)el._chart.destroy();
+  el._chart=new Chart(el,cfg);
+}
+function barOpts(){return {responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}};}
+function lineOpts(){return {responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'}},x:{grid:{display:false}}}};}
+function moneyBarOpts(){return {responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}},x:{grid:{display:false}}}};}
+function moneyLineOpts(){return {responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:8,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}},x:{grid:{display:false}}}};}
+</script>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center" onclick="if(event.target===this)closeSettings()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:560px;max-width:95vw;padding:28px;position:relative">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px">⚙ Data Settings</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:20px">Paste Google Sheets published CSV URLs below</div>
+    ${[
+      ['mdpa_financials','MD PA — Brand Financials','Columns: brand, month, revenue, collections, denials'],
+      ['mdpa_providers','MD PA — Provider Roster','Columns: name, role, brand, utilization_pct'],
+      ['hnj_billing','Health NJ — Medicaid Billing','Columns: payer, submitted, collected, denied, pending, avg_days, month'],
+      ['hnj_referrals','Health NJ — Referral Log','Columns: id, date, patient, source, state, payer, status, days'],
+      ['shared_compliance','Shared — Compliance Checklist','Columns: item, th, wa, tc, hbh, due_date'],
+    ].map(([k,label,hint])=>`
+      <div style="margin-bottom:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:5px;letter-spacing:0.5px">${label}</div>
+        <input id="cfg-${k}" value="${settings[k]||''}" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px">${hint}</div>
+      </div>`).join('')}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button onclick="closeSettings()" style="background:transparent;border:1px solid var(--border);color:var(--text2);padding:8px 18px;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px">Cancel</button>
+      <button onclick="saveSettings()" style="background:var(--mdpa);border:none;color:#fff;padding:8px 20px;border-radius:6px;cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;font-weight:700">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD REFERRAL DRAWER -->
+<div id="refDrawer" style="position:fixed;top:0;right:-420px;width:400px;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:500;padding:28px;overflow-y:auto;transition:right 0.3s ease">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800">+ New Referral</div>
+    <button onclick="closeRefDrawer()" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+  </div>
+  <div id="ref-copy-notice" style="display:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:10px;color:#22c55e;margin-bottom:16px">
+    ✓ Referral added to dashboard. Copy this row to your Google Sheet to persist across sessions.
+  </div>
+  ${[
+    ['date','Date Received','date',''],
+    ['patient','Patient Initials / ID','text','e.g. J.D.'],
+    ['source','Referral Source','select','PCP / Primary Care|Hospital / ER|Insurance / Managed Care|Self-Referral|Other Provider'],
+    ['state','State','select','NJ|NY|PA'],
+    ['payer','Payer','select','NJ Medicaid (DMAHS)|NJ FamilyCare|Horizon NJ Health|Amerigroup NJ|WellCare NJ|Other'],
+    ['notes','Notes','textarea',''],
+  ].map(([id,label,type,opts])=>`
+    <div style="margin-bottom:14px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:5px;letter-spacing:0.5px">${label}</div>
+      ${type==='select'
+        ?`<select id="rf-${id}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none">${opts.split('|').map(o=>`<option value="${o}">${o}</option>`).join('')}</select>`
+        :type==='textarea'
+        ?`<textarea id="rf-${id}" rows="3" placeholder="${opts}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;resize:vertical"></textarea>`
+        :`<input id="rf-${id}" type="${type}" placeholder="${opts}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none">`
+      }
+    </div>`).join('')}
+  <button onclick="submitReferral()" style="width:100%;background:#22c55e;border:none;color:#000;padding:12px;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin-top:8px">Submit Referral</button>
+</div>
+
+<style>
+#settingsModal.open{display:flex!important;}
+#refDrawer.open{right:0!important;}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#f87171;color:#000;font-size:9px;font-weight:700;margin-left:6px;font-family:'DM Mono',monospace;}
+</style>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  (function(){
+    var NJ=[
+      {name:"Hunterdon",pop:128947,pct:85.6,ins:110379},
+      {name:"Morris",pop:509285,pct:83.5,ins:425253},
+      {name:"Somerset",pop:345361,pct:81.9,ins:282851},
+      {name:"Sussex",pop:144221,pct:80.2,ins:115705},
+      {name:"Bergen",pop:955732,pct:79.4,ins:758851},
+      {name:"Monmouth",pop:643615,pct:79.0,ins:508456},
+      {name:"Burlington",pop:461860,pct:77.2,ins:356556},
+      {name:"Gloucester",pop:302294,pct:76.4,ins:230953},
+      {name:"Warren",pop:108692,pct:75.4,ins:81954},
+      {name:"Cape May",pop:95263,pct:73.5,ins:70018},
+      {name:"Middlesex",pop:863162,pct:72.8,ins:628382},
+      {name:"Union",pop:575345,pct:72.0,ins:414249},
+      {name:"Mercer",pop:379615,pct:71.4,ins:271065},
+      {name:"Ocean",pop:637229,pct:71.2,ins:453707},
+      {name:"Camden",pop:523485,pct:69.2,ins:362251},
+      {name:"Salem",pop:64837,pct:67.5,ins:43765},
+      {name:"Essex",pop:863728,pct:64.8,ins:559496},
+      {name:"Atlantic",pop:274534,pct:63.3,ins:173780},
+      {name:"Passaic",pop:524118,pct:62.4,ins:327050},
+      {name:"Hudson",pop:724854,pct:61.9,ins:448885},
+      {name:"Cumberland",pop:154152,pct:56.8,ins:87558}
+    ];
+    var breaks=[57,62,65,68,72,75,80,86];
+    var cols=['#d0e8f5','#a9cce3','#7fb3d3','#5499c0','#2980b9','#1f6fa3','#1a5c8a','#154472'];
+    function getColor(p){for(var i=breaks.length-1;i>=0;i--){if(p>=breaks[i])return cols[i];}return cols[0];}
+    var tbody=document.getElementById('hb-njCountyTable');
+    if(tbody){tbody.innerHTML=NJ.map(function(c,i){var w=Math.round((c.pct/86)*100);return'<tr style="border-bottom:1px solid #1e2130"><td style="padding:5px 4px;color:#8b8fa8">'+(i+1)+'</td><td style="padding:5px 4px;color:#e2e4f0">'+c.name+'</td><td style="padding:5px 4px"><div style="display:flex;align-items:center;gap:6px"><div style="width:50px;height:7px;border-radius:3px;background:#0f1117"><div style="width:'+w+'%;height:100%;border-radius:3px;background:'+getColor(c.pct)+'"></div></div><span style="color:#e2e4f0">'+c.pct+'%</span></div></td><td style="padding:5px 4px;text-align:right;color:#34d399">'+c.ins.toLocaleString()+'</td><td style="padding:5px 4px;text-align:right;color:#8b8fa8">'+c.pop.toLocaleString()+'</td></tr>';}).join('');}
+    var NJ_METRICS = {
+"Atlantic": {
+"pop": 274534,
+"medicare_total": 66146,
+"medicare_advantage": 28821,
+"medicare_ffs": 37325,
+"duals": 8121,
+"medicaid": 85105,
+"marketplace": 16472,
+"fips": "34001"
+},
+"Bergen": {
+"pop": 955732,
+"medicare_total": 192662,
+"medicare_advantage": 70327,
+"medicare_ffs": 122335,
+"duals": 21501,
+"medicaid": 124245,
+"marketplace": 32494,
+"fips": "34003"
+},
+"Burlington": {
+"pop": 461860,
+"medicare_total": 102558,
+"medicare_advantage": 43325,
+"medicare_ffs": 59233,
+"duals": 8633,
+"medicaid": 73897,
+"marketplace": 18474,
+"fips": "34005"
+},
+"Camden": {
+"pop": 523485,
+"medicare_total": 105833,
+"medicare_advantage": 47903,
+"medicare_ffs": 57930,
+"duals": 16636,
+"medicaid": 167515,
+"marketplace": 28268,
+"fips": "34007"
+},
+"Cape May": {
+"pop": 95263,
+"medicare_total": 31252,
+"medicare_advantage": 10555,
+"medicare_ffs": 20697,
+"duals": 2478,
+"medicaid": 19052,
+"marketplace": 4191,
+"fips": "34009"
+},
+"Cumberland": {
+"pop": 149527,
+"medicare_total": 30668,
+"medicare_advantage": 16480,
+"medicare_ffs": 14188,
+"duals": 5992,
+"medicaid": 62801,
+"marketplace": 9270,
+"fips": "34011"
+},
+"Essex": {
+"pop": 863728,
+"medicare_total": 128785,
+"medicare_advantage": 64109,
+"medicare_ffs": 64676,
+"duals": 25829,
+"medicaid": 267755,
+"marketplace": 47505,
+"fips": "34013"
+},
+"Gloucester": {
+"pop": 302294,
+"medicare_total": 64464,
+"medicare_advantage": 27800,
+"medicare_ffs": 36664,
+"duals": 6099,
+"medicaid": 60458,
+"marketplace": 13300,
+"fips": "34015"
+},
+"Hudson": {
+"pop": 623453,
+"medicare_total": 88296,
+"medicare_advantage": 48510,
+"medicare_ffs": 39786,
+"duals": 24287,
+"medicaid": 187035,
+"marketplace": 41147,
+"fips": "34017"
+},
+"Hunterdon": {
+"pop": 128947,
+"medicare_total": 32044,
+"medicare_advantage": 11253,
+"medicare_ffs": 20791,
+"duals": 1894,
+"medicaid": 9026,
+"marketplace": 4255,
+"fips": "34019"
+},
+"Mercer": {
+"pop": 379615,
+"medicare_total": 72123,
+"medicare_advantage": 32947,
+"medicare_ffs": 39176,
+"duals": 10594,
+"medicaid": 94903,
+"marketplace": 17462,
+"fips": "34021"
+},
+"Middlesex": {
+"pop": 863162,
+"medicare_total": 156162,
+"medicare_advantage": 64183,
+"medicare_ffs": 91979,
+"duals": 20923,
+"medicaid": 155369,
+"marketplace": 37115,
+"fips": "34023"
+},
+"Monmouth": {
+"pop": 643615,
+"medicare_total": 147085,
+"medicare_advantage": 45968,
+"medicare_ffs": 101117,
+"duals": 11449,
+"medicaid": 90106,
+"marketplace": 24457,
+"fips": "34025"
+},
+"Morris": {
+"pop": 509285,
+"medicare_total": 105749,
+"medicare_advantage": 34999,
+"medicare_ffs": 70750,
+"duals": 8265,
+"medicaid": 45835,
+"marketplace": 15278,
+"fips": "34027"
+},
+"Ocean": {
+"pop": 637229,
+"medicare_total": 168422,
+"medicare_advantage": 65045,
+"medicare_ffs": 103377,
+"duals": 12077,
+"medicaid": 127445,
+"marketplace": 26126,
+"fips": "34029"
+},
+"Passaic": {
+"pop": 487710,
+"medicare_total": 92834,
+"medicare_advantage": 45204,
+"medicare_ffs": 47630,
+"duals": 18645,
+"medicaid": 156067,
+"marketplace": 30238,
+"fips": "34031"
+},
+"Salem": {
+"pop": 64837,
+"medicare_total": 15111,
+"medicare_advantage": 6387,
+"medicare_ffs": 8724,
+"duals": 2089,
+"medicaid": 20747,
+"marketplace": 3371,
+"fips": "34033"
+},
+"Somerset": {
+"pop": 345361,
+"medicare_total": 65884,
+"medicare_advantage": 23485,
+"medicare_ffs": 42399,
+"duals": 6188,
+"medicaid": 34536,
+"marketplace": 11742,
+"fips": "34035"
+},
+"Sussex": {
+"pop": 144221,
+"medicare_total": 34379,
+"medicare_advantage": 11965,
+"medicare_ffs": 22414,
+"duals": 2379,
+"medicaid": 20190,
+"marketplace": 5768,
+"fips": "34037"
+},
+"Union": {
+"pop": 575345,
+"medicare_total": 96560,
+"medicare_advantage": 45251,
+"medicare_ffs": 51309,
+"duals": 14093,
+"medicaid": 120822,
+"marketplace": 27616,
+"fips": "34039"
+},
+"Warren": {
+"pop": 108692,
+"medicare_total": 26572,
+"medicare_advantage": 10167,
+"medicare_ffs": 16405,
+"duals": 2564,
+"medicaid": 17390,
+"marketplace": 4565,
+"fips": "34041"
+}
+};
+
+window._currentMetric = 'commercial';
+window._initHbNjMap = function() {
+  if (window._hbNjMapInitialized) return;
+  window._hbNjMapInitialized = true;
+  var el = document.getElementById('hb-njMap');
+  if (!el) return;
+
+  // Metric definitions
+  var METRICS = {
+    commercial: {label:'Commercially Insured', sub:'ACS 2019-2023 - % with private health insurance',
+                 unit:'%', valFn:function(c){return c.commercial_pct||0;}, color:'#7c6ff7',
+                 stops:[57,62,65,68,72,75,80,86], colors:['#d0e8f5','#a9cce3','#7fb3d3','#5499c0','#2980b9','#1f6fa3','#1a5c8a','#154472']},
+    medicare_total: {label:'Medicare (total)', sub:'CMS Monthly Enrollment Jan 2026',
+                 unit:'', valFn:function(c){return c.medicare_total||0;}, color:'#22c55e',
+                 stops:[20000,40000,70000,100000,130000,160000,180000], colors:['#bbf7d0','#86efac','#6ee7b7','#34d399','#22c55e','#16a34a','#15803d','#14532d']},
+    medicare_advantage: {label:'Medicare Advantage', sub:'CMS Monthly Enrollment Jan 2026',
+                 unit:'', valFn:function(c){return c.medicare_advantage||0;}, color:'#3b82f6',
+                 stops:[8000,15000,25000,35000,45000,55000,65000], colors:['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e3a8a']},
+    medicare_ffs: {label:'Medicare FFS (Original)', sub:'CMS Monthly Enrollment Jan 2026',
+                 unit:'', valFn:function(c){return c.medicare_ffs||0;}, color:'#f59e0b',
+                 stops:[10000,20000,40000,55000,70000,90000,110000], colors:['#fef3c7','#fde68a','#fcd34d','#fbbf24','#f59e0b','#d97706','#b45309','#78350f']},
+    medicaid: {label:'Medicaid (NJ FamilyCare)', sub:'NJ DHS estimate (population × penetration rate)',
+                 unit:'', valFn:function(c){return c.medicaid||0;}, color:'#a855f7',
+                 stops:[10000,30000,60000,90000,120000,160000,220000], colors:['#f3e8ff','#e9d5ff','#d8b4fe','#c084fc','#a855f7','#9333ea','#7e22ce','#581c87']},
+    marketplace: {label:'Marketplace (Get Covered NJ)', sub:'2024 Open Enrollment estimate',
+                 unit:'', valFn:function(c){return c.marketplace||0;}, color:'#ec4899',
+                 stops:[3000,7000,12000,18000,25000,35000,45000], colors:['#fce7f3','#fbcfe8','#f9a8d4','#f472b6','#ec4899','#db2777','#be185d','#831843']},
+    duals: {label:'Duals (Medicare + Medicaid)', sub:'CMS Jan 2026 dual-eligible beneficiaries',
+                 unit:'', valFn:function(c){return c.duals||0;}, color:'#ef4444',
+                 stops:[2000,4000,7000,11000,15000,20000,25000], colors:['#fee2e2','#fecaca','#fca5a5','#f87171','#ef4444','#dc2626','#b91c1c','#7f1d1d']}
+  };
+
+  // Add commercial_pct values from existing data (we keep the ACS data for commercial metric)
+  var COMMERCIAL_DATA = {'Hunterdon':85.6,'Morris':83.5,'Somerset':81.9,'Sussex':80.2,'Bergen':79.4,'Monmouth':79.0,'Burlington':77.2,'Gloucester':76.4,'Warren':75.4,'Cape May':73.5,'Middlesex':72.8,'Union':72.0,'Mercer':71.4,'Ocean':71.2,'Camden':68.2,'Salem':67.5,'Essex':64.8,'Atlantic':63.3,'Passaic':62.1,'Hudson':60.5,'Cumberland':55.0};
+  Object.keys(NJ_METRICS).forEach(function(name){
+    NJ_METRICS[name].commercial_pct = COMMERCIAL_DATA[name] || 0;
+    NJ_METRICS[name].name = name;
+  });
+
+  function getColor(v, m) {
+    var stops = m.stops, cols = m.colors;
+    for (var i = stops.length - 1; i >= 0; i--) {
+      if (v >= stops[i]) return cols[i+1] || cols[cols.length-1];
+    }
+    return cols[0];
+  }
+
+  function fmtVal(v, m) {
+    if (m.unit === '%') return v.toFixed(1) + '%';
+    return v.toLocaleString();
+  }
+
+  var map = L.map('hb-njMap', {zoomControl:true, scrollWheelZoom:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; CartoDB', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+
+  var geojsonLayer = null;
+  var legendControl = null;
+  var njGeo = null;
+
+  var tip = document.getElementById('hb-njTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'hb-njTip';
+    tip.style.cssText = 'position:fixed;background:rgba(9,9,15,0.95);color:#e0e0e0;padding:10px 14px;border-radius:8px;font-size:12px;pointer-events:none;display:none;z-index:99999;border:1px solid #22c55e;line-height:1.6;min-width:160px;';
+    document.body.appendChild(tip);
+  }
+
+  function highlightRow(name) {
+    var tbody = document.getElementById('hb-njCountyTable');
+    if (!tbody) return;
+    tbody.querySelectorAll('tr').forEach(function(r) {
+      var first = r.querySelector('td');
+      var firstCounty = r.querySelectorAll('td')[1];
+      var match = firstCounty && firstCounty.textContent.trim() === name;
+      r.style.background = match ? 'rgba(34,197,94,0.18)' : '';
+      r.style.outline    = match ? '1px solid rgba(34,197,94,0.6)' : '';
+      if (match) r.scrollIntoView({block:'nearest', behavior:'smooth'});
+    });
+  }
+
+  function renderMap(metricKey) {
+    var m = METRICS[metricKey];
+    if (!m) return;
+    
+    // Update title and subtitle
+    var titleEl = document.getElementById('hb-njMapTitle');
+    var subEl = document.getElementById('hb-njMapSub');
+    if (titleEl) titleEl.textContent = m.label + ' by County';
+    if (subEl) subEl.textContent = m.sub;
+    
+    // Update KPIs
+    var stateTotal = 0, stateMax = 0;
+    Object.keys(NJ_METRICS).forEach(function(name){
+      var v = m.valFn(NJ_METRICS[name]);
+      stateTotal += (m.unit === '%' ? 0 : v);
+      if (v > stateMax) stateMax = v;
+    });
+    
+    var kpi1 = document.getElementById('hb-kpi1-val');
+    var kpi1l = document.getElementById('hb-kpi1-label');
+    var kpi2 = document.getElementById('hb-kpi2-val');
+    var kpi2l = document.getElementById('hb-kpi2-label');
+    if (kpi1 && kpi1l) {
+      if (m.unit === '%') {
+        kpi1.textContent = '6.71M';
+        kpi1l.textContent = 'Commercially Insured';
+      } else {
+        kpi1.textContent = (stateTotal>=1e6 ? (stateTotal/1e6).toFixed(2)+'M' : stateTotal>=1e3 ? Math.round(stateTotal/1e3)+'K' : stateTotal);
+        kpi1l.textContent = m.label + ' (NJ)';
+      }
+      kpi1.style.color = m.color;
+    }
+    if (kpi2 && kpi2l) {
+      if (m.unit === '%') {
+        kpi2.textContent = '73.0%';
+        kpi2l.textContent = 'Avg Commercial Rate';
+      } else {
+        var statePop = 9137895;
+        kpi2.textContent = ((stateTotal/statePop)*100).toFixed(1) + '%';
+        kpi2l.textContent = '% of NJ Population';
+      }
+      kpi2.style.color = m.color;
+    }
+    
+    // Update rankings table
+    var tbody = document.getElementById('hb-njCountyTable');
+    if (tbody) {
+      var counties = Object.keys(NJ_METRICS).map(function(name){
+        return {name:name, val:m.valFn(NJ_METRICS[name]), pop:NJ_METRICS[name].pop};
+      }).sort(function(a,b){return b.val - a.val;});
+      tbody.innerHTML = counties.map(function(c, i){
+        var pct = stateMax > 0 ? Math.round((c.val/stateMax)*100) : 0;
+        return '<tr style="border-bottom:1px solid #1e2130"><td style="padding:5px 4px;color:#8b8fa8">'+(i+1)+'</td><td style="padding:5px 4px;color:#e2e4f0">'+c.name+'</td><td style="padding:5px 4px"><div style="display:flex;align-items:center;gap:6px"><div style="width:50px;height:7px;border-radius:3px;background:#0f1117"><div style="width:'+pct+'%;height:100%;border-radius:3px;background:'+getColor(c.val, m)+'"></div></div><span style="color:#e2e4f0">'+fmtVal(c.val, m)+'</span></div></td><td style="padding:5px 4px;text-align:right;color:'+m.color+'">'+fmtVal(c.val, m)+'</td><td style="padding:5px 4px;text-align:right;color:#8b8fa8">'+c.pop.toLocaleString()+'</td></tr>';
+      }).join('');
+    }
+    
+    // Update column header for rate column based on metric
+    var rateHdr = document.getElementById('hb-njTblRateHdr');
+    if (rateHdr) rateHdr.textContent = m.unit === '%' ? 'Rate' : 'Bar';
+    var insuredHdr = document.getElementById('hb-njTblInsuredHdr');
+    if (insuredHdr) insuredHdr.textContent = m.label;
+    
+    // Update map layer styling
+    if (geojsonLayer) {
+      geojsonLayer.eachLayer(function(layer){
+        var feat = layer.feature;
+        var name = (feat.properties && (feat.properties.NAME || feat.properties.name)) || '';
+        var data = NJ_METRICS[name] || {};
+        var v = m.valFn(data);
+        layer.setStyle({fillColor: getColor(v, m), fillOpacity:0.85, weight:1.4, color:'rgba(255,255,255,0.18)'});
+      });
+    }
+    
+    // Update legend
+    if (legendControl) map.removeControl(legendControl);
+    legendControl = L.control({position:'bottomleft'});
+    legendControl.onAdd = function(){
+      var div = L.DomUtil.create('div', 'leg');
+      div.style.cssText = 'background:rgba(9,9,15,0.92);padding:10px 12px;border-radius:6px;font-size:11px;color:#dde0f0;border:1px solid #2a2d3e;';
+      var html = '<div style="font-weight:700;margin-bottom:6px;color:'+m.color+'">'+m.label+'</div>';
+      var labels = m.stops.slice().reverse();
+      var colors = m.colors.slice().reverse();
+      for (var i = 0; i < labels.length; i++) {
+        var range = (i === 0 ? '≥'+(m.unit==='%'?labels[i]+'%':labels[i].toLocaleString()) : (labels[i].toLocaleString()+(m.unit==='%'?'%':'')+'-'+labels[i-1].toLocaleString()+(m.unit==='%'?'%':'')));
+        if (i === labels.length-1) range = '<'+labels[i].toLocaleString()+(m.unit==='%'?'%':'');
+        html += '<div style="display:flex;align-items:center;gap:6px;margin:2px 0"><span style="display:inline-block;width:14px;height:10px;background:'+colors[i]+';border-radius:2px"></span>'+range+'</div>';
+      }
+      div.innerHTML = html;
+      return div;
+    };
+    legendControl.addTo(map);
+  }
+  
+  fetch('https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/11/query?where=STATE%3D%2734%27&outFields=NAME%2CCOUNTY&returnGeometry=true&f=geojson')
+    .then(function(r){ return r.json(); })
+    .then(function(gj) {
+      njGeo = gj;
+      geojsonLayer = L.geoJSON(gj, {
+        style: function(){return {weight:1.4, color:'rgba(255,255,255,0.18)', fillOpacity:0.85};},
+        onEachFeature: function(feat, layer){
+          var name = (feat.properties && feat.properties.NAME) || '';
+          layer.on('mouseover', function(e){
+            layer.setStyle({weight:2.5, color:'#22c55e'});
+            var d = NJ_METRICS[name] || {};
+            var m = METRICS[window._currentMetric];
+            var v = m.valFn(d);
+            tip.innerHTML = '<div style="font-weight:700;font-size:13px;color:'+m.color+';margin-bottom:6px">'+name+' County</div>' +
+              '<div style="display:flex;justify-content:space-between;gap:14px"><span style="color:#7a80a0">'+m.label+':</span><span style="color:#dde0f0;font-weight:600">'+fmtVal(v,m)+'</span></div>' +
+              '<div style="display:flex;justify-content:space-between;gap:14px"><span style="color:#7a80a0">Population:</span><span style="color:#dde0f0">'+(d.pop||0).toLocaleString()+'</span></div>';
+            tip.style.display = 'block';
+            highlightRow(name);
+          });
+          layer.on('mousemove', function(e){
+            tip.style.left = (e.originalEvent.clientX + 14) + 'px';
+            tip.style.top = (e.originalEvent.clientY + 14) + 'px';
+          });
+          layer.on('mouseout', function(){
+            geojsonLayer.resetStyle(layer);
+            tip.style.display = 'none';
+            highlightRow(null);
+          });
+        }
+      }).addTo(map);
+      map.fitBounds(geojsonLayer.getBounds(), {padding:[10,10]});
+      renderMap(window._currentMetric);
+    });
+
+  // Wire up metric buttons
+  document.querySelectorAll('.hb-metric-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.hb-metric-btn').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');
+      window._currentMetric = btn.getAttribute('data-metric');
+      renderMap(window._currentMetric);
+    });
+  });
+};    // Hook into switchInner if it exists
+    var origSwitch=window.switchInner;
+    window.switchInner=function(brand,tab,btn){
+      if(origSwitch)origSwitch(brand,tab,btn);
+      if(brand==='hnj'&&tab==='njmap'){setTimeout(window._initHbNjMap,100);}
+    };
+  })();
+  </script>
+</body>
+</html>
