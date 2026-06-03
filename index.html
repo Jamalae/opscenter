@@ -245,6 +245,22 @@
     </section>
 
     <section class="view" id="view-credentialing">
+      <article class="card">
+        <div class="card-head">
+          <div>
+            <h2>Hamilton Behavioral Credentialing OpsCenter</h2>
+            <span class="muted">Credentialing operations across Elmwood Park, Edgewater, Newton, and Oakhurst</span>
+          </div>
+          <span class="muted" id="credentialingOpsSummary"></span>
+        </div>
+        <div class="tag-row office-tag-row">
+          <span class="tag">Elmwood Park</span>
+          <span class="tag">Edgewater</span>
+          <span class="tag">Newton</span>
+          <span class="tag">Oakhurst</span>
+        </div>
+      </article>
+
       <section class="kpi-grid" id="credentialingKpis"></section>
       <div class="two-col">
         <article class="card">
@@ -265,6 +281,33 @@
           </table>
         </article>
       </div>
+
+      <div class="three-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Enrollments</h2>
+            <span class="muted">Submitted applications and current pipeline</span>
+          </div>
+          <div id="enrollmentReadiness" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Documents</h2>
+            <span class="muted">CAQH, W-9, malpractice, packets</span>
+          </div>
+          <div id="documentReadiness" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Follow-Ups & Alerts</h2>
+            <span class="muted" id="followupAlertsSummary"></span>
+          </div>
+          <div id="followupAlertsPanel" class="stack"></div>
+        </article>
+      </div>
+
       <article class="card">
         <div class="card-head">
           <h2>All Credentialing In Flight</h2>
@@ -285,6 +328,99 @@
           <tbody id="credentialingTable"></tbody>
         </table>
       </article>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Providers</h2>
+            <span class="muted" id="providerOpsSummary"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Licensed State</th>
+                <th>License #</th>
+                <th>Specialty</th>
+                <th>Contract Type</th>
+                <th>NPI / Payer Coverage</th>
+              </tr>
+            </thead>
+            <tbody id="providerOpsTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Licenses</h2>
+            <span class="muted" id="licenseOpsSummary"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>State</th>
+                <th>License #</th>
+                <th>Expiration</th>
+                <th>Renewal Status</th>
+              </tr>
+            </thead>
+            <tbody id="licenseOpsTable"></tbody>
+          </table>
+        </article>
+      </div>
+
+      <div class="three-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Networks & EAPs</h2>
+            <span class="muted">Lyra, Spring Health, Magellan, and other agreements</span>
+          </div>
+          <div id="networkOpsPanel" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Network Activation</h2>
+            <span class="muted">Approved vs billable in payer systems</span>
+          </div>
+          <div id="activationOpsPanel" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Portals & Issues</h2>
+            <span class="muted">Provider portal access and known blockers</span>
+          </div>
+          <div id="portalOpsPanel" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="three-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Rate Negotiations</h2>
+            <span class="muted">Requested vs current reimbursement by payer/CPT</span>
+          </div>
+          <div id="rateOpsPanel" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Correspondence Log</h2>
+            <span class="muted">Calls, emails, appeals, follow-up history</span>
+          </div>
+          <div id="correspondenceOpsPanel" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Audit Log</h2>
+            <span class="muted">Full change history and source provenance</span>
+          </div>
+          <div id="auditOpsPanel" class="stack"></div>
+        </article>
+      </div>
     </section>
 
     <section class="view" id="view-staff">

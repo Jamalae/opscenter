@@ -423,6 +423,10 @@ th {
   color: #9cf0da;
 }
 
+.office-tag-row {
+  margin-top: 10px;
+}
+
 .metric-list {
   display: grid;
   gap: 8px;
