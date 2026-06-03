@@ -91,26 +91,11 @@ const el = {
   insuranceMapLegend: document.getElementById('insuranceMapLegend'),
   insuranceMarketingSummary: document.getElementById('insuranceMarketingSummary'),
   mapModeToggle: document.querySelector('.map-mode-toggle'),
-  credentialingOpsSummary: document.getElementById('credentialingOpsSummary'),
   credentialingKpis: document.getElementById('credentialingKpis'),
   credentialingByStatus: document.getElementById('credentialingByStatus'),
   credentialingStuckTable: document.getElementById('credentialingStuckTable'),
   credentialingSummary: document.getElementById('credentialingSummary'),
   credentialingTable: document.getElementById('credentialingTable'),
-  enrollmentReadiness: document.getElementById('enrollmentReadiness'),
-  documentReadiness: document.getElementById('documentReadiness'),
-  followupAlertsSummary: document.getElementById('followupAlertsSummary'),
-  followupAlertsPanel: document.getElementById('followupAlertsPanel'),
-  providerOpsSummary: document.getElementById('providerOpsSummary'),
-  providerOpsTable: document.getElementById('providerOpsTable'),
-  licenseOpsSummary: document.getElementById('licenseOpsSummary'),
-  licenseOpsTable: document.getElementById('licenseOpsTable'),
-  networkOpsPanel: document.getElementById('networkOpsPanel'),
-  activationOpsPanel: document.getElementById('activationOpsPanel'),
-  portalOpsPanel: document.getElementById('portalOpsPanel'),
-  rateOpsPanel: document.getElementById('rateOpsPanel'),
-  correspondenceOpsPanel: document.getElementById('correspondenceOpsPanel'),
-  auditOpsPanel: document.getElementById('auditOpsPanel'),
   licenseAlertsPanel: document.getElementById('licenseAlertsPanel'),
   licenseAlertsSummary: document.getElementById('licenseAlertsSummary'),
   // Marketing view
@@ -661,8 +646,6 @@ function renderIntakeView() {
 function renderCredentialingView() {
   if (!model || !el.credentialingTable) return;
   const rows = (model.dataset.newHiring || []).filter((r) => r.credentialing || r.interviewStatus);
-  const workforce = model.dataset.currentWorkforce || [];
-  const issues = model.issues || [];
 
   function classify(c) {
     const s = String(c || '').toLowerCase();
@@ -679,12 +662,6 @@ function renderCredentialingView() {
     const b = classify(r.credentialing);
     buckets[b] = (buckets[b] || 0) + 1;
   });
-  const uniqueProviders = uniq([
-    ...workforce.map((item) => item.providerName),
-    ...rows.map((item) => item.name),
-  ]).length;
-  const licensesWithExp = workforce.filter((item) => item.licenseExpiration).length;
-  const followupAlerts = issues.filter((item) => /license|activation|credential|source outage|blocker/i.test(`${item.risk} ${item.detail} ${item.status}`));
 
   el.credentialingKpis.innerHTML = [
     { label: 'In flight', value: rows.length, tone: 'good', detail: 'Total candidates with credentialing tracked' },
@@ -700,10 +677,6 @@ function renderCredentialingView() {
       <div class="d">${escapeHtml(card.detail)}</div>
     </article>
   `).join('');
-
-  if (el.credentialingOpsSummary) {
-    el.credentialingOpsSummary.textContent = `${uniqueProviders} providers tracked · ${rows.length} credentialing rows · ${followupAlerts.length} live alerts`;
-  }
 
   el.credentialingByStatus.innerHTML = Object.entries(buckets)
     .sort((a, b) => b[1] - a[1])
@@ -743,210 +716,6 @@ function renderCredentialingView() {
       </tr>
     `).join('')
     : '<tr><td colspan="7" class="empty-state">No credentialing data is loaded yet.</td></tr>';
-
-  if (el.enrollmentReadiness) {
-    const submitted = rows.filter((r) => /submit|pending|review|complete|approved|active|in.?process/i.test(r.credentialing || ''));
-    el.enrollmentReadiness.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Current workbook support',
-        body: `${submitted.length} live credentialing rows can be treated as enrollment pipeline records from the New Hiring tab.`,
-      },
-      {
-        title: 'Needed for full enrollment tracking',
-        body: 'Add an Enrollments sheet with payer, application status, submission date, payer contact, office, and next follow-up owner.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'provider_name, office, payer, enrollment_status, submission_date, payer_contact_name, payer_contact_phone, portal_name, notes.',
-      },
-    ]);
-  }
-
-  if (el.documentReadiness) {
-    const documentsTracked = workforce.filter((item) => item.licenseNumber || item.contractType).length;
-    el.documentReadiness.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Current workbook support',
-        body: `${documentsTracked} provider rows exist, but CAQH, W-9, malpractice, and packet documents are not tracked in dedicated fields yet.`,
-      },
-      {
-        title: 'Needed for live document tracking',
-        body: 'Add a Documents sheet or document-status columns in Current Workforce for CAQH, W-9, malpractice certificate, and credentialing packet.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'provider_name, document_type, status, effective_date, expiration_date, storage_link, verified_by, office.',
-      },
-    ]);
-  }
-
-  if (el.followupAlertsSummary) {
-    el.followupAlertsSummary.textContent = `${followupAlerts.length} live alerts · ${licensesWithExp} licenses with expiration dates`;
-  }
-
-  if (el.followupAlertsPanel) {
-    el.followupAlertsPanel.innerHTML = followupAlerts.length
-      ? followupAlerts.slice(0, 8).map((item) => `
-        <div class="note-card">
-          <strong>${escapeHtml(item.name || 'Unknown')}</strong>
-          <div class="table-note">${escapeHtml(item.status)} · ${escapeHtml(item.priority)} · ${escapeHtml(item.source)}</div>
-          <div>${escapeHtml(item.detail || item.risk || 'Needs review')}</div>
-        </div>
-      `).join('')
-      : '<div class="empty-state">No credentialing-specific alerts are active right now.</div>';
-  }
-
-  if (el.providerOpsSummary) {
-    el.providerOpsSummary.textContent = `${workforce.length} workforce rows · NPI and payer coverage fields not yet present in workbook`;
-  }
-
-  if (el.providerOpsTable) {
-    el.providerOpsTable.innerHTML = workforce.length
-      ? workforce.slice(0, 16).map((item) => `
-        <tr>
-          <td>${escapeHtml(item.providerName || '—')}</td>
-          <td>${escapeHtml(item.licensedState || '—')}</td>
-          <td>${escapeHtml(item.licenseNumber || '—')}</td>
-          <td>${escapeHtml(item.specialty || '—')}</td>
-          <td>${escapeHtml(item.contractType || '—')}</td>
-          <td class="table-note">Add NPI + payer coverage fields to Current Workforce</td>
-        </tr>
-      `).join('')
-      : '<tr><td colspan="6" class="empty-state">No provider workforce rows are loaded yet.</td></tr>';
-  }
-
-  if (el.licenseOpsSummary) {
-    el.licenseOpsSummary.textContent = licensesWithExp
-      ? `${licensesWithExp} rows include expiration dates`
-      : 'Add License Expiration to Current Workforce for renewal tracking';
-  }
-
-  if (el.licenseOpsTable) {
-    const licenseRows = workforce
-      .filter((item) => item.providerName || item.licenseNumber)
-      .slice(0, 16);
-    el.licenseOpsTable.innerHTML = licenseRows.length
-      ? licenseRows.map((item) => {
-        const expiration = item.licenseExpirationLabel || 'Not tracked';
-        const renewalStatus = item.licenseExpiration
-          ? (item.licenseExpiration < new Date() ? 'Expired / renew now' : 'Tracked')
-          : 'Need expiration field';
-        return `
-          <tr>
-            <td>${escapeHtml(item.providerName || '—')}</td>
-            <td>${escapeHtml(item.licensedState || '—')}</td>
-            <td>${escapeHtml(item.licenseNumber || '—')}</td>
-            <td>${escapeHtml(expiration)}</td>
-            <td>${badgeStatus(renewalStatus)}</td>
-          </tr>
-        `;
-      }).join('')
-      : '<tr><td colspan="5" class="empty-state">No license rows are loaded yet.</td></tr>';
-  }
-
-  if (el.networkOpsPanel) {
-    el.networkOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Needed source',
-        body: 'Add a Networks_EAPs sheet to track Lyra, Spring Health, Magellan, and other network or EAP agreements by office.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'partner_name, contract_type, office, effective_date, renewal_date, status, owner, notes.',
-      },
-      {
-        title: 'Current status',
-        body: 'No dedicated network or EAP contract rows are present in the current workbook export.',
-      },
-    ]);
-  }
-
-  if (el.activationOpsPanel) {
-    const completeCount = buckets['Complete'] || 0;
-    el.activationOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Current workbook support',
-        body: `${completeCount} credentialing rows are marked complete, but billable activation in payer systems is not tracked separately yet.`,
-      },
-      {
-        title: 'Needed source',
-        body: 'Add a Network_Activation sheet with payer approval date, activation date, billable status, and effective billing office.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'provider_name, payer, office, approval_date, activation_status, activation_date, billable_status, notes.',
-      },
-    ]);
-  }
-
-  if (el.portalOpsPanel) {
-    el.portalOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Needed source',
-        body: 'Add a Portals_Issues sheet for portal URL, login owner, MFA note, lockout history, and known payer portal issues.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'payer, portal_name, portal_url, login_owner, issue_status, issue_summary, workaround, updated_at.',
-      },
-      {
-        title: 'Current status',
-        body: 'Portal login and issue metadata are not exposed in the current published workbook tabs.',
-      },
-    ]);
-  }
-
-  if (el.rateOpsPanel) {
-    el.rateOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Needed source',
-        body: 'Add a Rate_Negotiations sheet for payer, CPT code, current rate, requested rate, negotiation status, and effective date.',
-      },
-      {
-        title: 'Why it matters',
-        body: 'This lets Hamilton compare current reimbursement against requested reimbursement by payer and CPT.',
-      },
-      {
-        title: 'Current status',
-        body: 'The workbook currently has clinician compensation rates, but not payer reimbursement negotiation data.',
-      },
-    ]);
-  }
-
-  if (el.correspondenceOpsPanel) {
-    el.correspondenceOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Needed source',
-        body: 'Add a Correspondence_Log sheet to track calls, emails, faxes, appeals, and escalation history with insurance companies.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'date, provider_name, payer, office, communication_type, contact_name, summary, next_step, owner.',
-      },
-      {
-        title: 'Current status',
-        body: 'No communication ledger exists in the published workbook yet.',
-      },
-    ]);
-  }
-
-  if (el.auditOpsPanel) {
-    const cacheBackedTabs = (model.sourceMeta || []).filter((item) => item.source === 'cache').length;
-    el.auditOpsPanel.innerHTML = renderOpsReadinessList([
-      {
-        title: 'Current source provenance',
-        body: `${(model.sourceMeta || []).length} workbook tabs are loaded with source-state metadata; ${cacheBackedTabs} are currently cache-backed.`,
-      },
-      {
-        title: 'Needed source',
-        body: 'Add an Audit_Log sheet if you want row-level change history, actor tracking, and audit comments inside the intranet itself.',
-      },
-      {
-        title: 'Recommended fields',
-        body: 'changed_at, changed_by, module, record_id, field_name, old_value, new_value, note.',
-      },
-    ]);
-  }
 }
 
 function renderStaffView() {
@@ -1803,15 +1572,6 @@ function renderMetricList(rows, suffix) {
     <div class="metric-row">
       <span>${escapeHtml(row.label)}</span>
       <strong>${row.value}${suffix ? ` ${escapeHtml(suffix)}` : ''}</strong>
-    </div>
-  `).join('');
-}
-
-function renderOpsReadinessList(items) {
-  return items.map((item) => `
-    <div class="note-card">
-      <strong>${escapeHtml(item.title)}</strong>
-      <div class="table-note">${escapeHtml(item.body)}</div>
     </div>
   `).join('');
 }
