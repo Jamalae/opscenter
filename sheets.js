@@ -5,7 +5,7 @@ const OpsSheets = (() => {
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
-    { id: 'candidatePool', label: 'Candidate Pool', sheetName: 'Sheet1', gid: '0' },
+    { id: 'candidatePool', label: 'Candidate Pool', sheetName: 'LinkedIn Hiring', gid: '0', localCsv: './data/linkedin-hiring.csv' },
     { id: 'interviews', label: 'Interview Tracker', sheetName: 'Sheet3', gid: '516627695' },
     { id: 'finalHires', label: 'Final Sheet', sheetName: 'Final Sheet', gid: '1249804960' },
     { id: 'currentWorkforce', label: 'Current Workforce', sheetName: 'Current Work force', gid: '1575031700' },
@@ -164,14 +164,15 @@ const OpsSheets = (() => {
   }
 
   async function loadTab(tab) {
-    const csvUrl = buildCsvUrl(tab.gid, tab.csvBase);
+    const isLocal = Boolean(tab.localCsv);
+    const csvUrl = isLocal ? tab.localCsv : buildCsvUrl(tab.gid, tab.csvBase);
     const meta = {
       id: tab.id,
       label: tab.label,
       sheetName: tab.sheetName,
       gid: tab.gid,
       csvUrl,
-      source: 'live',
+      source: isLocal ? 'local' : 'live',
       ok: true,
       error: null,
       rowCount: 0,
@@ -203,13 +204,16 @@ const OpsSheets = (() => {
 
   function normalizeCandidatePoolRow(row) {
     return {
-      name: cleanText(row.Name),
+      name: cleanText(row['Candidate Name'] || row.Name),
       address: cleanText(row.Address),
       contact: cleanText(row['Contact/Email']),
-      title: cleanText(row.Title),
+      title: cleanText(row['Job Title'] || row.Title),
       comments: cleanText(row.Comments),
-      stateLicense: cleanText(row['state license']),
-      rawStatus: cleanText(row[''] || row.Status),
+      stateLicense: cleanText(row['Licensed state'] || row['state license']),
+      rawStatus: cleanText(row.Status || row['']),
+      licenseType: cleanText(row['License Type']),
+      interviewDate: cleanText(row['Interview Date']),
+      resume: cleanText(row.Resume),
       source: 'Candidate Pool',
     };
   }
