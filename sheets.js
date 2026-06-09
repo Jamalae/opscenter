@@ -5,8 +5,8 @@ const OpsSheets = (() => {
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
-    { id: 'candidatePool', label: 'Candidate Pool', sheetName: 'LinkedIn Hiring', gid: '0', localCsv: './data/linkedin-hiring.csv' },
-    { id: 'interviews', label: 'Interview Tracker', sheetName: 'Sheet3', gid: '516627695' },
+    { id: 'candidatePool', label: 'Candidate Pool', sheetName: 'Sheet1', gid: '0' },
+    { id: 'interviews', label: 'Interview Tracker', sheetName: 'LinkedIn Hiring', gid: '516627695', localCsv: './data/linkedin-hiring.csv' },
     { id: 'finalHires', label: 'Final Sheet', sheetName: 'Final Sheet', gid: '1249804960' },
     { id: 'currentWorkforce', label: 'Current Workforce', sheetName: 'Current Work force', gid: '1575031700' },
     { id: 'resumePool', label: 'Resume Pool', sheetName: 'Resume Pool', gid: '624754739' },
@@ -204,16 +204,13 @@ const OpsSheets = (() => {
 
   function normalizeCandidatePoolRow(row) {
     return {
-      name: cleanText(row['Candidate Name'] || row.Name),
+      name: cleanText(row.Name),
       address: cleanText(row.Address),
       contact: cleanText(row['Contact/Email']),
-      title: cleanText(row['Job Title'] || row.Title),
+      title: cleanText(row.Title),
       comments: cleanText(row.Comments),
-      stateLicense: cleanText(row['Licensed state'] || row['state license']),
-      rawStatus: cleanText(row.Status || row['']),
-      licenseType: cleanText(row['License Type']),
-      interviewDate: cleanText(row['Interview Date']),
-      resume: cleanText(row.Resume),
+      stateLicense: cleanText(row['state license']),
+      rawStatus: cleanText(row[''] || row.Status),
       source: 'Candidate Pool',
     };
   }
@@ -221,14 +218,16 @@ const OpsSheets = (() => {
   function normalizeInterviewRow(row) {
     return {
       name: cleanText(row['Candidate Name']),
-      position: cleanText(row.Position),
-      state: cleanText(row.State),
-      phase: cleanText(row['Interview phase']),
-      scheduledTime: cleanText(row['Scheduled time']),
-      dateLabel: cleanText(row.Date),
-      date: parseDate(row.Date),
+      position: cleanText(row.Position || row['Job Title']),
+      state: cleanText(row.State || row['Licensed state']),
+      phase: cleanText(row['Interview phase'] || row.Status),
+      scheduledTime: cleanText(row['Scheduled time'] || row['Interview Date']),
+      dateLabel: cleanText(row.Date || row['Interview Date']),
+      date: parseDate(row.Date || row['Interview Date']),
       status: cleanText(row.Status),
-      notes: cleanText(row.Notes),
+      notes: cleanText(row.Notes || row.Comments),
+      licenseType: cleanText(row['License Type']),
+      resume: cleanText(row.Resume),
       source: 'Interview Tracker',
     };
   }
