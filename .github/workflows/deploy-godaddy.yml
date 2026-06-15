@@ -1,0 +1,36 @@
+name: Deploy to GoDaddy (ops.teletherapeuticshealth.com)
+
+# Publishes the repo to the GoDaddy-hosted OpsCenter site over FTP.
+# Runs on every push to main, and can be run manually from the Actions tab.
+# Uses existing repo secrets: FTP_HOST, FTP_USER, FTP_PASSWORD.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ./public_html/ops_dashboard/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.DS_Store
+            **/.htaccess
+            **/.htpasswd
+            **/README.md
+            **/*.patch
+            hb_index_*.html
+            scripts/**
