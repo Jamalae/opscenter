@@ -21,8 +21,8 @@
  */
 const OpsMinutes = (() => {
   // === Paste your published-sheet values here ===
-  const PUBLISHED_KEY = 'PASTE_PUBLISHED_KEY_HERE'; // the 2PACX-... string
-  const MINUTES_GID = '0';                          // gid of the Minutes tab
+  const PUBLISHED_KEY = '2PACX-1vS-XLO0fcaZgvaO0l3vUBdkkGeIUyn2RzgiwwMvP8-F-AhEfKaUtNRKIKknp6bYFTyq7Wwv5UXYY5He';
+  const MINUTES_GID = '23154775';                   // gid of the Minutes tab
   // ===============================================
 
   const CSV_BASE = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_KEY}/pub`;
