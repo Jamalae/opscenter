@@ -24,6 +24,7 @@ const views = [
   { id: 'hubstaff', label: 'Hubstaff' },
   { id: 'insurance', label: 'State Insurance Maps' },
   { id: 'marketing', label: 'Marketing' },
+  { id: 'minutes', label: 'Meeting Minutes' },
 ];
 
 const el = {
@@ -110,6 +111,14 @@ const el = {
   marketingPriorityKpis: document.getElementById('marketingPriorityKpis'),
   marketingPriorityExplainer: document.getElementById('marketingPriorityExplainer'),
   marketingPriorityTable: document.getElementById('marketingPriorityTable'),
+  // Meeting Minutes view
+  minutesKpis: document.getElementById('minutesKpis'),
+  minutesSummary: document.getElementById('minutesSummary'),
+  minutesTable: document.getElementById('minutesTable'),
+  minutesActionItems: document.getElementById('minutesActionItems'),
+  minutesActionSummary: document.getElementById('minutesActionSummary'),
+  minutesLatest: document.getElementById('minutesLatest'),
+  minutesLatestSummary: document.getElementById('minutesLatestSummary'),
 };
 
 function uniq(values) {
@@ -1655,6 +1664,9 @@ function render() {
   if (state.view === 'marketing') {
     renderMarketingView();
   }
+  if (state.view === 'minutes') {
+    renderMinutesView();
+  }
 }
 
 function bind() {
@@ -1735,6 +1747,8 @@ async function loadData() {
     el.liveStatus.textContent = `● ${liveCount} live tabs · ${cacheCount} cached tabs · refreshed ${formatDate(model.loadedAt)}`;
     // Load marketing data in parallel (non-blocking)
     loadMarketingData();
+    // Load meeting minutes in parallel (non-blocking)
+    loadMinutesData();
   } catch (error) {
     console.error(error);
     el.liveStatus.textContent = '● Workbook load failed';
@@ -1964,6 +1978,118 @@ function renderMarketingPriorityMatrix() {
     return '<tr><td><strong>' + escapeHtml(s.code) + '</strong> ' + escapeHtml(s.name) + '</td><td><span class="badge ' + (priorityTone[s.priority] || '') + '">' + escapeHtml(s.priority) + '</span></td><td>' + s.providers + '</td><td>' + s.credentialing + '</td><td>' + wholeNumber(s.enrollment) + '</td><td class="table-note">' + escapeHtml(s.rationale) + '</td></tr>';
   }).join('');
 }
+// --- Meeting Minutes View ---
+
+let minutesModel = null;
+
+async function loadMinutesData() {
+  if (!el.minutesSummary) return;
+  if (!OpsMinutes.configured()) { renderMinutesNotConfigured(); return; }
+  el.minutesSummary.textContent = 'Loading meeting minutes…';
+  try {
+    minutesModel = await OpsMinutes.loadData();
+    renderMinutesView();
+    const m = minutesModel;
+    el.minutesSummary.textContent =
+      `${m.meetings.length} meetings · ${m.openActionItems.length} open action items · ` +
+      `${m.source === 'cache' ? 'cached' : 'live'} · refreshed ${formatDateTime(m.loadedAt)}`;
+  } catch (err) {
+    console.error('Minutes load error:', err);
+    renderMinutesEmpty('Meeting minutes unavailable — check the published sheet URL in minutes.js.');
+  }
+}
+
+function renderMinutesNotConfigured() {
+  if (el.minutesKpis) el.minutesKpis.innerHTML =
+    '<article class="kpi warn"><div class="k">Data Source</div><div class="v">Not Connected</div>' +
+    '<div class="d">Open the Minutes Log sheet → File → Share → Publish to web → CSV, then paste the key into minutes.js</div></article>';
+  if (el.minutesTable) el.minutesTable.innerHTML =
+    '<tr><td colspan="7" class="empty-state">Meeting minutes sheet not connected yet. See setup notes in minutes.js.</td></tr>';
+  if (el.minutesActionItems) el.minutesActionItems.innerHTML = '<p class="muted">No source connected.</p>';
+  if (el.minutesLatest) el.minutesLatest.innerHTML = '<p class="muted">No source connected.</p>';
+  if (el.minutesSummary) el.minutesSummary.textContent = 'Minutes sheet not connected';
+}
+
+function renderMinutesEmpty(message) {
+  const msg = message || 'No meeting minutes yet.';
+  if (el.minutesTable) el.minutesTable.innerHTML = `<tr><td colspan="7" class="empty-state">${escapeHtml(msg)}</td></tr>`;
+  if (el.minutesActionItems) el.minutesActionItems.innerHTML = '<p class="muted">No open action items.</p>';
+  if (el.minutesLatest) el.minutesLatest.innerHTML = '<p class="muted">No meetings recorded yet.</p>';
+}
+
+function renderMinutesView() {
+  if (!OpsMinutes.configured()) { renderMinutesNotConfigured(); return; }
+  if (!minutesModel) { el.minutesSummary.textContent = 'Loading meeting minutes…'; return; }
+
+  const m = minutesModel;
+
+  // KPIs
+  if (el.minutesKpis) {
+    const lastDate = m.meetings.length && m.meetings[0].date ? formatDate(m.meetings[0].date) : '—';
+    el.minutesKpis.innerHTML =
+      `<article class="kpi"><div class="k">Meetings Logged</div><div class="v">${m.meetings.length}</div><div class="d">All recorded sessions</div></article>` +
+      `<article class="kpi ${m.openActionItems.length ? 'warn' : ''}"><div class="k">Open Action Items</div><div class="v">${m.openActionItems.length}</div><div class="d">Awaiting completion</div></article>` +
+      `<article class="kpi"><div class="k">Total Action Items</div><div class="v">${m.totalActionItems || 0}</div><div class="d">Open + completed</div></article>` +
+      `<article class="kpi"><div class="k">Most Recent</div><div class="v">${escapeHtml(lastDate)}</div><div class="d">Last meeting on file</div></article>`;
+  }
+
+  if (!m.meetings.length) { renderMinutesEmpty('No meeting minutes recorded yet.'); return; }
+
+  // Open action items
+  if (el.minutesActionItems) {
+    el.minutesActionItems.innerHTML = m.openActionItems.length
+      ? m.openActionItems.map((ai) => `
+        <div class="attention-item">
+          <div>
+            <strong>${escapeHtml(ai.text)}</strong>
+            <div class="muted">${escapeHtml(ai.meeting.title || 'Meeting')}${ai.meeting.dateLabel ? ' · ' + escapeHtml(ai.meeting.dateLabel) : ''}</div>
+          </div>
+          ${ai.owner ? `<span class="badge status-open">${escapeHtml(ai.owner)}</span>` : ''}
+        </div>`).join('')
+      : '<p class="muted">All action items are complete. 🎉</p>';
+    el.minutesActionSummary.textContent = `${m.openActionItems.length} open across ${m.meetings.length} meetings`;
+  }
+
+  // Latest meeting detail
+  if (el.minutesLatest) {
+    const latest = m.meetings[0];
+    el.minutesLatestSummary.textContent = latest.dateLabel || '';
+    el.minutesLatest.innerHTML = `
+      <div class="note-card">
+        <strong>${escapeHtml(latest.title || 'Untitled meeting')}</strong>
+        ${latest.attendees ? `<div class="muted">Attendees: ${escapeHtml(latest.attendees)}</div>` : ''}
+      </div>
+      ${latest.summary ? `<p>${escapeHtml(latest.summary)}</p>` : ''}
+      ${latest.decisions ? `<p><strong>Decisions:</strong> ${escapeHtml(latest.decisions)}</p>` : ''}
+      ${latest.actionItems.length ? `<p><strong>Action items:</strong></p><ul>${latest.actionItems.map((ai) => `<li>${ai.done ? '✓ ' : ''}${escapeHtml(ai.text)}${ai.owner ? ' — ' + escapeHtml(ai.owner) : ''}</li>`).join('')}</ul>` : ''}
+      ${latest.docLink ? `<p><a class="btn small" href="${escapeHtml(latest.docLink)}" target="_blank" rel="noreferrer">Open full minutes</a></p>` : ''}
+    `;
+  }
+
+  // Full log table
+  if (el.minutesTable) {
+    el.minutesTable.innerHTML = m.meetings.map((mtg) => {
+      const open = mtg.actionItems.filter((ai) => !ai.done).length;
+      const total = mtg.actionItems.length;
+      const actionCell = total
+        ? `${open} open / ${total}`
+        : '—';
+      const docCell = mtg.docLink
+        ? `<a href="${escapeHtml(mtg.docLink)}" target="_blank" rel="noreferrer">Doc</a>`
+        : '';
+      return `<tr>
+        <td>${escapeHtml(mtg.dateLabel || '')}</td>
+        <td><strong>${escapeHtml(mtg.title || '')}</strong></td>
+        <td class="table-note">${escapeHtml(mtg.attendees || '')}</td>
+        <td class="table-note">${escapeHtml(mtg.summary || '')}</td>
+        <td class="table-note">${escapeHtml(mtg.decisions || '')}</td>
+        <td>${actionCell}</td>
+        <td>${docCell}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
 bind();
 renderViewNav();
 loadData();
