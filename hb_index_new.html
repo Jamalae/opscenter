@@ -543,6 +543,7 @@ tbody td:first-child{color:var(--text);font-weight:500;}
       <button class="tab" onclick="switchInner('hbops','credentialing',this)">Credentialing</button>
       <button class="tab" onclick="switchInner('hbops','referrals',this)">Referrals</button>
       <button class="tab" onclick="switchInner('hbops','schedule',this)">Schedule</button>
+      <button class="tab" onclick="switchInner('hbops','reimburse',this)">Reimbursement</button>
       <button class="tab" onclick="switchInner('hbops','sheets',this)">Live Sheets</button>
     </div>
 
@@ -725,10 +726,27 @@ tbody td:first-child{color:var(--text);font-weight:500;}
       </div>
     </div>
 
+    <!-- Reimbursement -->
+    <div class="inner-view" id="iv-hbops-reimburse">
+      <div class="sh"><span class="sh-title">Monthly Reimbursement — Therapist / Provider</span><div class="sh-line"></div><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">reimbursement · payroll · P&amp;L (YTD)</span></div>
+      <div class="kpi-grid kpi-4">
+        <div class="kpi" style="--k-c:#f59e0b"><div class="kpi-label">Providers</div><div class="kpi-val" id="hb-rb-providers">—</div><div class="kpi-sub">on reimbursement</div></div>
+        <div class="kpi" style="--k-c:#34d399"><div class="kpi-label">YTD Reimbursement</div><div class="kpi-val" id="hb-rb-reimb">—</div><div class="kpi-sub">collected</div></div>
+        <div class="kpi" style="--k-c:#fbbf24"><div class="kpi-label">YTD Payroll</div><div class="kpi-val" id="hb-rb-pay">—</div><div class="kpi-sub">paid out</div></div>
+        <div class="kpi" style="--k-c:#0091ff"><div class="kpi-label">YTD P&amp;L</div><div class="kpi-val" id="hb-rb-pl">—</div><div class="kpi-sub">net margin (P&amp;L)</div></div>
+      </div>
+      <div class="tw"><div class="th-row"><span class="th-title">By Provider</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">year to date</span></div>
+        <table><thead><tr><th>Provider</th><th>Specialty</th><th style="text-align:right">Reimbursement</th><th style="text-align:right">Payroll</th><th style="text-align:right">P&amp;L</th></tr></thead>
+        <tbody id="hb-reimburseBody"></tbody></table>
+      </div>
+    </div>
+
     <!-- Live Sheets — embeds & links -->
     <div class="inner-view" id="iv-hbops-sheets">
       <div class="sh"><span class="sh-title">Source Google Sheets</span><div class="sh-line"></div></div>
       <div id="hb-sheetCards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
+      <div class="sh" style="margin-top:24px"><span class="sh-title">Documents &amp; Folders</span><div class="sh-line"></div></div>
+      <div id="hb-linkCards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
     </div>
 
   </div>
@@ -1216,6 +1234,13 @@ const HB_SHEETS=[
   {key:'ringcentral',name:'Ring Central Report',            id:'2PACX-1vREG5oI3W9UJQ7vhsarjC2cGZci3TRS5bIrm3vnyjLzerjwQNsmupATUH2qYW4s1bXDhotSSV8YldAN',gid:'0'},
   {key:'tmscount',   name:'TMS & Spravato Count',           id:'2PACX-1vTyPvrMH6tt4jlpS6yBrzU-wH2ZY9I_zJXlsatek-gpN-p6RgrnAqpn96sp_Grw2b9L0LOoJf2_-z6o',gid:'0'},
   {key:'tmspa',      name:'TMS & Spravato Referral & PA',   id:'2PACX-1vQyP3gi36Ixb6vgSlhvnkRMTcojUTg0BasmV05oWkI2JVP9EDPrahSfMqSlH5QZdFBedwwLOYF1pFPH',gid:'0'},
+  {key:'reimburse',  name:'Monthly Reimbursement (Therapist/Provider)',id:'2PACX-1vRiVV8yeUv6SG8slmFRxOLhL_2g5j4bLSbb1wvjf8DLXfuveldtNqgOr6PMpgoNiYnzP3oX9s7WhC4c',gid:'1907462640'},
+];
+const HB_LINKS=[
+  {name:'HB Credentialing Sheet', sub:'live wiring pending sheet access', url:'https://docs.google.com/spreadsheets/d/1rmdLzSknK2BLNHteDBarANkvR1VD40DaLLqqj6SVLmI/edit'},
+  {name:'Provider CAQH & PECOS', sub:'restricted · contains credentials', url:'https://docs.google.com/spreadsheets/d/1hekPFNmgklIXg_YQbLXeljkUixODOIV6IhdUgZqvDCQ/edit?gid=1735709440'},
+  {name:'Aging Reports — Insurance', sub:'Google Drive folder', url:'https://drive.google.com/drive/folders/1RreXJERxvVscr29ASKJK9R3XVOjmumA7'},
+  {name:'HB Patient Statements', sub:'Google Drive folder', url:'https://drive.google.com/drive/folders/1NuQxTztMdayVLvhx6SJu6xIGFlBsYem-'},
 ];
 const HB_DATA={};
 const HB_CRED={
@@ -1340,6 +1365,7 @@ async function loadHbOps(){
   const status=document.getElementById('hb-loadStatus');
   if(status)status.textContent='loading…';
   renderHbSheetCards();
+  renderHbLinkCards();
   const results=await Promise.all(HB_SHEETS.map(s=>fetchSheet(s).then(d=>[s.key,d])));
   results.forEach(([k,d])=>{HB_DATA[k]=d;});
   if(status){
@@ -1354,6 +1380,7 @@ async function loadHbOps(){
   try{renderHbCopay();}catch(e){console.error(e);}
   try{renderHbOverview();}catch(e){console.error(e);}
   try{renderHbCredentialing();}catch(e){console.error(e);}
+  try{renderHbReimburse();}catch(e){console.error(e);}
 }
 
 function renderHbSheetCards(){
@@ -1367,6 +1394,42 @@ function renderHbSheetCards(){
         <a href="${csvUrl(s)}" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:8px 14px;border-radius:6px;text-decoration:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px">CSV</a>
       </div>
     </div>`).join('');
+}
+
+function renderHbLinkCards(){
+  const wrap=document.getElementById('hb-linkCards');if(!wrap)return;
+  wrap.innerHTML=HB_LINKS.map(l=>`
+    <div class="cc" style="padding:16px">
+      <div class="cc-title" style="margin-bottom:6px">${l.name}</div>
+      <div class="cc-sub" style="margin-bottom:10px">${l.sub}</div>
+      <a href="${l.url}" target="_blank" rel="noopener" style="display:inline-block;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;padding:8px 14px;border-radius:6px;text-decoration:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px">Open ↗</a>
+    </div>`).join('');
+}
+
+function renderHbReimburse(){
+  const rows=HB_DATA.reimburse;if(!rows||!rows.length)return;
+  const hdr=rows[0]||[];
+  const MON=/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+  const monCols=[];hdr.forEach((h,i)=>{if(MON.test((h||'').trim()))monCols.push(i);});
+  let section='';const provs=[];let tR=0,tP=0,tL=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];if(!r)continue;
+    const first=(r[0]||'').trim(),last=(r[1]||'').trim();
+    if(first&&!last){section=first;continue;}
+    if(!first||!last)continue;
+    let reimb=0,pay=0,pl=0;
+    monCols.forEach(c=>{reimb+=num(r[c])||0;pay+=num(r[c+1])||0;pl+=num(r[c+2])||0;});
+    provs.push({name:`${first} ${last}`,specialty:(r[2]||'').trim()||section,reimb,pay,pl});
+    tR+=reimb;tP+=pay;tL+=pl;
+  }
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('hb-rb-providers',fmtNum(provs.length));
+  set('hb-rb-reimb',fmtMoney(tR));
+  set('hb-rb-pay',fmtMoney(tP));
+  set('hb-rb-pl',fmtMoney(tL));
+  provs.sort((a,b)=>b.reimb-a.reimb);
+  const tbody=document.getElementById('hb-reimburseBody');
+  if(tbody)tbody.innerHTML=provs.map(p=>`<tr><td>${p.name}</td><td>${p.specialty||'—'}</td><td style="text-align:right">${fmtMoney(p.reimb)}</td><td style="text-align:right">${fmtMoney(p.pay)}</td><td style="text-align:right;color:${p.pl<0?'#f87171':'#34d399'}">${fmtMoney(p.pl)}</td></tr>`).join('');
 }
 
 // ── Visits ────────────────────────────────────────────────
