@@ -1,0 +1,13 @@
+# Node / test tooling (added with Cypress + Puppeteer)
+node_modules/
+
+# Cypress artifacts
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+# Puppeteer artifacts
+tests/puppeteer/screenshots/
+
+# OS
+.DS_Store

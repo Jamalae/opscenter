@@ -37,6 +37,28 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080`.
 
+## Testing (Cypress + Puppeteer)
+
+End-to-end tests live alongside the app and run against a locally served copy
+of the static site. Test tooling is excluded from the FTP deploy, so nothing
+here ships to the live site.
+
+```bash
+npm install            # installs Cypress, Puppeteer, and a static server
+
+# Cypress (interactive)
+npm run cy:open
+
+# Cypress (headless, auto-starts the static server)
+npm run test:e2e
+
+# Puppeteer smoke test (auto-starts the static server)
+npm run test:smoke:served
+```
+
+- `cypress/e2e/smoke.cy.js` — verifies the app shell, header, and source-sheet link render.
+- `tests/puppeteer/smoke.js` — headless Chromium smoke check that also saves a screenshot.
+
 ## GitHub Pages deploy
 
 1. Push the repo to GitHub.
