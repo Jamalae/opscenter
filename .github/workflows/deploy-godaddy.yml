@@ -34,3 +34,9 @@ jobs:
             **/*.patch
             hb_index_*.html
             scripts/**
+            node_modules/**
+            cypress/**
+            tests/**
+            cypress.config.js
+            package.json
+            package-lock.json
