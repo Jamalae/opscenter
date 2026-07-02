@@ -21,8 +21,8 @@
  */
 const OpsMinutes = (() => {
   // === Paste your published-sheet values here ===
-  const PUBLISHED_KEY = '2PACX-1vS-XLO0fcaZgvaO0l3vUBdkkGeIUyn2RzgiwwMvP8-F-AhEfKaUtNRKIKknp6bYFTyq7Wwv5UXYY5He';
-  const MINUTES_GID = '929221542';                   // gid of the Minutes tab
+  const PUBLISHED_KEY = '2PACX-1vQwAm4b5KHklcVO1FqgeE-sbeZgVEDQAKALQz0p3YdKp5FXlHXXY4mUArH44U61HwUMpKfUZESJ4Gy4';
+  const MINUTES_GID = '0';                   // gid of the Minutes tab
   // ===============================================
 
   const CSV_BASE = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_KEY}/pub`;
@@ -150,7 +150,7 @@ const OpsMinutes = (() => {
       decisions: pick(row, ['Decisions', 'Decision']),
       actionItems,
       actionItemsRaw: actionRaw,
-      docLink: pick(row, ['Doc Link', 'Doc', 'Document', 'Link']),
+      docLink: pick(row, ['Doc Link', 'Notes Link', 'Doc', 'Document', 'Link']),
     };
   }
 
