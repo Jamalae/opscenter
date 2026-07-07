@@ -46,6 +46,8 @@ const el = {
   executiveSummary: document.getElementById('executiveSummary'),
   executiveHeadline: document.getElementById('executiveHeadline'),
   executiveNarrative: document.getElementById('executiveNarrative'),
+  executiveToday: document.getElementById('executiveToday'),
+  executiveTrends: document.getElementById('executiveTrends'),
   executiveInsights: document.getElementById('executiveInsights'),
   watchlistPanel: document.getElementById('watchlistPanel'),
   opsKpis: document.getElementById('opsKpis'),
@@ -220,6 +222,67 @@ function renderTrendBadge(value, formatter = wholeNumber, options = {}) {
   const prefix = value > 0 ? '+' : '';
   const label = options.label ? ` ${escapeHtml(options.label)}` : '';
   return `<span class="trend-badge ${direction}">${prefix}${escapeHtml(formatter(Math.abs(value)))}${label}</span>`;
+}
+
+function makeSparklinePath(values, width = 160, height = 52) {
+  const numericValues = values.filter((value) => Number.isFinite(value));
+  if (!numericValues.length) return '';
+  const max = Math.max(...numericValues);
+  const min = Math.min(...numericValues);
+  const range = max - min || 1;
+  return values.map((value, index) => {
+    const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+    const y = height - (((value - min) / range) * height);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+
+function renderSparklineCard(config) {
+  const safeSeries = (config.series || []).filter((item) => Number.isFinite(item.value));
+  if (!safeSeries.length) {
+    return `
+      <div class="spark-card">
+        <div class="spark-head">
+          <div>
+            <strong>${escapeHtml(config.title || 'Trend')}</strong>
+            <div class="table-note">${escapeHtml(config.summary || 'No time series available')}</div>
+          </div>
+        </div>
+        <div class="empty-state">No trend data available yet.</div>
+      </div>
+    `;
+  }
+
+  const latest = safeSeries[safeSeries.length - 1];
+  const previous = safeSeries.length > 1 ? safeSeries[safeSeries.length - 2] : null;
+  const delta = previous ? latest.value - previous.value : 0;
+  const points = makeSparklinePath(safeSeries.map((item) => item.value));
+  const high = safeSeries.reduce((best, item) => (item.value > best.value ? item : best), safeSeries[0]);
+  const low = safeSeries.reduce((best, item) => (item.value < best.value ? item : best), safeSeries[0]);
+
+  return `
+    <div class="spark-card">
+      <div class="spark-head">
+        <div>
+          <strong>${escapeHtml(config.title)}</strong>
+          <div class="table-note">${escapeHtml(config.summary || '')}</div>
+        </div>
+        ${previous ? renderTrendBadge(delta, config.formatter || wholeNumber, { label: config.deltaLabel || 'vs prior period' }) : ''}
+      </div>
+      <div class="spark-value">${escapeHtml((config.formatter || wholeNumber)(latest.value))}</div>
+      <svg class="sparkline" viewBox="0 0 160 52" role="img" aria-label="${escapeHtml(config.title)} trend">
+        <polyline points="${points}" />
+      </svg>
+      <div class="spark-axis">
+        <span>${escapeHtml(safeSeries[0].label)}</span>
+        <span>${escapeHtml(latest.label)}</span>
+      </div>
+      <div class="spark-notes">
+        <span>High ${escapeHtml((config.formatter || wholeNumber)(high.value))} · ${escapeHtml(high.label)}</span>
+        <span>Low ${escapeHtml((config.formatter || wholeNumber)(low.value))} · ${escapeHtml(low.label)}</span>
+      </div>
+    </div>
+  `;
 }
 
 function restoreUIState() {
@@ -519,6 +582,135 @@ function renderExecutiveInsights() {
       <div class="metric-list">${card.body}</div>
     </div>
   `).join('');
+}
+
+function renderExecutiveToday() {
+  if (!el.executiveToday) return;
+  const issues = getFilteredIssues();
+  const critical = issues.filter((item) => item.priority === 'High');
+  const topIssue = critical[0] || issues[0] || null;
+  const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
+  const cacheFallbacks = model.sourceMeta.filter((item) => item.source === 'cache');
+  const agingTopState = model.aging?.spotlight?.topState || null;
+  const upcomingInterviews = getFilteredInterviews().filter((item) => {
+    const when = item.date instanceof Date ? item.date : null;
+    if (!when || Number.isNaN(when.getTime())) return false;
+    const diffDays = (when.getTime() - model.loadedAt.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 14;
+  });
+
+  const items = [
+    sourceFailures.length
+      ? {
+          title: 'Restore data confidence',
+          tone: 'bad',
+          detail: `${sourceFailures.length} workbook tab${sourceFailures.length === 1 ? '' : 's'} unavailable right now.`,
+          owner: 'Data Ops',
+        }
+      : cacheFallbacks.length
+        ? {
+            title: 'Watch cached feeds',
+            tone: 'warn',
+            detail: `${cacheFallbacks.length} source${cacheFallbacks.length === 1 ? '' : 's'} are running on cache fallback.`,
+            owner: 'System',
+          }
+        : {
+            title: 'System is clear',
+            tone: 'good',
+            detail: 'No source outages are blocking decision-making this morning.',
+            owner: 'System',
+          },
+    topIssue
+      ? {
+          title: `Move ${topIssue.name}`,
+          tone: topIssue.priority === 'High' ? 'bad' : 'warn',
+          detail: `${topIssue.status} · ${topIssue.risk} · ${topIssue.detail}`,
+          owner: topIssue.owner || 'Unassigned',
+        }
+      : {
+          title: 'Issue queue is quiet',
+          tone: 'good',
+          detail: 'No active issues match the current filters.',
+          owner: 'Ops',
+        },
+    agingTopState
+      ? {
+          title: `Contain AR in ${agingTopState.state}`,
+          tone: agingTopState.over90 > 0 ? 'bad' : 'warn',
+          detail: `${money(agingTopState.total)} total AR with ${money(agingTopState.over90)} sitting 90+ days.`,
+          owner: 'Billing',
+        }
+      : {
+          title: 'AR feed is limited',
+          tone: 'warn',
+          detail: 'Aging totals are not available yet for state-level prioritization.',
+          owner: 'Billing',
+        },
+    {
+      title: upcomingInterviews.length ? 'Protect upcoming interviews' : 'Recruiting calendar is light',
+      tone: upcomingInterviews.length >= 5 ? 'warn' : 'good',
+      detail: upcomingInterviews.length
+        ? `${upcomingInterviews.length} interview${upcomingInterviews.length === 1 ? '' : 's'} scheduled in the next 14 days.`
+        : 'No interview dates are stacked in the next 14 days from the current feed.',
+      owner: 'Recruiting',
+    },
+  ];
+
+  el.executiveToday.innerHTML = items.map((item) => `
+    <div class="today-item ${item.tone}">
+      <div class="today-top">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span class="tag ${item.tone === 'bad' ? 'bad' : item.tone === 'warn' ? 'warn' : ''}">${item.tone === 'bad' ? 'Needs action' : item.tone === 'warn' ? 'Watch' : 'Stable'}</span>
+      </div>
+      <div class="muted">${escapeHtml(item.detail)}</div>
+      <div class="table-note">Owner: ${escapeHtml(item.owner)}</div>
+    </div>
+  `).join('');
+}
+
+function renderExecutiveTrends() {
+  if (!el.executiveTrends) return;
+  const agingMonths = (model.aging?.byMonth || []).slice(0, 6).reverse();
+  const interviewTimelineMap = {};
+  getFilteredInterviews().forEach((item) => {
+    const when = item.date instanceof Date ? item.date : null;
+    if (!when || Number.isNaN(when.getTime())) return;
+    const key = when.toISOString().slice(0, 10);
+    if (!interviewTimelineMap[key]) {
+      interviewTimelineMap[key] = { label: formatDate(when), value: 0, sortKey: when.getTime() };
+    }
+    interviewTimelineMap[key].value += 1;
+  });
+  const interviewTimeline = Object.values(interviewTimelineMap)
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .slice(0, 6)
+    .map(({ label, value }) => ({ label, value }));
+
+  const trendCards = [
+    {
+      title: 'Combined AR',
+      summary: 'Latest six pressure months from the safe feeder',
+      series: agingMonths.map((row) => ({ label: row.monthLabel, value: row.total })),
+      formatter: money,
+      deltaLabel: 'vs prior month',
+    },
+    {
+      title: '90+ AR Exposure',
+      summary: 'Oldest balance carrying month to month',
+      series: agingMonths.map((row) => ({ label: row.monthLabel, value: row.over90 })),
+      formatter: money,
+      deltaLabel: 'vs prior month',
+    },
+    {
+      title: 'Interview Calendar',
+      summary: 'Upcoming interview load from dated recruiting rows',
+      series: interviewTimeline,
+      formatter: wholeNumber,
+      deltaLabel: 'vs prior date',
+    },
+  ];
+
+  el.executiveTrends.innerHTML = trendCards.map(renderSparklineCard).join('');
 }
 
 function renderWatchlist() {
@@ -1916,6 +2108,8 @@ const viewRenderers = {
   executive() {
     renderExecutiveKpis();
     renderExecutiveInsights();
+    renderExecutiveToday();
+    renderExecutiveTrends();
     renderWatchlist();
   },
   ops() {

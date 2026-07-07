@@ -186,6 +186,10 @@ h2 {
   align-items: start;
 }
 
+.executive-command-grid {
+  align-items: start;
+}
+
 .executive-kpi-grid {
   margin-top: 12px;
 }
@@ -207,9 +211,82 @@ h2 {
 .meta-grid,
 .insight-grid,
 .stack,
-.attention-list {
+.attention-list,
+.trend-deck,
+.today-panel {
   display: grid;
   gap: 10px;
+}
+
+.trend-deck {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.today-item,
+.spark-card {
+  border: 1px solid rgba(112, 141, 230, 0.14);
+  background: rgba(7, 13, 31, 0.5);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.today-item.bad {
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.today-item.warn {
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.today-top,
+.spark-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.spark-value {
+  margin-top: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.sparkline {
+  width: 100%;
+  height: 58px;
+  margin-top: 10px;
+  overflow: visible;
+}
+
+.sparkline polyline {
+  fill: none;
+  stroke: #7bb7ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-axis,
+.spark-notes {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.spark-axis {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.spark-notes {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .meta-grid {
@@ -751,6 +828,10 @@ td a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .trend-deck {
+    grid-template-columns: 1fr;
+  }
+
   .mini-kpi-grid,
   .meta-grid,
   .state-atlas-grid {
@@ -774,10 +855,48 @@ td a {
     padding: 14px;
   }
 
+  .card {
+    padding: 12px;
+  }
+
   .head,
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .card-head,
+  .today-top,
+  .spark-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+  }
+
+  .view-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .executive-narrative {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .spark-value {
+    font-size: 20px;
+  }
+
+  .spark-axis,
+  .spark-notes {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .kpi-grid,
