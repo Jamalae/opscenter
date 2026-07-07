@@ -2,6 +2,8 @@ const OpsSheets = (() => {
   const WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml';
   const WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
   const HUBSTAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub?gid=861294478&single=true&output=csv';
+  const AGING_FEED_SHEET_ID = '1h74oPL3cgiKVlowMNE-w8wpVbkt-Jj3pcAjShOpA67M';
+  const AGING_FEED_URL = `https://docs.google.com/spreadsheets/d/${AGING_FEED_SHEET_ID}/edit`;
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
@@ -12,9 +14,17 @@ const OpsSheets = (() => {
     { id: 'resumePool', label: 'Resume Pool', sheetName: 'Resume Pool', gid: '624754739' },
     { id: 'newHiring', label: 'New Hiring', sheetName: 'New Hiring', gid: '1396856298' },
   ];
+  const AGING_TAB_CONFIG = [
+    { id: 'insuranceAging', label: 'Insurance Aging', sheetName: 'Insurance Aging' },
+    { id: 'patientAging', label: 'Patient Aging', sheetName: 'Patient Aging' },
+  ];
 
   function buildCsvUrl(gid, csvBase = WORKBOOK_CSV_BASE) {
     return `${csvBase}?gid=${gid}&single=true&output=csv`;
+  }
+
+  function buildSheetCsvUrl(sheetId, sheetName) {
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   }
 
   function parseCSVRow(line) {
@@ -74,6 +84,16 @@ const OpsSheets = (() => {
   function parseRate(value) {
     const match = String(value || '').match(/\$?\s*([0-9]+(?:\.[0-9]+)?)/);
     return match ? Number(match[1]) : null;
+  }
+
+  function parseAmount(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return 0;
+    const negative = /^\(.*\)$/.test(raw) || raw.startsWith('-');
+    const normalized = raw.replace(/[$,%\s,()]/g, '');
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) return 0;
+    return negative ? -Math.abs(parsed) : parsed;
   }
 
   function uniq(values) {
@@ -201,6 +221,43 @@ const OpsSheets = (() => {
     }
   }
 
+  async function loadAgingTab(tab) {
+    const csvUrl = buildSheetCsvUrl(AGING_FEED_SHEET_ID, tab.sheetName);
+    const meta = {
+      id: tab.id,
+      label: tab.label,
+      sheetName: tab.sheetName,
+      csvUrl,
+      source: 'live',
+      ok: true,
+      error: null,
+      rowCount: 0,
+    };
+
+    try {
+      const text = await fetchCsvText(csvUrl);
+      const rows = parseCsv(text);
+      localStorage.setItem(cacheKey(`aging-${tab.id}`), JSON.stringify(rows));
+      meta.rowCount = rows.length;
+      return { rows, meta };
+    } catch (error) {
+      const cached = localStorage.getItem(cacheKey(`aging-${tab.id}`));
+      if (cached) {
+        const rows = JSON.parse(cached);
+        meta.source = 'cache';
+        meta.ok = true;
+        meta.error = cleanText(error.message || 'Unknown aging-feed fetch failure');
+        meta.rowCount = rows.length;
+        return { rows, meta };
+      }
+
+      meta.source = 'unavailable';
+      meta.ok = false;
+      meta.error = cleanText(error.message || 'Unable to load aging feed tab');
+      return { rows: [], meta };
+    }
+  }
+
   function normalizeCandidatePoolRow(row) {
     return {
       name: cleanText(row.Name),
@@ -321,6 +378,235 @@ const OpsSheets = (() => {
         .map((part) => part.replace(/\.$/, ''))
         .filter((part) => part.length && part.length <= 24)
     );
+  }
+
+  function normalizeHeader(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function getRowValueByAliases(row, aliases) {
+    const normalizedRow = Object.entries(row).reduce((acc, [key, value]) => {
+      acc[normalizeHeader(key)] = value;
+      return acc;
+    }, {});
+    for (let i = 0; i < aliases.length; i += 1) {
+      const match = normalizedRow[normalizeHeader(aliases[i])];
+      if (match !== undefined && cleanText(match) !== '') return match;
+    }
+    return '';
+  }
+
+  function normalizeAgingRow(row, sourceType) {
+    const state = cleanText(getRowValueByAliases(row, ['state', 'location', 'region', 'market']));
+    const monthLabel = cleanText(getRowValueByAliases(row, ['month', 'service month', 'post month', 'date', 'period'])) || 'Unspecified';
+    const monthDate = parseDate(monthLabel);
+    const current = parseAmount(getRowValueByAliases(row, ['current', '0-30', '0-30 days', '0to30']));
+    const bucket31to60 = parseAmount(getRowValueByAliases(row, ['31-60', '31-60 days', '31to60']));
+    const bucket61to90 = parseAmount(getRowValueByAliases(row, ['61-90', '61-90 days', '61to90']));
+    const bucket91to120 = parseAmount(getRowValueByAliases(row, ['91-120', '91-120 days', '91to120']));
+    const bucket120Plus = parseAmount(getRowValueByAliases(row, ['120+', '120 +', '120plus', '>120', '121+', 'over120']));
+    const explicitTotal = parseAmount(getRowValueByAliases(row, ['total', 'total ar', 'balance', 'ending ar', 'amount']));
+    const computedTotal = current + bucket31to60 + bucket61to90 + bucket91to120 + bucket120Plus;
+    const total = explicitTotal || computedTotal;
+
+    return {
+      state: state || 'Unknown',
+      monthLabel,
+      monthDate,
+      current,
+      bucket31to60,
+      bucket61to90,
+      bucket91to120,
+      bucket120Plus,
+      over90: bucket91to120 + bucket120Plus,
+      total,
+      sourceType,
+    };
+  }
+
+  function findLatestMonthLabel(values) {
+    for (let index = values.length - 1; index >= 0; index -= 1) {
+      const label = cleanText(values[index]);
+      if (/[A-Za-z]{3,}\s+\d{4}/.test(label)) return label;
+    }
+    return 'Unspecified';
+  }
+
+  function parseInsuranceAgingMatrix(matrix) {
+    if (!Array.isArray(matrix) || matrix.length < 3) return [];
+    const rows = [];
+    const monthRow = matrix[0] || [];
+    const headerRow = matrix[1] || [];
+    const blockStarts = [];
+
+    headerRow.forEach((cell, index) => {
+      if (cleanText(cell).toLowerCase() === 'state name') {
+        blockStarts.push(index);
+      }
+    });
+
+    blockStarts.forEach((startIndex) => {
+      const monthLabel = findLatestMonthLabel(monthRow.slice(0, startIndex + 1));
+      const monthDate = parseDate(monthLabel);
+      for (let rowIndex = 2; rowIndex < matrix.length; rowIndex += 1) {
+        const state = cleanText(matrix[rowIndex]?.[startIndex]);
+        if (!state || /^total$/i.test(state)) continue;
+        const current = parseAmount(matrix[rowIndex]?.[startIndex + 1]);
+        const bucket31to60 = parseAmount(matrix[rowIndex]?.[startIndex + 2]);
+        const bucket61to90 = parseAmount(matrix[rowIndex]?.[startIndex + 3]);
+        const bucket90Plus = parseAmount(matrix[rowIndex]?.[startIndex + 4]);
+        const total = parseAmount(matrix[rowIndex]?.[startIndex + 5]) || (current + bucket31to60 + bucket61to90 + bucket90Plus);
+        if (!total && !current && !bucket31to60 && !bucket61to90 && !bucket90Plus) continue;
+        rows.push({
+          state,
+          monthLabel,
+          monthDate,
+          current,
+          bucket31to60,
+          bucket61to90,
+          bucket91to120: 0,
+          bucket120Plus: bucket90Plus,
+          over90: bucket90Plus,
+          total,
+          sourceType: 'Insurance AR',
+        });
+      }
+    });
+
+    return rows;
+  }
+
+  function parsePatientAgingMatrix(matrix) {
+    if (!Array.isArray(matrix) || matrix.length < 3) return [];
+    return matrix.slice(2)
+      .map((row) => {
+        const state = cleanText(row?.[1]);
+        if (!state || /^total$/i.test(state) || /^as on /i.test(state)) return null;
+        const numbers = row
+          .slice(2)
+          .map((value) => parseAmount(value))
+          .filter((value) => Number.isFinite(value));
+        if (!numbers.length) return null;
+        const endingOutstanding = numbers[numbers.length - 1] || 0;
+        const grossTotal = numbers.length >= 4 ? numbers[numbers.length - 4] : endingOutstanding;
+        return {
+          state,
+          monthLabel: 'Current patient aging snapshot',
+          monthDate: null,
+          current: 0,
+          bucket31to60: 0,
+          bucket61to90: 0,
+          bucket91to120: 0,
+          bucket120Plus: 0,
+          over90: 0,
+          total: endingOutstanding || grossTotal,
+          grossTotal,
+          sourceType: 'Patient AR',
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function sortAgingRows(rows) {
+    return rows.slice().sort((a, b) => {
+      if (a.monthDate && b.monthDate) return b.monthDate - a.monthDate;
+      if (a.monthDate) return -1;
+      if (b.monthDate) return 1;
+      return b.total - a.total || a.state.localeCompare(b.state);
+    });
+  }
+
+  function buildAgingModel(rawTabs, sourceMeta) {
+    const insuranceRows = sortAgingRows(parseInsuranceAgingMatrix(rawTabs.insuranceAging || []));
+    const patientRows = sortAgingRows(parsePatientAgingMatrix(rawTabs.patientAging || []));
+    const allRows = insuranceRows.concat(patientRows);
+
+    const byState = Object.values(allRows.reduce((acc, row) => {
+      const key = row.state || 'Unknown';
+      if (!acc[key]) {
+        acc[key] = {
+          state: key,
+          insuranceTotal: 0,
+          patientTotal: 0,
+          total: 0,
+          over90: 0,
+          months: new Set(),
+        };
+      }
+      if (row.sourceType === 'Insurance AR') acc[key].insuranceTotal += row.total;
+      if (row.sourceType === 'Patient AR') acc[key].patientTotal += row.total;
+      acc[key].total += row.total;
+      acc[key].over90 += row.over90;
+      if (row.monthLabel) acc[key].months.add(row.monthLabel);
+      return acc;
+    }, {}))
+      .map((row) => ({
+        state: row.state,
+        insuranceTotal: row.insuranceTotal,
+        patientTotal: row.patientTotal,
+        total: row.total,
+        over90: row.over90,
+        monthsTracked: row.months.size,
+      }))
+      .sort((a, b) => b.total - a.total || b.over90 - a.over90 || a.state.localeCompare(b.state));
+
+    const byMonth = Object.values(allRows.reduce((acc, row) => {
+      const key = row.monthLabel || 'Unspecified';
+      if (!acc[key]) {
+        acc[key] = {
+          monthLabel: key,
+          monthDate: row.monthDate,
+          insuranceTotal: 0,
+          patientTotal: 0,
+          total: 0,
+          over90: 0,
+        };
+      }
+      if (row.sourceType === 'Insurance AR') acc[key].insuranceTotal += row.total;
+      if (row.sourceType === 'Patient AR') acc[key].patientTotal += row.total;
+      acc[key].total += row.total;
+      acc[key].over90 += row.over90;
+      return acc;
+    }, {}))
+      .sort((a, b) => {
+        if (a.monthDate && b.monthDate) return b.monthDate - a.monthDate;
+        if (a.monthDate) return -1;
+        if (b.monthDate) return 1;
+        return b.total - a.total || a.monthLabel.localeCompare(b.monthLabel);
+      });
+
+    const insuranceTotal = insuranceRows.reduce((sum, row) => sum + row.total, 0);
+    const patientTotal = patientRows.reduce((sum, row) => sum + row.total, 0);
+    const combinedTotal = insuranceTotal + patientTotal;
+    const over90Total = allRows.reduce((sum, row) => sum + row.over90, 0);
+    const topState = byState[0] || null;
+    const hottestMonth = byMonth[0] || null;
+
+    return {
+      feedUrl: AGING_FEED_URL,
+      sourceMeta,
+      insuranceRows,
+      patientRows,
+      allRows,
+      byState,
+      byMonth,
+      metrics: {
+        insuranceTotal,
+        patientTotal,
+        combinedTotal,
+        over90Total,
+        stateCount: uniq(allRows.map((row) => row.state)).length,
+        monthCount: uniq(allRows.map((row) => row.monthLabel)).length,
+      },
+      spotlight: {
+        topState,
+        hottestMonth,
+      },
+      privacy: {
+        mode: 'safe-feed',
+        note: 'Aging data is loaded only from the separate aggregate feeder sheet. The PHI workbook stays private and must not be published to the web.',
+      },
+    };
   }
 
   function deriveIssues(dataset, sourceMeta) {
@@ -500,7 +786,7 @@ const OpsSheets = (() => {
     };
   }
 
-  function buildModel(rawTabs, sourceMeta, hubstaffModel) {
+  function buildModel(rawTabs, sourceMeta, hubstaffModel, agingModel) {
     const dataset = {
       candidatePool: rawTabs.candidatePool.map(normalizeCandidatePoolRow),
       interviews: rawTabs.interviews.map(normalizeInterviewRow),
@@ -529,6 +815,7 @@ const OpsSheets = (() => {
       workbookUrl: WORKBOOK_PUBLISHED_URL,
       sourceMeta,
       hubstaff: hubstaffModel,
+      aging: agingModel,
       dataset,
       issues,
       metrics: {
@@ -564,12 +851,19 @@ const OpsSheets = (() => {
 
   async function loadWorkbookData() {
     const primaryResults = await Promise.all(TAB_CONFIG.map(loadTab));
+    const agingResults = await Promise.all(AGING_TAB_CONFIG.map(loadAgingTab));
     const rawTabs = {};
     const sourceMeta = [];
+    const rawAgingTabs = {};
+    const agingSourceMeta = [];
 
     primaryResults.forEach(({ rows, meta }) => {
       rawTabs[meta.id] = rows;
       sourceMeta.push(meta);
+    });
+    agingResults.forEach(({ rows, meta }) => {
+      rawAgingTabs[meta.id] = rows;
+      agingSourceMeta.push(meta);
     });
 
     let hubstaffModel;
@@ -614,12 +908,13 @@ const OpsSheets = (() => {
       }
     }
 
-    return buildModel(rawTabs, sourceMeta, hubstaffModel);
+    return buildModel(rawTabs, sourceMeta, hubstaffModel, buildAgingModel(rawAgingTabs, agingSourceMeta));
   }
 
   return {
     TAB_CONFIG,
     HUBSTAFF_CSV_URL,
+    AGING_FEED_URL,
     WORKBOOK_PUBLISHED_URL,
     loadWorkbookData,
     utils: {

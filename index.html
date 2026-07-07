@@ -63,24 +63,35 @@
       </div>
     </section>
 
-    <section class="kpi-grid" id="executiveKpis"></section>
-
     <section class="view active" id="view-executive">
-      <div class="two-col">
+      <article class="card executive-hero">
+        <div class="card-head">
+          <div>
+            <h2>Daily Brief</h2>
+            <p class="muted" id="executiveSummary"></p>
+          </div>
+          <span class="badge status-warning" id="executiveHeadline"></span>
+        </div>
+        <p class="executive-narrative" id="executiveNarrative"></p>
+      </article>
+
+      <section class="kpi-grid executive-kpi-grid" id="executiveKpis"></section>
+
+      <div class="two-col executive-top-grid">
         <article class="card">
           <div class="card-head">
-            <h2>Executive Dashboard</h2>
-            <span class="muted" id="executiveSummary"></span>
+            <h2>Where Attention Goes First</h2>
+            <span class="muted">Highest urgency across all workstreams</span>
           </div>
-          <div class="insight-grid" id="executiveInsights"></div>
+          <div class="attention-list" id="watchlistPanel"></div>
         </article>
 
         <article class="card">
           <div class="card-head">
-            <h2>Top Watchlist</h2>
-            <span class="muted">Highest urgency across all workstreams</span>
+            <h2>What The Numbers Say</h2>
+            <span class="muted">Live operating signals, not raw sheet tabs</span>
           </div>
-          <div class="attention-list" id="watchlistPanel"></div>
+          <div class="insight-grid" id="executiveInsights"></div>
         </article>
       </div>
     </section>
@@ -239,6 +250,117 @@
               </tr>
             </thead>
             <tbody id="intakeTable"></tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-aging">
+      <article class="card aging-hero">
+        <div class="card-head">
+          <div>
+            <h2>Aging Command Center</h2>
+            <p class="muted" id="agingSummary">Loading safe AR feed…</p>
+          </div>
+          <span class="badge status-approved" id="agingPrivacyBadge">Aggregate-only feed</span>
+        </div>
+        <section class="kpi-grid" id="agingKpis"></section>
+      </article>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Why It Matters Today</h2>
+            <span class="muted">Daily AR brief</span>
+          </div>
+          <div id="agingSpotlight" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Source Guardrails</h2>
+            <span class="muted">PHI-safe setup only</span>
+          </div>
+          <div id="agingSourceMeta" class="stack"></div>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>State Concentration</h2>
+            <span class="muted">Combined insurance + patient aging</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Total AR</th>
+                <th>Insurance</th>
+                <th>Patient</th>
+                <th>90+ Days</th>
+              </tr>
+            </thead>
+            <tbody id="agingStateTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Monthly Trend</h2>
+            <span class="muted">Aggregate month x source rollup</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Total AR</th>
+                <th>Insurance</th>
+                <th>Patient</th>
+                <th>90+ Days</th>
+              </tr>
+            </thead>
+            <tbody id="agingMonthTable"></tbody>
+          </table>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <h2>Insurance Aging Rows</h2>
+            <span class="muted" id="agingInsuranceSummary"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Month</th>
+                <th>Total AR</th>
+                <th>Current</th>
+                <th>90+ Days</th>
+              </tr>
+            </thead>
+            <tbody id="agingInsuranceTable"></tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Patient Aging Rows</h2>
+            <span class="muted" id="agingPatientSummary"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Month</th>
+                <th>Total AR</th>
+                <th>Current</th>
+                <th>90+ Days</th>
+              </tr>
+            </thead>
+            <tbody id="agingPatientTable"></tbody>
           </table>
         </article>
       </div>
@@ -696,11 +818,11 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="./sheets.js?v=2"></script>
+  <script src="./sheets.js?v=4"></script>
   <script src="./insurance.js?v=2"></script>
   <script src="./marketing.js?v=3"></script>
   <script src="./minutes.js?v=1"></script>
-  <script src="./app.js?v=2"></script>
+  <script src="./app.js?v=4"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
   <script src="./workforce-map.js?v=2"></script>

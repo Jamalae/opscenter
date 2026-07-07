@@ -124,6 +124,28 @@ h2 {
   margin-bottom: 12px;
 }
 
+.executive-hero {
+  background:
+    radial-gradient(circle at top left, rgba(108, 168, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(16, 27, 61, 0.98), rgba(10, 17, 39, 0.98));
+}
+
+.executive-top-grid {
+  align-items: start;
+}
+
+.executive-kpi-grid {
+  margin-top: 12px;
+}
+
+.executive-narrative {
+  margin-top: 14px;
+  max-width: 72ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #d6e3ff;
+}
+
 .intro-strip {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
@@ -153,6 +175,11 @@ h2 {
 .source-item strong,
 .insight-card strong {
   display: block;
+}
+
+.insight-card .table-note {
+  margin-top: 4px;
+  margin-bottom: 10px;
 }
 
 .controls {
@@ -273,6 +300,10 @@ h2 {
 
 .kpi.good .v {
   color: var(--good);
+}
+
+.kpi.accent .v {
+  color: var(--accent);
 }
 
 .kpi.warn .v {
@@ -426,6 +457,17 @@ th {
 .metric-list {
   display: grid;
   gap: 8px;
+}
+
+.aging-hero {
+  background:
+    radial-gradient(circle at top left, rgba(108, 168, 255, 0.18), transparent 38%),
+    linear-gradient(180deg, rgba(15, 24, 53, 0.98), rgba(10, 17, 39, 0.98));
+}
+
+.aging-hero .card-head {
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .map-panel {

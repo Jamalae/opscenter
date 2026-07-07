@@ -14,11 +14,13 @@ let model = null;
 let insuranceMap = null;
 let insuranceMapLayer = null;
 let insuranceGeoJson = null;
+let insuranceLoadPromise = null;
 
 const views = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'ops', label: 'Ops Center' },
   { id: 'intake', label: 'Intake / Referral Reporting' },
+  { id: 'aging', label: 'Aging / AR' },
   { id: 'credentialing', label: 'Credentialing Pipeline' },
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
@@ -40,6 +42,8 @@ const el = {
   sourceMeta: document.getElementById('sourceMeta'),
   executiveKpis: document.getElementById('executiveKpis'),
   executiveSummary: document.getElementById('executiveSummary'),
+  executiveHeadline: document.getElementById('executiveHeadline'),
+  executiveNarrative: document.getElementById('executiveNarrative'),
   executiveInsights: document.getElementById('executiveInsights'),
   watchlistPanel: document.getElementById('watchlistPanel'),
   opsKpis: document.getElementById('opsKpis'),
@@ -57,6 +61,17 @@ const el = {
   referralSourcePanel: document.getElementById('referralSourcePanel'),
   interviewTable: document.getElementById('interviewTable'),
   intakeTable: document.getElementById('intakeTable'),
+  agingSummary: document.getElementById('agingSummary'),
+  agingPrivacyBadge: document.getElementById('agingPrivacyBadge'),
+  agingKpis: document.getElementById('agingKpis'),
+  agingSpotlight: document.getElementById('agingSpotlight'),
+  agingSourceMeta: document.getElementById('agingSourceMeta'),
+  agingStateTable: document.getElementById('agingStateTable'),
+  agingMonthTable: document.getElementById('agingMonthTable'),
+  agingInsuranceSummary: document.getElementById('agingInsuranceSummary'),
+  agingPatientSummary: document.getElementById('agingPatientSummary'),
+  agingInsuranceTable: document.getElementById('agingInsuranceTable'),
+  agingPatientTable: document.getElementById('agingPatientTable'),
   staffSummary: document.getElementById('staffSummary'),
   staffKpis: document.getElementById('staffKpis'),
   staffInsights: document.getElementById('staffInsights'),
@@ -295,20 +310,32 @@ function getFilteredHireRows() {
 }
 
 function renderViewNav() {
-  el.viewNav.innerHTML = views.map((view) => `
-    <button type="button" class="view-tab ${state.view === view.id ? 'active' : ''}" data-view="${view.id}">
-      ${escapeHtml(view.label)}
-    </button>
-  `).join('');
+  if (!el.viewNav.dataset.initialized) {
+    el.viewNav.innerHTML = views.map((view) => `
+      <button type="button" class="view-tab" data-view="${view.id}">
+        ${escapeHtml(view.label)}
+      </button>
+    `).join('');
+
+    el.viewNav.addEventListener('click', (event) => {
+      const button = event.target.closest('.view-tab');
+      if (!button) return;
+      setActiveView(button.getAttribute('data-view'));
+    });
+    el.viewNav.dataset.initialized = 'true';
+  }
 
   el.viewNav.querySelectorAll('.view-tab').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.view = button.getAttribute('data-view');
-      document.querySelectorAll('.view').forEach((section) => section.classList.remove('active'));
-      document.getElementById(`view-${state.view}`).classList.add('active');
-      render();
-    });
+    button.classList.toggle('active', button.getAttribute('data-view') === state.view);
   });
+}
+
+function setActiveView(viewId) {
+  if (!views.some((view) => view.id === viewId) || state.view === viewId) return;
+  state.view = viewId;
+  document.querySelectorAll('.view').forEach((section) => section.classList.remove('active'));
+  document.getElementById(`view-${state.view}`).classList.add('active');
+  render();
 }
 
 function renderSourceMeta() {
@@ -327,13 +354,16 @@ function renderSourceMeta() {
 }
 
 function renderExecutiveKpis() {
+  const criticalIssues = model.issues.filter((item) => item.priority === 'High').length;
+  const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable').length;
+  const over90Balance = model.aging?.metrics?.over90Total || 0;
   const cards = [
-    { label: 'Tracked Candidates', value: model.metrics.totalCandidates, tone: 'good', detail: 'Across live workbook tabs' },
-    { label: 'Open Interviews', value: model.metrics.openInterviews, tone: 'warn', detail: 'Active interview pipeline' },
-    { label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records' },
-    { label: 'Active Workforce', value: model.metrics.activeWorkforce, tone: 'good', detail: 'Current workforce roster' },
-    { label: 'States Covered', value: model.metrics.statesCovered, tone: 'accent', detail: 'Licensed state footprint' },
-    { label: 'Open Issues', value: model.metrics.issueCount, tone: 'bad', detail: 'Ops follow-up queue' },
+    { label: 'Critical Today', value: criticalIssues, tone: criticalIssues ? 'bad' : 'good', detail: 'High-priority blockers needing action' },
+    { label: 'Pipeline In Motion', value: model.metrics.openInterviews, tone: 'warn', detail: `${model.metrics.totalCandidates} tracked candidates across recruiting sheets` },
+    { label: 'Active Coverage', value: model.metrics.statesCovered, tone: 'accent', detail: `${model.metrics.activeWorkforce} active providers across licensed states` },
+    { label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet' },
+    { label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records ready to activate' },
+    { label: 'Source Health', value: liveFailures ? `${liveFailures} down` : 'Healthy', tone: liveFailures ? 'bad' : 'good', detail: liveFailures ? 'Workbook tabs missing live or cached data' : 'All primary workbook tabs reachable' },
   ];
 
   el.executiveKpis.innerHTML = cards.map((card) => `
@@ -346,28 +376,53 @@ function renderExecutiveKpis() {
 }
 
 function renderExecutiveInsights() {
+  const issues = getFilteredIssues();
   const interviewsByStatus = summarizeCounts(model.dataset.interviews.map((item) => item.status || 'Unknown'));
   const hiringBySpecialty = summarizeCounts(model.dataset.newHiring.map((item) => item.specialty || 'Unknown'));
   const workforceByContract = summarizeCounts(model.dataset.currentWorkforce.map((item) => item.contractType || 'Unknown'));
+  const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable').length;
+  const criticalIssues = issues.filter((item) => item.priority === 'High').length;
+  const topAgingState = model.aging?.spotlight?.topState || null;
+  const over90Balance = model.aging?.metrics?.over90Total || 0;
 
-  el.executiveSummary.textContent = `${model.metrics.totalCandidates} candidates tracked · ${model.metrics.activeWorkforce} active providers · ${model.metrics.issueCount} open issues`;
+  const headline = sourceFailures
+    ? `${sourceFailures} source issue${sourceFailures === 1 ? '' : 's'}`
+    : criticalIssues
+      ? `${criticalIssues} critical item${criticalIssues === 1 ? '' : 's'}`
+      : 'Daily flow is stable';
+  const headlineTone = sourceFailures ? 'status-blocked' : criticalIssues ? 'status-warning' : 'status-approved';
+
+  el.executiveSummary.textContent = `${model.metrics.issueCount} open issues · ${model.metrics.activeWorkforce} active providers · refreshed ${formatDate(model.loadedAt)}`;
+  el.executiveHeadline.className = `badge ${headlineTone}`;
+  el.executiveHeadline.textContent = headline;
+  el.executiveNarrative.textContent = sourceFailures
+    ? 'The fastest win today is restoring missing live sources before teams make staffing or AR decisions from stale context.'
+    : over90Balance
+      ? `Operations is carrying ${money(over90Balance)} in 90+ day AR while the hiring and credentialing pipeline continues to move.`
+      : 'No source outages are blocking the dashboard, so the focus can stay on hiring flow, activation readiness, and state coverage.';
 
   el.executiveInsights.innerHTML = [
     {
-      title: 'Interview Pipeline',
+      title: 'Hiring Flow',
+      summary: `${model.metrics.openInterviews} open interviews · ${model.metrics.finalSigned} final hires`,
       body: renderMetricList(interviewsByStatus.slice(0, 5), 'rows'),
     },
     {
-      title: 'New Hiring Mix',
+      title: 'Demand Mix',
+      summary: `${model.metrics.totalCandidates} candidates in motion`,
       body: renderMetricList(hiringBySpecialty.slice(0, 5), 'candidates'),
     },
     {
-      title: 'Contract Mix',
+      title: topAgingState ? `AR Pressure: ${topAgingState.state}` : 'Coverage Mix',
+      summary: topAgingState
+        ? `${money(topAgingState.total)} total AR · ${money(topAgingState.over90)} aged 90+`
+        : `${model.metrics.statesCovered} states covered`,
       body: renderMetricList(workforceByContract.slice(0, 5), 'providers'),
     },
   ].map((card) => `
     <div class="insight-card">
       <strong>${escapeHtml(card.title)}</strong>
+      <div class="table-note">${escapeHtml(card.summary)}</div>
       <div class="metric-list">${card.body}</div>
     </div>
   `).join('');
@@ -647,6 +702,118 @@ function renderIntakeView() {
       </tr>
     `).join('')
     : '<tr><td colspan="6" class="empty-state">No intake rows match the current filters.</td></tr>';
+}
+
+function renderAgingView() {
+  const aging = model?.aging;
+  if (!aging || !el.agingStateTable) return;
+
+  const sourceFailures = aging.sourceMeta.filter((item) => !item.ok);
+  const topState = aging.spotlight.topState;
+  const hottestMonth = aging.spotlight.hottestMonth;
+  const over90Share = aging.metrics.combinedTotal
+    ? (aging.metrics.over90Total / aging.metrics.combinedTotal) * 100
+    : 0;
+
+  el.agingSummary.textContent = `${aging.metrics.stateCount} states tracked · ${aging.metrics.monthCount} months aggregated · safe feeder only`;
+  el.agingPrivacyBadge.textContent = aging.privacy.mode === 'safe-feed' ? 'Aggregate-only feed' : 'Review source';
+
+  el.agingKpis.innerHTML = [
+    { label: 'Combined AR', value: money(aging.metrics.combinedTotal), tone: 'accent', detail: 'Insurance + patient aging feed' },
+    { label: 'Insurance AR', value: money(aging.metrics.insuranceTotal), tone: 'good', detail: 'Insurance Aging Total tab' },
+    { label: 'Patient AR', value: money(aging.metrics.patientTotal), tone: 'warn', detail: 'Patient Aging Total tab' },
+    { label: '90+ Day Balance', value: money(aging.metrics.over90Total), tone: 'bad', detail: `${percent(over90Share)} of combined AR` },
+    { label: 'Largest State', value: topState ? topState.state : 'N/A', tone: '', detail: topState ? money(topState.total) : 'No aging state totals yet' },
+    { label: 'Latest Pressure Month', value: hottestMonth ? hottestMonth.monthLabel : 'N/A', tone: '', detail: hottestMonth ? money(hottestMonth.total) : 'No month totals yet' },
+  ].map((card) => `
+    <article class="kpi ${card.tone}">
+      <div class="k">${escapeHtml(card.label)}</div>
+      <div class="v">${escapeHtml(card.value)}</div>
+      <div class="d">${escapeHtml(card.detail)}</div>
+    </article>
+  `).join('');
+
+  el.agingSpotlight.innerHTML = [
+    topState
+      ? `Highest AR concentration is in <strong>${escapeHtml(topState.state)}</strong> with <strong>${escapeHtml(money(topState.total))}</strong>, including <strong>${escapeHtml(money(topState.over90))}</strong> aged 90+ days.`
+      : 'No state concentration data is available yet.',
+    hottestMonth
+      ? `Largest month on file is <strong>${escapeHtml(hottestMonth.monthLabel)}</strong> at <strong>${escapeHtml(money(hottestMonth.total))}</strong>; 90+ exposure for that month is <strong>${escapeHtml(money(hottestMonth.over90))}</strong>.`
+      : 'No month trend data is available yet.',
+    sourceFailures.length
+      ? `<strong>${sourceFailures.length} aging source tab(s) failed.</strong> The dashboard is showing only the portions that loaded or were cached.`
+      : 'The AR tab is reading only the separate aggregate feeder sheet, not the private PHI workbook.',
+  ].map((line) => `<div class="note-card">${line}</div>`).join('');
+
+  el.agingSourceMeta.innerHTML = [
+    `<div class="note-card">${escapeHtml(aging.privacy.note)}</div>`,
+    '<div class="note-card">If these tabs show <strong>Unavailable</strong>, the feeder sheet still requires Google sign-in. For a static site, publish only the aggregate feeder sheet to the web or expose it through a safe Apps Script endpoint.</div>',
+    ...aging.sourceMeta.map((item) => `
+      <div class="source-item">
+        <div>
+          <strong>${escapeHtml(item.label)}</strong>
+          <div class="table-note">${escapeHtml(item.sheetName)}</div>
+          ${item.error ? `<div class="table-note">${escapeHtml(item.error)}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          ${badgeStatus(item.source === 'live' ? 'Live' : item.source === 'cache' ? 'Cache fallback' : 'Unavailable')}
+          <div class="table-note">${item.rowCount} rows</div>
+        </div>
+      </div>
+    `),
+    `<div class="note-card"><a class="btn small" href="${escapeHtml(aging.feedUrl)}" target="_blank" rel="noreferrer">Open aging feeder sheet</a></div>`,
+  ].join('');
+
+  el.agingStateTable.innerHTML = aging.byState.length
+    ? aging.byState.slice(0, 12).map((row) => `
+      <tr>
+        <td><strong>${escapeHtml(row.state)}</strong><div class="table-note">${row.monthsTracked} months tracked</div></td>
+        <td>${escapeHtml(money(row.total))}</td>
+        <td>${escapeHtml(money(row.insuranceTotal))}</td>
+        <td>${escapeHtml(money(row.patientTotal))}</td>
+        <td>${escapeHtml(money(row.over90))}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty-state">No state aging totals are available yet.</td></tr>';
+
+  el.agingMonthTable.innerHTML = aging.byMonth.length
+    ? aging.byMonth.slice(0, 12).map((row) => `
+      <tr>
+        <td><strong>${escapeHtml(row.monthLabel)}</strong></td>
+        <td>${escapeHtml(money(row.total))}</td>
+        <td>${escapeHtml(money(row.insuranceTotal))}</td>
+        <td>${escapeHtml(money(row.patientTotal))}</td>
+        <td>${escapeHtml(money(row.over90))}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty-state">No monthly aging trend is available yet.</td></tr>';
+
+  el.agingInsuranceSummary.textContent = `${aging.insuranceRows.length} aggregate insurance rows`;
+  el.agingPatientSummary.textContent = `${aging.patientRows.length} aggregate patient rows`;
+
+  el.agingInsuranceTable.innerHTML = aging.insuranceRows.length
+    ? aging.insuranceRows.slice(0, 12).map((row) => `
+      <tr>
+        <td>${escapeHtml(row.state)}</td>
+        <td>${escapeHtml(row.monthLabel)}</td>
+        <td>${escapeHtml(money(row.total))}</td>
+        <td>${escapeHtml(money(row.current))}</td>
+        <td>${escapeHtml(money(row.over90))}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty-state">Insurance aging rows are unavailable. Verify the feeder tab is link-accessible.</td></tr>';
+
+  el.agingPatientTable.innerHTML = aging.patientRows.length
+    ? aging.patientRows.slice(0, 12).map((row) => `
+      <tr>
+        <td>${escapeHtml(row.state)}</td>
+        <td>${escapeHtml(row.monthLabel)}</td>
+        <td>${escapeHtml(money(row.total))}</td>
+        <td>${escapeHtml(money(row.current))}</td>
+        <td>${escapeHtml(money(row.over90))}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="5" class="empty-state">Patient aging rows are unavailable. Verify the feeder tab is link-accessible.</td></tr>';
 }
 
 // Credentialing pipeline view: aggregate New Hiring rows by their
@@ -1408,15 +1575,12 @@ async function renderInsuranceView() {
   if (!model) return;
 
   if (!model.insurance || !Array.isArray(model.insurance.states)) {
-    try {
-      model.insurance = await OpsInsurance.loadData();
-    } catch (error) {
-      model.insurance = {
-        states: [],
-        rows: [],
-        error: error?.message || 'Insurance data load failed.',
-      };
-    }
+    el.insuranceValidationBanner.textContent = 'Insurance System: loading source files…';
+    el.insuranceSelectionSummary.textContent = 'Loading verified insurance rows…';
+    el.insuranceStatus.innerHTML = '<div class="note-card">Insurance datasets are loading on demand for this tab.</div>';
+    el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading county insurance rows…</td></tr>';
+    el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">Loading plan rows…</td></tr>';
+    await ensureInsuranceData();
   }
 
   const insurance = model.insurance || {
@@ -1455,10 +1619,8 @@ async function renderInsuranceView() {
   const validStates = insurance.states.map((entry) => entry.state);
   if (!validStates.includes(state.insuranceState)) {
     state.insuranceState = validStates[0];
-    console.log('Reset state to:', state.insuranceState);
   }
   const selectedState = insuranceLookup[state.insuranceState];
-  console.log('Selected state:', state.insuranceState);
   el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
 
   el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
@@ -1552,12 +1714,6 @@ async function renderInsuranceView() {
     `).join('')
     : '<div class="empty-state">No source URL or year is available for this state.</div>';
 
-  console.log('Insurance debug:', {
-    dropdownValue: el.insuranceStateSelect.value,
-    insuranceState: state.insuranceState,
-    renderInsuranceMapArg: state.insuranceState,
-  });
-
   renderMarketingSummary(selectedState);
 
   renderInsuranceMap(state.insuranceState).catch((error) => {
@@ -1644,29 +1800,86 @@ function render() {
   if (!model) return;
   renderViewNav();
   renderSourceMeta();
-  renderExecutiveKpis();
-  renderExecutiveInsights();
-  renderWatchlist();
-  renderOpsKpis();
-  renderCriticalActions();
-  renderOwnerAccountability();
-  renderRevenueRisk();
-  renderPatientFlow();
-  renderSystemHealth();
-  renderIssuesQueue();
-  renderIntakeView();
-  renderCredentialingView();
-  renderStaffView();
-  renderHubstaffView();
-  if (state.view === 'insurance') {
-    renderInsuranceView();
-  }
-  if (state.view === 'marketing') {
-    renderMarketingView();
-  }
-  if (state.view === 'minutes') {
+  const renderer = viewRenderers[state.view];
+  if (renderer) renderer();
+}
+
+const viewRenderers = {
+  executive() {
+    renderExecutiveKpis();
+    renderExecutiveInsights();
+    renderWatchlist();
+  },
+  ops() {
+    renderOpsKpis();
+    renderCriticalActions();
+    renderOwnerAccountability();
+    renderRevenueRisk();
+    renderPatientFlow();
+    renderSystemHealth();
+    renderIssuesQueue();
+  },
+  intake() {
+    renderIntakeView();
+  },
+  aging() {
+    renderAgingView();
+  },
+  credentialing() {
+    renderCredentialingView();
+  },
+  staff() {
+    renderStaffView();
+  },
+  hubstaff() {
+    renderHubstaffView();
+  },
+  minutes() {
     renderMinutesView();
+  },
+  insurance() {
+    renderInsuranceView().catch((error) => {
+      console.error(error);
+      el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    });
+  },
+  marketing() {
+    renderMarketingView();
+    ensureInsuranceData()
+      .then(() => {
+        if (state.view === 'marketing') renderMarketingView();
+      })
+      .catch((error) => {
+        console.error('Insurance support data unavailable for marketing priority:', error);
+      });
+  },
+};
+
+async function ensureInsuranceData() {
+  if (!model) return null;
+  if (model.insurance && Array.isArray(model.insurance.states)) {
+    return model.insurance;
   }
+  if (!insuranceLoadPromise) {
+    insuranceLoadPromise = OpsInsurance.loadData()
+      .then((insuranceData) => {
+        model.insurance = insuranceData;
+        return insuranceData;
+      })
+      .catch((error) => {
+        model.insurance = {
+          states: [],
+          rows: [],
+          sourceCatalog: [],
+          error: error?.message || 'Insurance data load failed.',
+        };
+        return model.insurance;
+      })
+      .finally(() => {
+        insuranceLoadPromise = null;
+      });
+  }
+  return insuranceLoadPromise;
 }
 
 function bind() {
@@ -1720,26 +1933,11 @@ async function loadData() {
   el.liveStatus.textContent = '● Refreshing Google Sheets data…';
   el.resultsSummary.textContent = 'Loading';
   el.issuesTable.innerHTML = '<tr><td colspan="8" class="empty-state">Loading workbook data…</td></tr>';
+  insuranceLoadPromise = null;
 
   try {
-    const [workbookResult, insuranceResult] = await Promise.allSettled([
-      OpsSheets.loadWorkbookData(),
-      OpsInsurance.loadData(),
-    ]);
-
-    if (workbookResult.status !== 'fulfilled') {
-      throw workbookResult.reason;
-    }
-
-    model = workbookResult.value;
-    model.insurance = insuranceResult.status === 'fulfilled'
-      ? insuranceResult.value
-      : {
-        states: [],
-        rows: [],
-        sourceCatalog: [],
-        error: insuranceResult.reason?.message || 'Insurance data load failed.',
-      };
+    model = await OpsSheets.loadWorkbookData();
+    model.insurance = null;
     initFilters();
     render();
     const liveCount = model.sourceMeta.filter((item) => item.source === 'live').length;
