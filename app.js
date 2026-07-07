@@ -9,6 +9,7 @@ const state = {
   insuranceState: 'all',
   mapMode: 'enrollment', // 'enrollment' or 'priority'
 };
+const UI_STATE_KEY = 'opscenter-ui-state-v1';
 
 let model = null;
 let insuranceMap = null;
@@ -38,6 +39,7 @@ const el = {
   searchInput: document.getElementById('searchInput'),
   refreshBtn: document.getElementById('refreshBtn'),
   clearFilters: document.getElementById('clearFilters'),
+  healthBanner: document.getElementById('healthBanner'),
   liveStatus: document.getElementById('liveStatus'),
   sourceMeta: document.getElementById('sourceMeta'),
   executiveKpis: document.getElementById('executiveKpis'),
@@ -176,6 +178,12 @@ function wholeNumber(value) {
   }).format(value);
 }
 
+function moneyDelta(value) {
+  if (!Number.isFinite(value)) return 'N/A';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${money(value)}`;
+}
+
 function formatDate(date) {
   if (!date) return 'No date';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
@@ -204,6 +212,54 @@ function badgeStatus(status) {
   if (/warning|pending|waiting|review/.test(lowered)) className = 'status-warning';
   if (/blocked|unavailable|no show|failed|denied/.test(lowered)) className = 'status-blocked';
   return `<span class="badge ${className}">${escapeHtml(value)}</span>`;
+}
+
+function renderTrendBadge(value, formatter = wholeNumber, options = {}) {
+  if (!Number.isFinite(value) || value === 0) return '';
+  const direction = value > 0 ? 'up' : 'down';
+  const prefix = value > 0 ? '+' : '';
+  const label = options.label ? ` ${escapeHtml(options.label)}` : '';
+  return `<span class="trend-badge ${direction}">${prefix}${escapeHtml(formatter(Math.abs(value)))}${label}</span>`;
+}
+
+function restoreUIState() {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== 'object') return;
+    Object.assign(state, {
+      view: saved.view || state.view,
+      stateFilter: saved.stateFilter || state.stateFilter,
+      specialtyFilter: saved.specialtyFilter || state.specialtyFilter,
+      statusFilter: saved.statusFilter || state.statusFilter,
+      sourceFilter: saved.sourceFilter || state.sourceFilter,
+      search: typeof saved.search === 'string' ? saved.search : state.search,
+      selectedCoverageState: saved.selectedCoverageState || state.selectedCoverageState,
+      insuranceState: saved.insuranceState || state.insuranceState,
+      mapMode: saved.mapMode || state.mapMode,
+    });
+  } catch (error) {
+    console.warn('Unable to restore dashboard UI state:', error);
+  }
+}
+
+function persistUIState() {
+  try {
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+      view: state.view,
+      stateFilter: state.stateFilter,
+      specialtyFilter: state.specialtyFilter,
+      statusFilter: state.statusFilter,
+      sourceFilter: state.sourceFilter,
+      search: state.search,
+      selectedCoverageState: state.selectedCoverageState,
+      insuranceState: state.insuranceState,
+      mapMode: state.mapMode,
+    }));
+  } catch (error) {
+    console.warn('Unable to persist dashboard UI state:', error);
+  }
 }
 
 // Match a row's raw `state` value (which may be "AZ", "Arizona",
@@ -335,7 +391,40 @@ function setActiveView(viewId) {
   state.view = viewId;
   document.querySelectorAll('.view').forEach((section) => section.classList.remove('active'));
   document.getElementById(`view-${state.view}`).classList.add('active');
+  persistUIState();
   render();
+}
+
+function renderHealthBanner() {
+  if (!model || !el.healthBanner) return;
+  const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
+  const cacheFallbacks = model.sourceMeta.filter((item) => item.source === 'cache');
+  const agingFailures = (model.aging?.sourceMeta || []).filter((item) => !item.ok);
+  const hubstaffStale = Boolean(model.hubstaff?.stale);
+  const issues = [
+    sourceFailures.length ? `${sourceFailures.length} workbook tab${sourceFailures.length === 1 ? '' : 's'} unavailable` : '',
+    cacheFallbacks.length ? `${cacheFallbacks.length} source${cacheFallbacks.length === 1 ? '' : 's'} on cache fallback` : '',
+    agingFailures.length ? `${agingFailures.length} aging feed tab${agingFailures.length === 1 ? '' : 's'} degraded` : '',
+    hubstaffStale ? 'Hubstaff snapshot is stale' : '',
+  ].filter(Boolean);
+  const healthy = issues.length === 0;
+
+  el.healthBanner.className = `card health-banner visible${healthy ? ' healthy' : ''}`;
+  el.healthBanner.innerHTML = healthy
+    ? `
+      <span class="badge status-approved">Healthy</span>
+      <div class="health-banner-copy">
+        <span class="health-banner-title">System Health</span>
+        <strong>All primary sources are reachable and no stale-feed warning is active.</strong>
+      </div>
+    `
+    : `
+      <span class="badge status-blocked">Attention</span>
+      <div class="health-banner-copy">
+        <span class="health-banner-title">System Health</span>
+        <strong>${escapeHtml(issues.join(' · '))}</strong>
+      </div>
+    `;
 }
 
 function renderSourceMeta() {
@@ -357,11 +446,14 @@ function renderExecutiveKpis() {
   const criticalIssues = model.issues.filter((item) => item.priority === 'High').length;
   const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable').length;
   const over90Balance = model.aging?.metrics?.over90Total || 0;
+  const currentMonth = model.aging?.byMonth?.[0] || null;
+  const previousMonth = model.aging?.byMonth?.[1] || null;
+  const arDelta = currentMonth && previousMonth ? currentMonth.total - previousMonth.total : 0;
   const cards = [
     { label: 'Critical Today', value: criticalIssues, tone: criticalIssues ? 'bad' : 'good', detail: 'High-priority blockers needing action' },
     { label: 'Pipeline In Motion', value: model.metrics.openInterviews, tone: 'warn', detail: `${model.metrics.totalCandidates} tracked candidates across recruiting sheets` },
     { label: 'Active Coverage', value: model.metrics.statesCovered, tone: 'accent', detail: `${model.metrics.activeWorkforce} active providers across licensed states` },
-    { label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet' },
+    { label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet', trend: currentMonth && previousMonth ? renderTrendBadge(arDelta, moneyDelta, { label: 'vs prior month' }) : '' },
     { label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records ready to activate' },
     { label: 'Source Health', value: liveFailures ? `${liveFailures} down` : 'Healthy', tone: liveFailures ? 'bad' : 'good', detail: liveFailures ? 'Workbook tabs missing live or cached data' : 'All primary workbook tabs reachable' },
   ];
@@ -371,6 +463,7 @@ function renderExecutiveKpis() {
       <div class="k">${escapeHtml(card.label)}</div>
       <div class="v">${escapeHtml(card.value)}</div>
       <div class="d">${escapeHtml(card.detail)}</div>
+      ${card.trend || ''}
     </article>
   `).join('');
 }
@@ -711,18 +804,21 @@ function renderAgingView() {
   const sourceFailures = aging.sourceMeta.filter((item) => !item.ok);
   const topState = aging.spotlight.topState;
   const hottestMonth = aging.spotlight.hottestMonth;
+  const previousMonth = aging.byMonth[1] || null;
   const over90Share = aging.metrics.combinedTotal
     ? (aging.metrics.over90Total / aging.metrics.combinedTotal) * 100
     : 0;
+  const combinedDelta = hottestMonth && previousMonth ? hottestMonth.total - previousMonth.total : 0;
+  const over90Delta = hottestMonth && previousMonth ? hottestMonth.over90 - previousMonth.over90 : 0;
 
-  el.agingSummary.textContent = `${aging.metrics.stateCount} states tracked · ${aging.metrics.monthCount} months aggregated · safe feeder only`;
+  el.agingSummary.textContent = `${aging.metrics.stateCount} states tracked · ${aging.metrics.monthCount} months aggregated · safe feeder only${hottestMonth && previousMonth ? ` · ${moneyDelta(combinedDelta)} vs prior month` : ''}`;
   el.agingPrivacyBadge.textContent = aging.privacy.mode === 'safe-feed' ? 'Aggregate-only feed' : 'Review source';
 
   el.agingKpis.innerHTML = [
-    { label: 'Combined AR', value: money(aging.metrics.combinedTotal), tone: 'accent', detail: 'Insurance + patient aging feed' },
+    { label: 'Combined AR', value: money(aging.metrics.combinedTotal), tone: 'accent', detail: 'Insurance + patient aging feed', trend: hottestMonth && previousMonth ? renderTrendBadge(combinedDelta, moneyDelta, { label: 'vs prior month' }) : '' },
     { label: 'Insurance AR', value: money(aging.metrics.insuranceTotal), tone: 'good', detail: 'Insurance Aging Total tab' },
     { label: 'Patient AR', value: money(aging.metrics.patientTotal), tone: 'warn', detail: 'Patient Aging Total tab' },
-    { label: '90+ Day Balance', value: money(aging.metrics.over90Total), tone: 'bad', detail: `${percent(over90Share)} of combined AR` },
+    { label: '90+ Day Balance', value: money(aging.metrics.over90Total), tone: 'bad', detail: `${percent(over90Share)} of combined AR`, trend: hottestMonth && previousMonth ? renderTrendBadge(over90Delta, moneyDelta, { label: 'vs prior month' }) : '' },
     { label: 'Largest State', value: topState ? topState.state : 'N/A', tone: '', detail: topState ? money(topState.total) : 'No aging state totals yet' },
     { label: 'Latest Pressure Month', value: hottestMonth ? hottestMonth.monthLabel : 'N/A', tone: '', detail: hottestMonth ? money(hottestMonth.total) : 'No month totals yet' },
   ].map((card) => `
@@ -730,6 +826,7 @@ function renderAgingView() {
       <div class="k">${escapeHtml(card.label)}</div>
       <div class="v">${escapeHtml(card.value)}</div>
       <div class="d">${escapeHtml(card.detail)}</div>
+      ${card.trend || ''}
     </article>
   `).join('');
 
@@ -1123,6 +1220,7 @@ function renderStaffView() {
     : '<option value="all">No states available</option>';
   el.stateCoverageSelect.onchange = (event) => {
     state.selectedCoverageState = event.target.value;
+    persistUIState();
     renderStaffView();
   };
 
@@ -1158,6 +1256,7 @@ function renderStaffView() {
   el.stateAtlas.querySelectorAll('.state-chip-card').forEach((button) => {
     button.addEventListener('click', () => {
       state.selectedCoverageState = button.getAttribute('data-state-code');
+      persistUIState();
       renderStaffView();
     });
   });
@@ -1780,6 +1879,11 @@ function initFilters() {
   fillSelect(el.specialtyFilter, 'All specialties', model.filterValues.specialties);
   fillSelect(el.statusFilter, 'All statuses', model.filterValues.statuses);
   fillSelect(el.sourceFilter, 'All sources', model.filterValues.sources.slice(1));
+  el.stateFilter.value = state.stateFilter;
+  el.specialtyFilter.value = state.specialtyFilter;
+  el.statusFilter.value = state.statusFilter;
+  el.sourceFilter.value = state.sourceFilter;
+  el.searchInput.value = state.search;
 }
 
 function resetFilters() {
@@ -1798,8 +1902,12 @@ function resetFilters() {
 
 function render() {
   if (!model) return;
+  document.querySelectorAll('.view').forEach((section) => {
+    section.classList.toggle('active', section.id === `view-${state.view}`);
+  });
   renderViewNav();
   renderSourceMeta();
+  renderHealthBanner();
   const renderer = viewRenderers[state.view];
   if (renderer) renderer();
 }
@@ -1885,26 +1993,32 @@ async function ensureInsuranceData() {
 function bind() {
   el.stateFilter.addEventListener('change', (event) => {
     state.stateFilter = event.target.value;
+    persistUIState();
     render();
   });
   el.specialtyFilter.addEventListener('change', (event) => {
     state.specialtyFilter = event.target.value;
+    persistUIState();
     render();
   });
   el.statusFilter.addEventListener('change', (event) => {
     state.statusFilter = event.target.value;
+    persistUIState();
     render();
   });
   el.sourceFilter.addEventListener('change', (event) => {
     state.sourceFilter = event.target.value;
+    persistUIState();
     render();
   });
   el.searchInput.addEventListener('input', (event) => {
     state.search = event.target.value;
+    persistUIState();
     render();
   });
   el.insuranceStateSelect.addEventListener('change', (event) => {
     state.insuranceState = event.target.value;
+    persistUIState();
     renderInsuranceView();
   });
   // Map mode toggle (Total Enrollment / Marketing Priority)
@@ -1914,6 +2028,7 @@ function bind() {
         const mode = btn.getAttribute('data-mode');
         if (mode !== state.mapMode) {
           state.mapMode = mode;
+          persistUIState();
           el.mapModeToggle.querySelectorAll('.mode-btn').forEach((b) => {
             b.classList.toggle('active', b === btn);
           });
@@ -1924,6 +2039,7 @@ function bind() {
   }
   el.clearFilters.addEventListener('click', () => {
     resetFilters();
+    persistUIState();
     render();
   });
   el.refreshBtn.addEventListener('click', () => loadData());
@@ -1939,6 +2055,7 @@ async function loadData() {
     model = await OpsSheets.loadWorkbookData();
     model.insurance = null;
     initFilters();
+    renderHealthBanner();
     render();
     const liveCount = model.sourceMeta.filter((item) => item.source === 'live').length;
     const cacheCount = model.sourceMeta.filter((item) => item.source === 'cache').length;
@@ -2288,6 +2405,7 @@ function renderMinutesView() {
   }
 }
 
+restoreUIState();
 bind();
 renderViewNav();
 loadData();
