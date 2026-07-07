@@ -22,7 +22,11 @@ jobs:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ./public_html/ops_dashboard/
+          protocol: ftps
+          port: 21
+          # The ops.teletherapeuticshealth.com docroot is /home/<user>/ops_dashboard,
+          # which is the FTP login's home root — NOT under public_html.
+          server-dir: ./ops_dashboard/
           exclude: |
             **/.git*
             **/.git*/**
