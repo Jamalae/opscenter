@@ -21,11 +21,12 @@ let agingLoadPromise = null;
 let hubstaffLoadPromise = null;
 let insuranceMapRenderKey = '';
 
+const AGING_VISIBLE = Boolean(OpsSheets && OpsSheets.AGING_ENABLED);
+
 const views = [
   { id: 'executive', label: 'Executive Dashboard' },
   { id: 'ops', label: 'Ops Center' },
   { id: 'intake', label: 'Intake / Referral Reporting' },
-  { id: 'aging', label: 'Aging / AR' },
   { id: 'credentialing', label: 'Credentialing Pipeline' },
   { id: 'staff', label: 'Staff Metrics' },
   { id: 'hubstaff', label: 'Hubstaff' },
@@ -33,6 +34,10 @@ const views = [
   { id: 'marketing', label: 'Marketing' },
   { id: 'minutes', label: 'Meeting Minutes' },
 ];
+
+if (AGING_VISIBLE) {
+  views.splice(3, 0, { id: 'aging', label: 'Aging / AR' });
+}
 
 const el = {
   viewNav: document.getElementById('viewNav'),
@@ -332,7 +337,6 @@ function closeDrilldown() {
 function getExecutiveDrilldown(key) {
   const issues = getFilteredIssues();
   const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
-  const byStateAging = (model.aging?.byState || []).slice().sort((a, b) => b.over90 - a.over90 || b.total - a.total);
   if (key === 'critical-today') {
     const rows = issues
       .filter((item) => item.priority === 'High')
@@ -394,19 +398,6 @@ function getExecutiveDrilldown(key) {
         { label: 'Contracts', render: (row) => wholeNumber(row.contractCount) },
         { label: 'Rows', render: (row) => wholeNumber(row.rows) },
       ], rows.slice(0, 25)),
-    };
-  }
-  if (key === 'aged-90') {
-    return {
-      title: '90+ AR Exposure',
-      subtitle: 'State-level aging exposure from the aggregate-only feeder',
-      html: renderDataTable([
-        { label: 'State', key: 'state' },
-        { label: 'Total AR', render: (row) => escapeHtml(money(row.total)) },
-        { label: '90+', render: (row) => escapeHtml(money(row.over90)) },
-        { label: 'Insurance', render: (row) => escapeHtml(money(row.insuranceTotal)) },
-        { label: 'Patient', render: (row) => escapeHtml(money(row.patientTotal)) },
-      ], byStateAging.slice(0, 20)),
     };
   }
   if (key === 'signed-final') {
@@ -486,7 +477,6 @@ function getOpsDrilldown(key) {
 
 function getStateScorecardData(selectedCoverage) {
   if (!selectedCoverage) return null;
-  const agingState = (model.aging?.byState || []).find((row) => row.state === selectedCoverage.stateCode) || null;
   const readinessScore = Math.max(
     0,
     Math.min(
@@ -494,7 +484,6 @@ function getStateScorecardData(selectedCoverage) {
       (selectedCoverage.workforceRows * 8)
       + (selectedCoverage.finalHireRows * 10)
       + (selectedCoverage.hiringRows * 5)
-      - ((agingState?.over90 || 0) / 8000)
     )
   );
   const readinessLabel = readinessScore >= 70
@@ -507,16 +496,13 @@ function getStateScorecardData(selectedCoverage) {
     score: Math.round(readinessScore),
     label: readinessLabel,
     tone,
-    narrative: agingState
-      ? `${selectedCoverage.stateCode} shows ${selectedCoverage.providerCount} named providers across ${selectedCoverage.totalCoverage} company rows, with ${money(agingState.total)} total AR and ${money(agingState.over90)} sitting 90+ days.`
-      : `${selectedCoverage.stateCode} shows ${selectedCoverage.providerCount} named providers across ${selectedCoverage.totalCoverage} company rows, with no AR totals currently loaded for this state.`,
+    narrative: `${selectedCoverage.stateCode} shows ${selectedCoverage.providerCount} named providers across ${selectedCoverage.totalCoverage} company rows, with hiring and coverage activity driving current readiness.`,
     metrics: [
       { label: 'Providers', value: selectedCoverage.providerCount },
       { label: 'Coverage Rows', value: selectedCoverage.totalCoverage },
       { label: 'Hiring Rows', value: selectedCoverage.hiringRows },
       { label: 'Final Hires', value: selectedCoverage.finalHireRows },
-      { label: 'Total AR', value: agingState ? money(agingState.total) : 'N/A' },
-      { label: '90+ AR', value: agingState ? money(agingState.over90) : 'N/A' },
+      { label: 'Readiness Score', value: `${Math.round(readinessScore)}` },
     ],
   };
 }
@@ -538,6 +524,9 @@ function restoreUIState() {
       insuranceState: saved.insuranceState || state.insuranceState,
       mapMode: saved.mapMode || state.mapMode,
     });
+    if (!AGING_VISIBLE && state.view === 'aging') {
+      state.view = 'executive';
+    }
   } catch (error) {
     console.warn('Unable to restore dashboard UI state:', error);
   }
@@ -622,12 +611,10 @@ function renderHealthBanner() {
   if (!model || !el.healthBanner) return;
   const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
   const cacheFallbacks = model.sourceMeta.filter((item) => item.source === 'cache');
-  const agingFailures = (model.aging?.sourceMeta || []).filter((item) => !item.ok);
   const hubstaffStale = Boolean(model.hubstaff?.stale);
   const issues = [
     sourceFailures.length ? `${sourceFailures.length} workbook tab${sourceFailures.length === 1 ? '' : 's'} unavailable` : '',
     cacheFallbacks.length ? `${cacheFallbacks.length} source${cacheFallbacks.length === 1 ? '' : 's'} on cache fallback` : '',
-    agingFailures.length ? `${agingFailures.length} aging feed tab${agingFailures.length === 1 ? '' : 's'} degraded` : '',
     hubstaffStale ? 'Hubstaff snapshot is stale' : '',
   ].filter(Boolean);
   const healthy = issues.length === 0;
@@ -668,15 +655,10 @@ function renderSourceMeta() {
 function renderExecutiveKpis() {
   const criticalIssues = model.issues.filter((item) => item.priority === 'High').length;
   const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable').length;
-  const over90Balance = model.aging?.metrics?.over90Total || 0;
-  const currentMonth = model.aging?.byMonth?.[0] || null;
-  const previousMonth = model.aging?.byMonth?.[1] || null;
-  const arDelta = currentMonth && previousMonth ? currentMonth.total - previousMonth.total : 0;
   const cards = [
     { key: 'critical-today', label: 'Critical Today', value: criticalIssues, tone: criticalIssues ? 'bad' : 'good', detail: 'High-priority blockers needing action' },
     { key: 'pipeline', label: 'Pipeline In Motion', value: model.metrics.openInterviews, tone: 'warn', detail: `${model.metrics.totalCandidates} tracked candidates across recruiting sheets` },
     { key: 'coverage', label: 'Active Coverage', value: model.metrics.statesCovered, tone: 'accent', detail: `${model.metrics.activeWorkforce} active providers across licensed states` },
-    { key: 'aged-90', label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet', trend: currentMonth && previousMonth ? renderTrendBadge(arDelta, moneyDelta, { label: 'vs prior month' }) : '' },
     { key: 'signed-final', label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records ready to activate' },
     { key: 'source-health', label: 'Source Health', value: liveFailures ? `${liveFailures} down` : 'Healthy', tone: liveFailures ? 'bad' : 'good', detail: liveFailures ? 'Workbook tabs missing live or cached data' : 'All primary workbook tabs reachable' },
   ];
@@ -699,8 +681,6 @@ function renderExecutiveInsights() {
   const workforceByContract = summarizeCounts(model.dataset.currentWorkforce.map((item) => item.contractType || 'Unknown'));
   const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable').length;
   const criticalIssues = issues.filter((item) => item.priority === 'High').length;
-  const topAgingState = model.aging?.spotlight?.topState || null;
-  const over90Balance = model.aging?.metrics?.over90Total || 0;
 
   const headline = sourceFailures
     ? `${sourceFailures} source issue${sourceFailures === 1 ? '' : 's'}`
@@ -714,9 +694,7 @@ function renderExecutiveInsights() {
   el.executiveHeadline.textContent = headline;
   el.executiveNarrative.textContent = sourceFailures
     ? 'The fastest win today is restoring missing live sources before teams make staffing or AR decisions from stale context.'
-    : over90Balance
-      ? `Operations is carrying ${money(over90Balance)} in 90+ day AR while the hiring and credentialing pipeline continues to move.`
-      : 'No source outages are blocking the dashboard, so the focus can stay on hiring flow, activation readiness, and state coverage.';
+    : 'No source outages are blocking the dashboard, so the focus can stay on hiring flow, activation readiness, and state coverage.';
 
   el.executiveInsights.innerHTML = [
     {
@@ -730,10 +708,8 @@ function renderExecutiveInsights() {
       body: renderMetricList(hiringBySpecialty.slice(0, 5), 'candidates'),
     },
     {
-      title: topAgingState ? `AR Pressure: ${topAgingState.state}` : 'Coverage Mix',
-      summary: topAgingState
-        ? `${money(topAgingState.total)} total AR · ${money(topAgingState.over90)} aged 90+`
-        : `${model.metrics.statesCovered} states covered`,
+      title: 'Coverage Mix',
+      summary: `${model.metrics.statesCovered} states covered`,
       body: renderMetricList(workforceByContract.slice(0, 5), 'providers'),
     },
   ].map((card) => `
@@ -752,7 +728,6 @@ function renderExecutiveToday() {
   const topIssue = critical[0] || issues[0] || null;
   const sourceFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
   const cacheFallbacks = model.sourceMeta.filter((item) => item.source === 'cache');
-  const agingTopState = model.aging?.spotlight?.topState || null;
   const upcomingInterviews = getFilteredInterviews().filter((item) => {
     const when = item.date instanceof Date ? item.date : null;
     if (!when || Number.isNaN(when.getTime())) return false;
@@ -794,19 +769,14 @@ function renderExecutiveToday() {
           detail: 'No active issues match the current filters.',
           owner: 'Ops',
         },
-    agingTopState
-      ? {
-          title: `Contain AR in ${agingTopState.state}`,
-          tone: agingTopState.over90 > 0 ? 'bad' : 'warn',
-          detail: `${money(agingTopState.total)} total AR with ${money(agingTopState.over90)} sitting 90+ days.`,
-          owner: 'Billing',
-        }
-      : {
-          title: 'AR feed is limited',
-          tone: 'warn',
-          detail: 'Aging totals are not available yet for state-level prioritization.',
-          owner: 'Billing',
-        },
+    {
+      title: model.metrics.finalSigned ? 'Move signed candidates' : 'Final hires need attention',
+      tone: model.metrics.finalSigned ? 'good' : 'warn',
+      detail: model.metrics.finalSigned
+        ? `${model.metrics.finalSigned} final hire record${model.metrics.finalSigned === 1 ? '' : 's'} are ready to activate.`
+        : 'No final hire records are currently in the active filtered view.',
+      owner: 'Credentialing',
+    },
     {
       title: upcomingInterviews.length ? 'Protect upcoming interviews' : 'Recruiting calendar is light',
       tone: upcomingInterviews.length >= 5 ? 'warn' : 'good',
@@ -831,7 +801,6 @@ function renderExecutiveToday() {
 
 function renderExecutiveTrends() {
   if (!el.executiveTrends) return;
-  const agingMonths = (model.aging?.byMonth || []).slice(0, 6).reverse();
   const interviewTimelineMap = {};
   getFilteredInterviews().forEach((item) => {
     const when = item.date instanceof Date ? item.date : null;
@@ -846,21 +815,28 @@ function renderExecutiveTrends() {
     .sort((a, b) => a.sortKey - b.sortKey)
     .slice(0, 6)
     .map(({ label, value }) => ({ label, value }));
+  const hiringMix = summarizeCounts(model.dataset.newHiring.map((item) => item.specialty || 'Unknown'))
+    .slice(0, 6)
+    .reverse()
+    .map((row) => ({ label: row.label, value: row.value }));
+  const sourceTimeline = model.sourceMeta
+    .slice(0, 6)
+    .map((item) => ({ label: item.label, value: item.rowCount || 0 }));
 
   const trendCards = [
     {
-      title: 'Combined AR',
-      summary: 'Latest six pressure months from the safe feeder',
-      series: agingMonths.map((row) => ({ label: row.monthLabel, value: row.total })),
-      formatter: money,
-      deltaLabel: 'vs prior month',
+      title: 'Hiring Mix',
+      summary: 'Most common specialties in the live hiring feed',
+      series: hiringMix,
+      formatter: wholeNumber,
+      deltaLabel: 'vs previous',
     },
     {
-      title: '90+ AR Exposure',
-      summary: 'Oldest balance carrying month to month',
-      series: agingMonths.map((row) => ({ label: row.monthLabel, value: row.over90 })),
-      formatter: money,
-      deltaLabel: 'vs prior month',
+      title: 'Source Volume',
+      summary: 'Rows loaded across the current workbook sources',
+      series: sourceTimeline,
+      formatter: wholeNumber,
+      deltaLabel: 'vs previous',
     },
     {
       title: 'Interview Calendar',
@@ -1154,6 +1130,31 @@ function renderIntakeView() {
 function renderAgingView() {
   const aging = model?.aging;
   if (!aging || !el.agingStateTable) return;
+  if (aging.disabled || aging.privacy?.mode === 'disabled') {
+    el.agingSummary.textContent = 'Aging / AR is temporarily hidden';
+    el.agingPrivacyBadge.textContent = 'Security hold';
+    el.agingKpis.innerHTML = [
+      { label: 'Combined AR', detail: 'Hidden until secured' },
+      { label: 'Insurance AR', detail: 'Hidden until secured' },
+      { label: 'Patient AR', detail: 'Hidden until secured' },
+      { label: '90+ Day Balance', detail: 'Hidden until secured' },
+    ].map((card) => `
+      <article class="kpi caution">
+        <div class="k">${escapeHtml(card.label)}</div>
+        <div class="v">Hidden</div>
+        <div class="d">${escapeHtml(card.detail)}</div>
+      </article>
+    `).join('');
+    el.agingSpotlight.innerHTML = '<div class="note-card"><strong>Aging reporting is temporarily disabled.</strong> AR totals, state balances, and month trends are hidden until an additional security layer is added.</div>';
+    el.agingSourceMeta.innerHTML = '<div class="note-card">The public feeder is intentionally disconnected so money information is not exposed on the site.</div>';
+    el.agingStateTable.innerHTML = '<tr><td colspan="5" class="empty-state">Aging state totals are hidden pending security updates.</td></tr>';
+    el.agingMonthTable.innerHTML = '<tr><td colspan="5" class="empty-state">Monthly aging trends are hidden pending security updates.</td></tr>';
+    el.agingInsuranceSummary.textContent = 'Insurance aging hidden';
+    el.agingPatientSummary.textContent = 'Patient aging hidden';
+    el.agingInsuranceTable.innerHTML = '<tr><td colspan="5" class="empty-state">Insurance aging rows are intentionally hidden.</td></tr>';
+    el.agingPatientTable.innerHTML = '<tr><td colspan="5" class="empty-state">Patient aging rows are intentionally hidden.</td></tr>';
+    return;
+  }
   if (aging.loading) {
     el.agingSummary.textContent = 'Loading aging feeder data…';
     el.agingPrivacyBadge.textContent = 'Aggregate-only feed';
@@ -1882,6 +1883,9 @@ function resetFilters() {
 
 function render() {
   if (!model) return;
+  if (!AGING_VISIBLE && state.view === 'aging') {
+    state.view = 'executive';
+  }
   document.querySelectorAll('.view').forEach((section) => {
     section.classList.toggle('active', section.id === `view-${state.view}`);
   });
@@ -1986,6 +1990,9 @@ function scheduleIdleTask(callback, timeout = 600) {
 
 async function ensureAgingData() {
   if (!model) return null;
+  if (!AGING_VISIBLE) {
+    return model.aging;
+  }
   if (model.aging && !model.aging.loading) {
     return model.aging;
   }
@@ -2040,7 +2047,7 @@ async function ensureHubstaffData() {
 
 function warmDeferredViewData() {
   scheduleIdleTask(() => {
-    ensureAgingData();
+    if (AGING_VISIBLE) ensureAgingData();
     ensureHubstaffData();
   });
 }

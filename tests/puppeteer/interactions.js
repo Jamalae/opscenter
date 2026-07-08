@@ -93,7 +93,6 @@ async function clickView(page, viewId, expectedSelector) {
       "executive",
       "ops",
       "intake",
-      "aging",
       "credentialing",
       "staff",
       "hubstaff",
@@ -116,9 +115,6 @@ async function clickView(page, viewId, expectedSelector) {
     await page.select("#stateFilter", "PA").catch(() => {});
     await wait(300);
     assert(true, "global state filter accepts selection");
-
-    await clickView(page, "aging", "#agingKpis .kpi-card, #agingKpis .kpi, #agingSummary");
-    assert(true, "aging view opens");
 
     await clickView(page, "staff", "#stateCoverageSelect");
     const staffOptions = await page.$$eval("#stateCoverageSelect option", (options) => options.length);

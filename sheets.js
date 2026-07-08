@@ -5,6 +5,7 @@ const OpsSheets = (() => {
   const HUBSTAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub?gid=861294478&single=true&output=csv';
   const AGING_FEED_SHEET_ID = '1h74oPL3cgiKVlowMNE-w8wpVbkt-Jj3pcAjShOpA67M';
   const AGING_FEED_URL = `https://docs.google.com/spreadsheets/d/${AGING_FEED_SHEET_ID}/edit`;
+  const AGING_ENABLED = false;
   const FETCH_TIMEOUT_MS = 10000;
 
   const TAB_CONFIG = [
@@ -674,6 +675,36 @@ const OpsSheets = (() => {
     };
   }
 
+  function buildDisabledAgingModel() {
+    return {
+      disabled: true,
+      loading: false,
+      feedUrl: '',
+      sourceMeta: [],
+      insuranceRows: [],
+      patientRows: [],
+      allRows: [],
+      byState: [],
+      byMonth: [],
+      metrics: {
+        insuranceTotal: 0,
+        patientTotal: 0,
+        combinedTotal: 0,
+        over90Total: 0,
+        stateCount: 0,
+        monthCount: 0,
+      },
+      spotlight: {
+        topState: null,
+        hottestMonth: null,
+      },
+      privacy: {
+        mode: 'disabled',
+        note: 'The Aging / AR view is intentionally disabled until an additional security layer is in place.',
+      },
+    };
+  }
+
   function deriveIssues(dataset, sourceMeta) {
     const issues = [];
 
@@ -954,19 +985,12 @@ const OpsSheets = (() => {
 
   async function loadWorkbookData() {
     const primaryResults = await Promise.all(TAB_CONFIG.map(loadTab));
-    const agingResults = await Promise.all(AGING_TAB_CONFIG.map(loadAgingTab));
     const rawTabs = {};
     const sourceMeta = [];
-    const rawAgingTabs = {};
-    const agingSourceMeta = [];
 
     primaryResults.forEach(({ rows, meta }) => {
       rawTabs[meta.id] = rows;
       sourceMeta.push(meta);
-    });
-    agingResults.forEach(({ rows, meta }) => {
-      rawAgingTabs[meta.id] = rows;
-      agingSourceMeta.push(meta);
     });
 
     let hubstaffModel;
@@ -1011,7 +1035,12 @@ const OpsSheets = (() => {
       }
     }
 
-    return buildModel(rawTabs, sourceMeta, hubstaffModel, buildAgingModel(rawAgingTabs, agingSourceMeta));
+    return buildModel(
+      rawTabs,
+      sourceMeta,
+      hubstaffModel,
+      AGING_ENABLED ? buildInitialAgingModel() : buildDisabledAgingModel()
+    );
   }
 
   async function loadPrimaryWorkbookData() {
@@ -1024,10 +1053,18 @@ const OpsSheets = (() => {
       sourceMeta.push(meta);
     });
 
-    return buildModel(rawTabs, sourceMeta, buildInitialHubstaffModel(), buildInitialAgingModel());
+    return buildModel(
+      rawTabs,
+      sourceMeta,
+      buildInitialHubstaffModel(),
+      AGING_ENABLED ? buildInitialAgingModel() : buildDisabledAgingModel()
+    );
   }
 
   async function loadAgingData() {
+    if (!AGING_ENABLED) {
+      return buildDisabledAgingModel();
+    }
     const agingResults = await Promise.all(AGING_TAB_CONFIG.map(loadAgingTab));
     const rawAgingTabs = {};
     const agingSourceMeta = [];
@@ -1072,6 +1109,7 @@ const OpsSheets = (() => {
     TAB_CONFIG,
     HUBSTAFF_CSV_URL,
     AGING_FEED_URL,
+    AGING_ENABLED,
     WORKBOOK_PUBLISHED_URL,
     loadWorkbookData,
     loadPrimaryWorkbookData,
