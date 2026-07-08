@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpsCenter Workforce Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' font-size='28' font-family='Arial,sans-serif' fill='%23f8fafc'%3EOC%3C/text%3E%3C/svg%3E" />
   <meta
     name="description"
     content="Static GitHub Pages-ready operations dashboard for recruiting, workforce, intake, and staffing metrics."
@@ -855,6 +856,16 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
+  <script>
+    window.OPS_CENTER_SOURCE_OVERRIDES = {
+      currentWorkforce: 'https://docs.google.com/spreadsheets/d/1IMqNuRTqVoQVxD-XcgcwHaNSfLJBhxX7gTqFImKQDOw/gviz/tq?tqx=out:csv&gid=1575031700',
+      newHiring: 'https://docs.google.com/spreadsheets/d/1lsR5P5rhNnXudm7bG0i5buI27aeznZAHKxYWJpYlYng/gviz/tq?tqx=out:csv&gid=2035887738',
+      candidatePool: 'disabled',
+      interviews: 'disabled',
+      finalHires: 'disabled',
+      resumePool: 'disabled',
+    };
+  </script>
   <script src="./sheets.js?v=4"></script>
   <script src="./insurance.js?v=2"></script>
   <script src="./marketing.js?v=3"></script>

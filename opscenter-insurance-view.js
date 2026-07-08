@@ -337,10 +337,12 @@ window.OpsCenterInsuranceView = (() => {
 
     renderMarketingSummary(ctx, selectedState);
 
-    renderInsuranceMap(ctx, state.insuranceState).catch((error) => {
+    try {
+      await renderInsuranceMap(ctx, state.insuranceState);
+    } catch (error) {
       console.error(error);
       el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-    });
+    }
   }
 
   return {

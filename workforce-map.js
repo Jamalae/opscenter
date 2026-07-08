@@ -4,6 +4,7 @@
 (function () {
   'use strict';
 
+  var SOURCE_OVERRIDES = window.OPS_CENTER_SOURCE_OVERRIDES || {};
   var CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
   var GID_WORKFORCE = '1575031700';
   var GID_NEWHIRING = '1396856298';
@@ -64,11 +65,44 @@
     return '#a5b4fc';
   }
 
+  function getCsvUrl(overrideKey, gid) {
+    var override = SOURCE_OVERRIDES[overrideKey];
+    if (override && override !== 'disabled') return override;
+    return CSV_BASE + '?gid=' + gid + '&single=true&output=csv';
+  }
+
+  function fetchText(url, bust) {
+    return fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 'cachebust=' + bust).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    });
+  }
+
+  function normalizeHeader(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function rowToObject(headers, row) {
+    var obj = {};
+    for (var i = 0; i < headers.length; i++) {
+      obj[headers[i]] = row[i] || '';
+    }
+    return obj;
+  }
+
+  function getValue(obj, aliases) {
+    for (var i = 0; i < aliases.length; i++) {
+      var key = normalizeHeader(aliases[i]);
+      if (obj[key] != null && String(obj[key]).trim()) return String(obj[key]).trim();
+    }
+    return '';
+  }
+
   function init() {
     var bust = Date.now();
     Promise.all([
-      fetch(CSV_BASE + '?gid=' + GID_WORKFORCE + '&single=true&output=csv&cachebust=' + bust).then(function (r) { return r.text(); }),
-      fetch(CSV_BASE + '?gid=' + GID_NEWHIRING + '&single=true&output=csv&cachebust=' + bust).then(function (r) { return r.text(); }),
+      fetchText(getCsvUrl('currentWorkforce', GID_WORKFORCE), bust),
+      fetchText(getCsvUrl('newHiring', GID_NEWHIRING), bust),
       fetch(TOPO_URL).then(function (r) { return r.json(); })
     ]).then(function (results) {
       var cwText = results[0], nhText = results[1], topo = results[2];
@@ -84,10 +118,16 @@
         }
       }
       var nh = parseCSV(nhText);
+      var nhHeaders = (nh[0] || []).map(normalizeHeader);
       for (var j = 1; j < nh.length; j++) {
         var rn = nh[j];
         if (!rn || rn.length < 4) continue;
-        var nm2 = rn[0] || '', raw2 = rn[2] || '', sp2 = rn[3] || '', is2 = rn[12] || '', rate = rn[9] || '';
+        var nhRow = rowToObject(nhHeaders, rn);
+        var nm2 = getValue(nhRow, ['Candidate Name', 'Name']) || rn[0] || '';
+        var raw2 = getValue(nhRow, ['Licensed state', 'State']) || rn[2] || '';
+        var sp2 = getValue(nhRow, ['License Type', 'Speciality', 'Specialty']) || rn[3] || '';
+        var is2 = getValue(nhRow, ['Status', 'Interview Status']) || '';
+        var rate = getValue(nhRow, ['Rate', 'Comments']) || '';
         var parts2 = raw2.split(/[,\/]/).map(function (s) { return s.trim(); }).filter(Boolean);
         for (var q = 0; q < parts2.length; q++) {
           var state2 = normState(parts2[q]);

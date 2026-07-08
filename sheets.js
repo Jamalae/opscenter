@@ -1,4 +1,5 @@
 const OpsSheets = (() => {
+  const RUNTIME_SOURCE_OVERRIDES = window.OPS_CENTER_SOURCE_OVERRIDES || {};
   const WORKBOOK_PUBLISHED_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml';
   const WORKBOOK_CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pub';
   const HUBSTAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_vAhUif2Bnpaq9VoMpMppGyxXVbKmU7uKI8pUL7UIrOsjfQ2n3hQ-qt_m__6SI1z_2bHh3tR692vz/pub?gid=861294478&single=true&output=csv';
@@ -25,6 +26,34 @@ const OpsSheets = (() => {
 
   function buildSheetCsvUrl(sheetId, sheetName) {
     return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  }
+
+  function getPrimaryWorkbookSheetId() {
+    return cleanText(
+      RUNTIME_SOURCE_OVERRIDES.primaryWorkbookSheetId
+      || RUNTIME_SOURCE_OVERRIDES.primarySheetId
+      || ''
+    );
+  }
+
+  function getTabOverrideUrl(tab) {
+    return cleanText(
+      RUNTIME_SOURCE_OVERRIDES[tab.id]
+      || RUNTIME_SOURCE_OVERRIDES[tab.sheetName]
+      || ''
+    );
+  }
+
+  function resolvePrimaryTabCsvUrl(tab) {
+    const overrideUrl = getTabOverrideUrl(tab);
+    if (overrideUrl) return overrideUrl;
+
+    const primaryWorkbookSheetId = getPrimaryWorkbookSheetId();
+    if (primaryWorkbookSheetId) {
+      return buildSheetCsvUrl(primaryWorkbookSheetId, tab.sheetName);
+    }
+
+    return buildCsvUrl(tab.gid, tab.csvBase);
   }
 
   function parseCSVRow(line) {
@@ -184,7 +213,7 @@ const OpsSheets = (() => {
   }
 
   async function loadTab(tab) {
-    const csvUrl = buildCsvUrl(tab.gid, tab.csvBase);
+    const csvUrl = resolvePrimaryTabCsvUrl(tab);
     const meta = {
       id: tab.id,
       label: tab.label,
@@ -196,6 +225,13 @@ const OpsSheets = (() => {
       error: null,
       rowCount: 0,
     };
+
+    if (!csvUrl || /^disabled$/i.test(csvUrl)) {
+      meta.source = 'disabled';
+      meta.ok = false;
+      meta.error = 'This source is intentionally disabled until a safe public feed is mapped.';
+      return { rows: [], meta };
+    }
 
     try {
       const text = await fetchCsvText(csvUrl);
