@@ -42,6 +42,7 @@ const el = {
   healthBanner: document.getElementById('healthBanner'),
   liveStatus: document.getElementById('liveStatus'),
   sourceMeta: document.getElementById('sourceMeta'),
+  executivePrintBtn: document.getElementById('executivePrintBtn'),
   executiveKpis: document.getElementById('executiveKpis'),
   executiveSummary: document.getElementById('executiveSummary'),
   executiveHeadline: document.getElementById('executiveHeadline'),
@@ -88,6 +89,7 @@ const el = {
   stateAtlas: document.getElementById('stateAtlas'),
   stateCoverageSummary: document.getElementById('stateCoverageSummary'),
   stateCoverageSelect: document.getElementById('stateCoverageSelect'),
+  stateScorecard: document.getElementById('stateScorecard'),
   stateCoverageInsights: document.getElementById('stateCoverageInsights'),
   hubstaffSummary: document.getElementById('hubstaffSummary'),
   hubstaffTimestamp: document.getElementById('hubstaffTimestamp'),
@@ -138,6 +140,11 @@ const el = {
   minutesActionSummary: document.getElementById('minutesActionSummary'),
   minutesLatest: document.getElementById('minutesLatest'),
   minutesLatestSummary: document.getElementById('minutesLatestSummary'),
+  drilldownDrawer: document.getElementById('drilldownDrawer'),
+  drawerTitle: document.getElementById('drawerTitle'),
+  drawerSubtitle: document.getElementById('drawerSubtitle'),
+  drawerBody: document.getElementById('drawerBody'),
+  drawerCloseBtn: document.getElementById('drawerCloseBtn'),
 };
 
 function uniq(values) {
@@ -283,6 +290,231 @@ function renderSparklineCard(config) {
       </div>
     </div>
   `;
+}
+
+function renderDataTable(columns, rows) {
+  if (!rows.length) return '<div class="empty-state">No detail rows are available for this view.</div>';
+  return `
+    <div class="drawer-table-wrap">
+      <table>
+        <thead>
+          <tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>${columns.map((column) => `<td>${column.render ? column.render(row) : escapeHtml(row[column.key] ?? '—')}</td>`).join('')}</tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openDrilldown(config) {
+  if (!el.drilldownDrawer || !el.drawerTitle || !el.drawerBody) return;
+  el.drawerTitle.textContent = config.title || 'Detail';
+  el.drawerSubtitle.textContent = config.subtitle || '';
+  el.drawerBody.innerHTML = config.html || '<div class="empty-state">Nothing to show yet.</div>';
+  el.drilldownDrawer.classList.add('open');
+  el.drilldownDrawer.setAttribute('aria-hidden', 'false');
+}
+
+function closeDrilldown() {
+  if (!el.drilldownDrawer) return;
+  el.drilldownDrawer.classList.remove('open');
+  el.drilldownDrawer.setAttribute('aria-hidden', 'true');
+}
+
+function getExecutiveDrilldown(key) {
+  const issues = getFilteredIssues();
+  const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
+  const byStateAging = (model.aging?.byState || []).slice().sort((a, b) => b.over90 - a.over90 || b.total - a.total);
+  if (key === 'critical-today') {
+    const rows = issues
+      .filter((item) => item.priority === 'High')
+      .sort((a, b) => priorityScore(b.priority) - priorityScore(a.priority))
+      .slice(0, 20);
+    return {
+      title: 'Critical Today',
+      subtitle: `${rows.length} high-priority issues behind the headline number`,
+      html: renderDataTable([
+        { label: 'Name', render: (row) => `<strong>${escapeHtml(row.name)}</strong><div class="table-note">${escapeHtml(row.source)} · ${escapeHtml(row.state)}</div>` },
+        { label: 'Owner', key: 'owner' },
+        { label: 'Status', render: (row) => badgeStatus(row.status) },
+        { label: 'Risk', key: 'risk' },
+        { label: 'Next Action', key: 'detail' },
+      ], rows),
+    };
+  }
+  if (key === 'pipeline') {
+    const rows = getFilteredInterviews().slice(0, 20);
+    return {
+      title: 'Pipeline In Motion',
+      subtitle: `${rows.length} interview rows match current filters`,
+      html: renderDataTable([
+        { label: 'Candidate', key: 'name' },
+        { label: 'Position', key: 'position' },
+        { label: 'State', key: 'state' },
+        { label: 'Phase', key: 'phase' },
+        { label: 'Status', render: (row) => badgeStatus(row.status) },
+        { label: 'Date', render: (row) => escapeHtml(row.dateLabel || formatDate(row.date)) },
+      ], rows),
+    };
+  }
+  if (key === 'coverage') {
+    const rows = Object.values(getFilteredWorkforceRows().reduce((acc, item) => {
+      OpsSheets.utils.splitStates(item.licensedState || '').forEach((code) => {
+        if (!acc[code]) acc[code] = { state: code, providers: new Set(), specialties: new Set(), contracts: new Set(), rows: 0 };
+        acc[code].rows += 1;
+        if (item.providerName) acc[code].providers.add(item.providerName);
+        if (item.specialty) acc[code].specialties.add(item.specialty);
+        if (item.contractType) acc[code].contracts.add(item.contractType);
+      });
+      return acc;
+    }, {}))
+      .map((row) => ({
+        state: row.state,
+        providerCount: row.providers.size,
+        specialtyCount: row.specialties.size,
+        contractCount: row.contracts.size,
+        rows: row.rows,
+      }))
+      .sort((a, b) => b.rows - a.rows || a.state.localeCompare(b.state));
+    return {
+      title: 'Active Coverage',
+      subtitle: 'Licensed coverage footprint from current workforce rows',
+      html: renderDataTable([
+        { label: 'State', key: 'state' },
+        { label: 'Providers', render: (row) => wholeNumber(row.providerCount) },
+        { label: 'Specialties', render: (row) => wholeNumber(row.specialtyCount) },
+        { label: 'Contracts', render: (row) => wholeNumber(row.contractCount) },
+        { label: 'Rows', render: (row) => wholeNumber(row.rows) },
+      ], rows.slice(0, 25)),
+    };
+  }
+  if (key === 'aged-90') {
+    return {
+      title: '90+ AR Exposure',
+      subtitle: 'State-level aging exposure from the aggregate-only feeder',
+      html: renderDataTable([
+        { label: 'State', key: 'state' },
+        { label: 'Total AR', render: (row) => escapeHtml(money(row.total)) },
+        { label: '90+', render: (row) => escapeHtml(money(row.over90)) },
+        { label: 'Insurance', render: (row) => escapeHtml(money(row.insuranceTotal)) },
+        { label: 'Patient', render: (row) => escapeHtml(money(row.patientTotal)) },
+      ], byStateAging.slice(0, 20)),
+    };
+  }
+  if (key === 'signed-final') {
+    const rows = getFilteredHireRows().slice(0, 20);
+    return {
+      title: 'Signed / Final',
+      subtitle: `${rows.length} final hire rows are in the current filtered view`,
+      html: renderDataTable([
+        { label: 'Name', key: 'name' },
+        { label: 'Title', key: 'title' },
+        { label: 'States', key: 'states' },
+        { label: 'Hours', key: 'workingHours' },
+        { label: 'Rate', render: (row) => escapeHtml(row.rateLabel || (row.rateValue ? money(row.rateValue) : 'N/A')) },
+        { label: 'Comments', key: 'comments' },
+      ], rows),
+    };
+  }
+  if (key === 'source-health') {
+    return {
+      title: 'Source Health',
+      subtitle: liveFailures.length ? 'These sources are down or unavailable' : 'All primary workbook tabs are reachable',
+      html: renderDataTable([
+        { label: 'Source', key: 'label' },
+        { label: 'State', render: (row) => badgeStatus(row.source === 'live' ? 'Live' : row.source === 'cache' ? 'Cache fallback' : 'Unavailable') },
+        { label: 'Rows', render: (row) => wholeNumber(row.rowCount) },
+        { label: 'Detail', render: (row) => escapeHtml(row.error || (row.source === 'cache' ? 'Loaded from browser cache after live fetch failure' : 'Primary workbook tab loaded normally')) },
+      ], model.sourceMeta),
+    };
+  }
+  return null;
+}
+
+function getOpsDrilldown(key) {
+  const issues = getFilteredIssues();
+  const filterMap = {
+    'critical-actions': (item) => item.priority === 'High',
+    'issues-queue': () => true,
+    'credentialing-risk': (item) => /license|activation|credential/i.test(item.risk),
+    'interview-risk': (item) => /pipeline|interview/i.test(item.risk),
+    'coverage-risk': (item) => /activation|coverage|license/i.test(item.risk),
+    'source-failures': null,
+  };
+  if (key === 'source-failures') {
+    const failing = model.sourceMeta.filter((item) => item.source !== 'live');
+    return {
+      title: 'Source Failures',
+      subtitle: `${failing.length} source entries are cached or unavailable`,
+      html: renderDataTable([
+        { label: 'Source', key: 'label' },
+        { label: 'State', render: (row) => badgeStatus(row.source === 'cache' ? 'Cache fallback' : 'Unavailable') },
+        { label: 'Rows', render: (row) => wholeNumber(row.rowCount) },
+        { label: 'Error', render: (row) => escapeHtml(row.error || 'Loaded from cache after a live fetch failure') },
+      ], failing),
+    };
+  }
+  const rows = issues.filter(filterMap[key] || (() => false));
+  const labelMap = {
+    'critical-actions': 'Critical Actions',
+    'issues-queue': 'Issues Queue',
+    'credentialing-risk': 'Credentialing Risk',
+    'interview-risk': 'Interview Risk',
+    'coverage-risk': 'Coverage Risk',
+  };
+  return {
+    title: labelMap[key] || 'Operational Detail',
+    subtitle: `${rows.length} issues match this KPI`,
+    html: renderDataTable([
+      { label: 'Name', render: (row) => `<strong>${escapeHtml(row.name)}</strong><div class="table-note">${escapeHtml(row.source)} · ${escapeHtml(row.state)}</div>` },
+      { label: 'Owner', key: 'owner' },
+      { label: 'Status', render: (row) => badgeStatus(row.status) },
+      { label: 'Priority', render: (row) => badgePriority(row.priority) },
+      { label: 'Risk', key: 'risk' },
+      { label: 'Next Action', key: 'detail' },
+    ], rows.slice(0, 25)),
+  };
+}
+
+function getStateScorecardData(selectedCoverage) {
+  if (!selectedCoverage) return null;
+  const agingState = (model.aging?.byState || []).find((row) => row.state === selectedCoverage.stateCode) || null;
+  const readinessScore = Math.max(
+    0,
+    Math.min(
+      100,
+      (selectedCoverage.workforceRows * 8)
+      + (selectedCoverage.finalHireRows * 10)
+      + (selectedCoverage.hiringRows * 5)
+      - ((agingState?.over90 || 0) / 8000)
+    )
+  );
+  const readinessLabel = readinessScore >= 70
+    ? 'Ready to push'
+    : readinessScore >= 45
+      ? 'Building momentum'
+      : 'Needs reinforcement';
+  const tone = readinessScore >= 70 ? 'good' : readinessScore >= 45 ? 'warn' : 'bad';
+  return {
+    score: Math.round(readinessScore),
+    label: readinessLabel,
+    tone,
+    narrative: agingState
+      ? `${selectedCoverage.stateCode} shows ${selectedCoverage.providerCount} named providers across ${selectedCoverage.totalCoverage} company rows, with ${money(agingState.total)} total AR and ${money(agingState.over90)} sitting 90+ days.`
+      : `${selectedCoverage.stateCode} shows ${selectedCoverage.providerCount} named providers across ${selectedCoverage.totalCoverage} company rows, with no AR totals currently loaded for this state.`,
+    metrics: [
+      { label: 'Providers', value: selectedCoverage.providerCount },
+      { label: 'Coverage Rows', value: selectedCoverage.totalCoverage },
+      { label: 'Hiring Rows', value: selectedCoverage.hiringRows },
+      { label: 'Final Hires', value: selectedCoverage.finalHireRows },
+      { label: 'Total AR', value: agingState ? money(agingState.total) : 'N/A' },
+      { label: '90+ AR', value: agingState ? money(agingState.over90) : 'N/A' },
+    ],
+  };
 }
 
 function restoreUIState() {
@@ -513,20 +745,21 @@ function renderExecutiveKpis() {
   const previousMonth = model.aging?.byMonth?.[1] || null;
   const arDelta = currentMonth && previousMonth ? currentMonth.total - previousMonth.total : 0;
   const cards = [
-    { label: 'Critical Today', value: criticalIssues, tone: criticalIssues ? 'bad' : 'good', detail: 'High-priority blockers needing action' },
-    { label: 'Pipeline In Motion', value: model.metrics.openInterviews, tone: 'warn', detail: `${model.metrics.totalCandidates} tracked candidates across recruiting sheets` },
-    { label: 'Active Coverage', value: model.metrics.statesCovered, tone: 'accent', detail: `${model.metrics.activeWorkforce} active providers across licensed states` },
-    { label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet', trend: currentMonth && previousMonth ? renderTrendBadge(arDelta, moneyDelta, { label: 'vs prior month' }) : '' },
-    { label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records ready to activate' },
-    { label: 'Source Health', value: liveFailures ? `${liveFailures} down` : 'Healthy', tone: liveFailures ? 'bad' : 'good', detail: liveFailures ? 'Workbook tabs missing live or cached data' : 'All primary workbook tabs reachable' },
+    { key: 'critical-today', label: 'Critical Today', value: criticalIssues, tone: criticalIssues ? 'bad' : 'good', detail: 'High-priority blockers needing action' },
+    { key: 'pipeline', label: 'Pipeline In Motion', value: model.metrics.openInterviews, tone: 'warn', detail: `${model.metrics.totalCandidates} tracked candidates across recruiting sheets` },
+    { key: 'coverage', label: 'Active Coverage', value: model.metrics.statesCovered, tone: 'accent', detail: `${model.metrics.activeWorkforce} active providers across licensed states` },
+    { key: 'aged-90', label: 'Aged 90+ AR', value: over90Balance ? money(over90Balance) : 'N/A', tone: over90Balance ? 'bad' : '', detail: over90Balance ? 'Oldest AR exposure from the safe feeder' : 'Aging feed not connected yet', trend: currentMonth && previousMonth ? renderTrendBadge(arDelta, moneyDelta, { label: 'vs prior month' }) : '' },
+    { key: 'signed-final', label: 'Signed / Final', value: model.metrics.finalSigned, tone: 'good', detail: 'Final Sheet records ready to activate' },
+    { key: 'source-health', label: 'Source Health', value: liveFailures ? `${liveFailures} down` : 'Healthy', tone: liveFailures ? 'bad' : 'good', detail: liveFailures ? 'Workbook tabs missing live or cached data' : 'All primary workbook tabs reachable' },
   ];
 
   el.executiveKpis.innerHTML = cards.map((card) => `
-    <article class="kpi ${card.tone}">
+    <article class="kpi ${card.tone} kpi-drilldown" data-drilldown-kind="executive" data-drilldown-key="${escapeHtml(card.key)}">
       <div class="k">${escapeHtml(card.label)}</div>
       <div class="v">${escapeHtml(card.value)}</div>
       <div class="d">${escapeHtml(card.detail)}</div>
       ${card.trend || ''}
+      <div class="kpi-drilldown-link">Open detail</div>
     </article>
   `).join('');
 }
@@ -745,19 +978,20 @@ function renderOpsKpis() {
   const liveFailures = model.sourceMeta.filter((item) => item.source === 'unavailable');
 
   const cards = [
-    { label: 'Critical Actions', value: critical.length, tone: 'bad', detail: 'High-priority follow-ups today' },
-    { label: 'Issues Queue', value: issues.length, tone: 'warn', detail: 'Current filtered queue size' },
-    { label: 'Credentialing Risk', value: credentialing.length, tone: 'warn', detail: 'Licensing and activation gaps' },
-    { label: 'Interview Risk', value: interviewRisk.length, tone: 'warn', detail: 'Stalled or lost pipeline stages' },
-    { label: 'Coverage Risk', value: coverageRisk.length, tone: 'bad', detail: 'Potential staffing drag by state' },
-    { label: 'Source Failures', value: liveFailures.length, tone: liveFailures.length ? 'bad' : 'good', detail: 'Tabs without live or cached data' },
+    { key: 'critical-actions', label: 'Critical Actions', value: critical.length, tone: 'bad', detail: 'High-priority follow-ups today' },
+    { key: 'issues-queue', label: 'Issues Queue', value: issues.length, tone: 'warn', detail: 'Current filtered queue size' },
+    { key: 'credentialing-risk', label: 'Credentialing Risk', value: credentialing.length, tone: 'warn', detail: 'Licensing and activation gaps' },
+    { key: 'interview-risk', label: 'Interview Risk', value: interviewRisk.length, tone: 'warn', detail: 'Stalled or lost pipeline stages' },
+    { key: 'coverage-risk', label: 'Coverage Risk', value: coverageRisk.length, tone: 'bad', detail: 'Potential staffing drag by state' },
+    { key: 'source-failures', label: 'Source Failures', value: liveFailures.length, tone: liveFailures.length ? 'bad' : 'good', detail: 'Tabs without live or cached data' },
   ];
 
   el.opsKpis.innerHTML = cards.map((card) => `
-    <article class="kpi ${card.tone}">
+    <article class="kpi ${card.tone} kpi-drilldown" data-drilldown-kind="ops" data-drilldown-key="${escapeHtml(card.key)}">
       <div class="k">${escapeHtml(card.label)}</div>
       <div class="v">${escapeHtml(card.value)}</div>
       <div class="d">${escapeHtml(card.detail)}</div>
+      <div class="kpi-drilldown-link">Open detail</div>
     </article>
   `).join('');
 }
@@ -1274,6 +1508,7 @@ function renderStaffView() {
   }
 
   const selectedCoverage = coverageLookup[state.selectedCoverageState] || null;
+  const scorecard = getStateScorecardData(selectedCoverage);
 
   el.staffSummary.textContent = `${workforce.length} workforce rows · ${hires.length} final hires · ${futureLicenses} future-license notes`;
   el.staffKpis.innerHTML = [
@@ -1515,6 +1750,31 @@ function renderStaffView() {
       </div>
     `).join('')
     : '<div class="empty-state">No company-wide state coverage detail is available yet.</div>';
+
+  if (el.stateScorecard) {
+    el.stateScorecard.innerHTML = scorecard
+      ? `
+        <div class="state-scorecard-shell ${scorecard.tone}">
+          <div class="state-scorecard-head">
+            <div>
+              <div class="table-note">State business unit score</div>
+              <strong>${escapeHtml(selectedCoverage.stateCode)} · ${escapeHtml(scorecard.label)}</strong>
+            </div>
+            <div class="state-score-pill">${escapeHtml(scorecard.score)}</div>
+          </div>
+          <p class="muted">${escapeHtml(scorecard.narrative)}</p>
+          <div class="state-score-metrics">
+            ${scorecard.metrics.map((item) => `
+              <div class="mini-kpi">
+                <div class="k">${escapeHtml(item.label)}</div>
+                <div class="v">${escapeHtml(item.value)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '<div class="empty-state">Select a state to see the combined coverage and AR scorecard.</div>';
+  }
 }
 
 function renderHubstaffView() {
@@ -2235,6 +2495,33 @@ function bind() {
     resetFilters();
     persistUIState();
     render();
+  });
+  if (el.executivePrintBtn) {
+    el.executivePrintBtn.addEventListener('click', () => {
+      window.print();
+    });
+  }
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('.kpi-drilldown');
+    if (trigger) {
+      const kind = trigger.getAttribute('data-drilldown-kind');
+      const key = trigger.getAttribute('data-drilldown-key');
+      const drilldown = kind === 'executive'
+        ? getExecutiveDrilldown(key)
+        : kind === 'ops'
+          ? getOpsDrilldown(key)
+          : null;
+      if (drilldown) openDrilldown(drilldown);
+    }
+    if (event.target === el.drilldownDrawer) {
+      closeDrilldown();
+    }
+  });
+  if (el.drawerCloseBtn) {
+    el.drawerCloseBtn.addEventListener('click', () => closeDrilldown());
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDrilldown();
   });
   el.refreshBtn.addEventListener('click', () => loadData());
 }

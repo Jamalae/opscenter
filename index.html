@@ -72,7 +72,10 @@
             <h2>Daily Brief</h2>
             <p class="muted" id="executiveSummary"></p>
           </div>
-          <span class="badge status-warning" id="executiveHeadline"></span>
+          <div class="card-head-actions">
+            <button class="btn small print-hide" id="executivePrintBtn" type="button">Export Brief</button>
+            <span class="badge status-warning" id="executiveHeadline"></span>
+          </div>
         </div>
         <p class="executive-narrative" id="executiveNarrative"></p>
       </article>
@@ -528,6 +531,7 @@
               <select id="stateCoverageSelect" class="compact-select"></select>
             </div>
           </div>
+          <div id="stateScorecard" class="state-scorecard"></div>
           <div id="stateCoverageInsights" class="stack"></div>
         </article>
       </div>
@@ -832,6 +836,19 @@
       </article>
     </section>
   </main>
+
+  <aside class="drawer-backdrop" id="drilldownDrawer" aria-hidden="true">
+    <div class="drawer-panel">
+      <div class="card-head">
+        <div>
+          <h2 id="drawerTitle">Detail</h2>
+          <p class="muted" id="drawerSubtitle"></p>
+        </div>
+        <button class="btn small" id="drawerCloseBtn" type="button">Close</button>
+      </div>
+      <div class="drawer-body" id="drawerBody"></div>
+    </div>
+  </aside>
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
