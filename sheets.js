@@ -609,6 +609,35 @@ const OpsSheets = (() => {
     };
   }
 
+  function buildInitialAgingModel() {
+    return {
+      loading: true,
+      feedUrl: AGING_FEED_URL,
+      sourceMeta: [],
+      insuranceRows: [],
+      patientRows: [],
+      allRows: [],
+      byState: [],
+      byMonth: [],
+      metrics: {
+        insuranceTotal: 0,
+        patientTotal: 0,
+        combinedTotal: 0,
+        over90Total: 0,
+        stateCount: 0,
+        monthCount: 0,
+      },
+      spotlight: {
+        topState: null,
+        hottestMonth: null,
+      },
+      privacy: {
+        mode: 'safe-feed',
+        note: 'Aging data is loading from the separate aggregate feeder sheet. The PHI workbook stays unpublished.',
+      },
+    };
+  }
+
   function deriveIssues(dataset, sourceMeta) {
     const issues = [];
 
@@ -786,6 +815,44 @@ const OpsSheets = (() => {
     };
   }
 
+  function buildInitialHubstaffModel() {
+    if (!hubstaffJsonConfigured()) {
+      return {
+        configured: false,
+        source: 'not_configured',
+        sourceUrl: HUBSTAFF_CSV_URL,
+        sourceError: '',
+        loadedAt: null,
+        stale: false,
+        staleReason: '',
+        employeeCount: 0,
+        trackedHours: 0,
+        activityRate: 0,
+        payrollEstimate: 0,
+        attendanceIssues: 0,
+        rows: [],
+        topEmployees: [],
+      };
+    }
+
+    return {
+      configured: true,
+      source: 'loading',
+      sourceUrl: HUBSTAFF_CSV_URL,
+      sourceError: '',
+      loadedAt: null,
+      stale: false,
+      staleReason: '',
+      employeeCount: 0,
+      trackedHours: 0,
+      activityRate: 0,
+      payrollEstimate: 0,
+      attendanceIssues: 0,
+      rows: [],
+      topEmployees: [],
+    };
+  }
+
   function buildModel(rawTabs, sourceMeta, hubstaffModel, agingModel) {
     const dataset = {
       candidatePool: rawTabs.candidatePool.map(normalizeCandidatePoolRow),
@@ -911,12 +978,69 @@ const OpsSheets = (() => {
     return buildModel(rawTabs, sourceMeta, hubstaffModel, buildAgingModel(rawAgingTabs, agingSourceMeta));
   }
 
+  async function loadPrimaryWorkbookData() {
+    const primaryResults = await Promise.all(TAB_CONFIG.map(loadTab));
+    const rawTabs = {};
+    const sourceMeta = [];
+
+    primaryResults.forEach(({ rows, meta }) => {
+      rawTabs[meta.id] = rows;
+      sourceMeta.push(meta);
+    });
+
+    return buildModel(rawTabs, sourceMeta, buildInitialHubstaffModel(), buildInitialAgingModel());
+  }
+
+  async function loadAgingData() {
+    const agingResults = await Promise.all(AGING_TAB_CONFIG.map(loadAgingTab));
+    const rawAgingTabs = {};
+    const agingSourceMeta = [];
+
+    agingResults.forEach(({ rows, meta }) => {
+      rawAgingTabs[meta.id] = rows;
+      agingSourceMeta.push(meta);
+    });
+
+    return buildAgingModel(rawAgingTabs, agingSourceMeta);
+  }
+
+  async function loadHubstaffData() {
+    if (!hubstaffJsonConfigured()) {
+      return buildInitialHubstaffModel();
+    }
+
+    try {
+      const rows = await fetchCsv(HUBSTAFF_CSV_URL);
+      return buildHubstaffModel(rows, 'live', '');
+    } catch (error) {
+      return {
+        configured: true,
+        source: 'unavailable',
+        sourceUrl: HUBSTAFF_CSV_URL,
+        sourceError: cleanText(error.message || 'Unable to load Hubstaff CSV'),
+        loadedAt: null,
+        stale: false,
+        staleReason: '',
+        employeeCount: 0,
+        trackedHours: 0,
+        activityRate: 0,
+        payrollEstimate: 0,
+        attendanceIssues: 0,
+        rows: [],
+        topEmployees: [],
+      };
+    }
+  }
+
   return {
     TAB_CONFIG,
     HUBSTAFF_CSV_URL,
     AGING_FEED_URL,
     WORKBOOK_PUBLISHED_URL,
     loadWorkbookData,
+    loadPrimaryWorkbookData,
+    loadAgingData,
+    loadHubstaffData,
     utils: {
       cleanText,
       parseDate,

@@ -15,7 +15,11 @@ let model = null;
 let insuranceMap = null;
 let insuranceMapLayer = null;
 let insuranceGeoJson = null;
+let insuranceGeoJsonByState = null;
 let insuranceLoadPromise = null;
+let agingLoadPromise = null;
+let hubstaffLoadPromise = null;
+let insuranceMapRenderKey = '';
 
 const views = [
   { id: 'executive', label: 'Executive Dashboard' },
@@ -557,107 +561,28 @@ function persistUIState() {
   }
 }
 
-// Match a row's raw `state` value (which may be "AZ", "Arizona",
-// "AZ, FL", "FL NY GA", "MAINE", etc.) against a selected 2-letter code.
-function stateMatchesFilter(rawState, selectedCode) {
-  if (selectedCode === 'all') return true;
-  const validStates = OpsInsurance.validStates || {};
-  const nameToCode = {};
-  Object.keys(validStates).forEach((code) => {
-    nameToCode[validStates[code].toLowerCase()] = code;
-  });
-  const pieces = OpsSheets.utils.splitStates(rawState || '');
-  if (pieces.length) {
-    if (pieces.includes(selectedCode)) return true;
-  }
-  // Fall back to interpreting the raw value as a full state name.
-  const code = nameToCode[String(rawState || '').trim().toLowerCase()];
-  return code === selectedCode;
-}
-
-function matchesFilters(textParts, values) {
-  const query = state.search.trim().toLowerCase();
-  const searchable = textParts.join(' ').toLowerCase();
-  return (!query || searchable.includes(query))
-    && stateMatchesFilter(values.state, state.stateFilter)
-    && (state.specialtyFilter === 'all' || values.specialty === state.specialtyFilter)
-    && (state.statusFilter === 'all' || values.status === state.statusFilter)
-    && (state.sourceFilter === 'all' || values.source === state.sourceFilter);
-}
-
 function getFilteredIssues() {
-  if (!model) return [];
-  return model.issues.filter((item) =>
-    matchesFilters(
-      [item.name, item.state, item.owner, item.status, item.detail, item.source, item.risk],
-      {
-        state: item.state,
-        specialty: '',
-        status: item.status,
-        source: item.source,
-      }
-    )
-  );
+  return OpsCenterData.getFilteredCollections(model, state).issues;
 }
 
 function getFilteredInterviews() {
-  if (!model) return [];
-  return model.dataset.interviews.filter((item) =>
-    matchesFilters(
-      [item.name, item.position, item.state, item.phase, item.status, item.notes, item.source],
-      {
-        state: item.state,
-        specialty: item.position,
-        status: item.status,
-        source: item.source,
-      }
-    )
-  );
+  return OpsCenterData.getFilteredCollections(model, state).interviews;
 }
 
 function getFilteredIntakeRows() {
-  if (!model) return [];
-  return model.dataset.newHiring.filter((item) =>
-    matchesFilters(
-      [item.name, item.state, item.specialty, item.interviewStatus, item.credentialing, item.referralSource, item.source],
-      {
-        state: item.state,
-        specialty: item.specialty,
-        status: item.interviewStatus,
-        source: item.source,
-      }
-    )
-  );
+  return OpsCenterData.getFilteredCollections(model, state).intakeRows;
 }
 
 function getFilteredWorkforceRows() {
-  if (!model) return [];
-  return model.dataset.currentWorkforce.filter((item) =>
-    matchesFilters(
-      [item.providerName, item.licensedState, item.specialty, item.contractType, item.futureLicense, item.source],
-      {
-        state: item.licensedState,
-        specialty: item.specialty,
-        status: item.contractType,
-        source: item.source,
-      }
-    )
-  );
+  return OpsCenterData.getFilteredCollections(model, state).workforceRows;
 }
 
 function getFilteredHireRows() {
-  if (!model) return [];
-  return model.dataset.finalHires.filter((item) =>
-    matchesFilters(
-      [item.name, item.title, item.states, item.comments, item.source],
-      {
-        state: '',
-        specialty: item.title,
-        status: '',
-        source: item.source,
-      }
-    )
-  );
+  return OpsCenterData.getFilteredCollections(model, state).hireRows;
+}
+
+function getCompanyCoverageData() {
+  return OpsCenterData.getCompanyCoverageData(model);
 }
 
 function renderViewNav() {
@@ -687,6 +612,9 @@ function setActiveView(viewId) {
   document.querySelectorAll('.view').forEach((section) => section.classList.remove('active'));
   document.getElementById(`view-${state.view}`).classList.add('active');
   persistUIState();
+  if (state.view === 'aging') ensureAgingData();
+  if (state.view === 'hubstaff') ensureHubstaffData();
+  if (state.view === 'insurance') ensureInsuranceData();
   render();
 }
 
@@ -1226,6 +1154,31 @@ function renderIntakeView() {
 function renderAgingView() {
   const aging = model?.aging;
   if (!aging || !el.agingStateTable) return;
+  if (aging.loading) {
+    el.agingSummary.textContent = 'Loading aging feeder data…';
+    el.agingPrivacyBadge.textContent = 'Aggregate-only feed';
+    el.agingKpis.innerHTML = [
+      { label: 'Combined AR', detail: 'Waiting on feeder' },
+      { label: 'Insurance AR', detail: 'Waiting on feeder' },
+      { label: 'Patient AR', detail: 'Waiting on feeder' },
+      { label: '90+ Day Balance', detail: 'Waiting on feeder' },
+    ].map((card) => `
+      <article class="kpi">
+        <div class="k">${escapeHtml(card.label)}</div>
+        <div class="v">Loading…</div>
+        <div class="d">${escapeHtml(card.detail)}</div>
+      </article>
+    `).join('');
+    el.agingSpotlight.innerHTML = '<div class="note-card">Aging data is loading in the background from the separate aggregate feeder sheet.</div>';
+    el.agingSourceMeta.innerHTML = '<div class="note-card">This view now loads after the primary dashboard so the site becomes interactive faster.</div>';
+    el.agingStateTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading state aging totals…</td></tr>';
+    el.agingMonthTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading monthly aging trends…</td></tr>';
+    el.agingInsuranceSummary.textContent = 'Loading aggregate insurance rows…';
+    el.agingPatientSummary.textContent = 'Loading aggregate patient rows…';
+    el.agingInsuranceTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading insurance aging rows…</td></tr>';
+    el.agingPatientTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading patient aging rows…</td></tr>';
+    return;
+  }
 
   const sourceFailures = aging.sourceMeta.filter((item) => !item.ok);
   const topState = aging.spotlight.topState;
@@ -1423,80 +1376,13 @@ function renderStaffView() {
   const specialties = summarizeCounts(workforce.map((item) => item.specialty || 'Unknown'));
   const states = summarizeCounts(workforce.map((item) => item.licensedState || 'Unknown'));
   const futureLicenses = workforce.filter((item) => item.futureLicense).length;
-  const companyStateCoverage = {};
-
-  model.dataset.currentWorkforce.forEach((item) => {
-    const statesForRow = OpsSheets.utils.splitStates(item.licensedState || '');
-    statesForRow.forEach((stateCode) => {
-      if (!companyStateCoverage[stateCode]) {
-        companyStateCoverage[stateCode] = {
-          stateCode,
-          workforceRows: 0,
-          finalHireRows: 0,
-          hiringRows: 0,
-          providers: new Set(),
-          specialties: new Set(),
-          contractTypes: new Set(),
-        };
-      }
-      companyStateCoverage[stateCode].workforceRows += 1;
-      if (item.providerName) companyStateCoverage[stateCode].providers.add(item.providerName);
-      if (item.specialty) companyStateCoverage[stateCode].specialties.add(item.specialty);
-      if (item.contractType) companyStateCoverage[stateCode].contractTypes.add(item.contractType);
-    });
-  });
-
-  model.dataset.finalHires.forEach((item) => {
-    OpsSheets.utils.splitStates(item.states || '').forEach((stateCode) => {
-      if (!companyStateCoverage[stateCode]) {
-        companyStateCoverage[stateCode] = {
-          stateCode,
-          workforceRows: 0,
-          finalHireRows: 0,
-          hiringRows: 0,
-          providers: new Set(),
-          specialties: new Set(),
-          contractTypes: new Set(),
-        };
-      }
-      companyStateCoverage[stateCode].finalHireRows += 1;
-      if (item.name) companyStateCoverage[stateCode].providers.add(item.name);
-      if (item.title) companyStateCoverage[stateCode].specialties.add(item.title);
-    });
-  });
-
-  model.dataset.newHiring.forEach((item) => {
-    OpsSheets.utils.splitStates(item.state || '').forEach((stateCode) => {
-      if (!companyStateCoverage[stateCode]) {
-        companyStateCoverage[stateCode] = {
-          stateCode,
-          workforceRows: 0,
-          finalHireRows: 0,
-          hiringRows: 0,
-          providers: new Set(),
-          specialties: new Set(),
-          contractTypes: new Set(),
-        };
-      }
-      companyStateCoverage[stateCode].hiringRows += 1;
-      if (item.name) companyStateCoverage[stateCode].providers.add(item.name);
-      if (item.specialty) companyStateCoverage[stateCode].specialties.add(item.specialty);
-    });
-  });
-
-  const coveredStates = Object.values(companyStateCoverage)
-    .map((item) => ({
-      stateCode: item.stateCode,
-      workforceRows: item.workforceRows,
-      finalHireRows: item.finalHireRows,
-      hiringRows: item.hiringRows,
-      providerCount: item.providers.size,
-      specialtyCount: item.specialties.size,
-      contractCount: item.contractTypes.size,
-      totalCoverage: item.workforceRows + item.finalHireRows + item.hiringRows,
-    }))
-    .sort((a, b) => b.totalCoverage - a.totalCoverage || a.stateCode.localeCompare(b.stateCode));
-  const coverageLookup = Object.fromEntries(coveredStates.map((item) => [item.stateCode, item]));
+  const {
+    coveredStates,
+    coverageLookup,
+    workforceByState,
+    finalHiresByState,
+    hiringByState,
+  } = getCompanyCoverageData();
 
   if (!coveredStates.length) {
     state.selectedCoverageState = 'all';
@@ -1688,21 +1574,9 @@ function renderStaffView() {
     });
   });
 
-  const selectedWorkforceRows = selectedCoverage
-    ? model.dataset.currentWorkforce.filter((item) =>
-      OpsSheets.utils.splitStates(item.licensedState || '').includes(selectedCoverage.stateCode)
-    )
-    : [];
-  const selectedFinalRows = selectedCoverage
-    ? model.dataset.finalHires.filter((item) =>
-      OpsSheets.utils.splitStates(item.states || '').includes(selectedCoverage.stateCode)
-    )
-    : [];
-  const selectedHiringRows = selectedCoverage
-    ? model.dataset.newHiring.filter((item) =>
-      OpsSheets.utils.splitStates(item.state || '').includes(selectedCoverage.stateCode)
-    )
-    : [];
+  const selectedWorkforceRows = selectedCoverage ? (workforceByState[selectedCoverage.stateCode] || []) : [];
+  const selectedFinalRows = selectedCoverage ? (finalHiresByState[selectedCoverage.stateCode] || []) : [];
+  const selectedHiringRows = selectedCoverage ? (hiringByState[selectedCoverage.stateCode] || []) : [];
   const selectedSpecialties = summarizeCounts([
     ...selectedWorkforceRows.map((item) => item.specialty || 'Unknown'),
     ...selectedFinalRows.map((item) => item.title || 'Unknown'),
@@ -1895,382 +1769,36 @@ function renderHubstaffView() {
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 }
 
-function buildInsuranceBreaks(values) {
-  const sorted = values.filter((value) => value > 0).sort((a, b) => a - b);
-  if (!sorted.length) return [0];
-  const percentiles = [0.25, 0.5, 0.75, 1];
-  return Array.from(new Set(percentiles.map((point) => {
-    const index = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * point));
-    return sorted[index];
-  })));
+function getInsuranceViewContext() {
+  return {
+    state,
+    el,
+    model,
+    ensureInsuranceData,
+    escapeHtml,
+    wholeNumber,
+    badgeStatus,
+    getInsuranceStateRenderData,
+    insuranceMap,
+    insuranceMapLayer,
+    insuranceGeoJson,
+    insuranceGeoJsonByState,
+    insuranceMapRenderKey,
+  };
 }
 
-function insuranceColor(value, breaks) {
-  if (!value) return '#16213d';
-  const palette = ['#213a6b', '#295598', '#3f73bb', '#5b8fd0', '#7fafe8'];
-  let colorIndex = 0;
-  while (colorIndex < breaks.length && value > breaks[colorIndex]) {
-    colorIndex += 1;
-  }
-  return palette[Math.min(colorIndex, palette.length - 1)];
-}
-
-async function renderInsuranceMap(selectedStateCode) {
-  if (state.view !== 'insurance') return;
-  if (!selectedStateCode || !el.insuranceCountyMap) return;
-  if (typeof L === 'undefined') {
-    el.insuranceCountyMap.innerHTML = '<div class="empty-state">Leaflet did not load, so the county map could not be rendered.</div>';
-    return;
-  }
-
-  const insuranceStates = model?.insurance?.states || [];
-  const selectedState = insuranceStates.find((entry) => entry.state === selectedStateCode);
-  if (!selectedState) {
-    el.insuranceCountyMap.innerHTML = `<div class="empty-state">No insurance map data is available for ${escapeHtml(selectedStateCode)}.</div>`;
-    return;
-  }
-
-  if (!insuranceGeoJson) {
-    const response = await fetch(model.insurance.geojsonPath, { cache: 'force-cache' });
-    if (!response.ok) {
-      throw new Error(`County GeoJSON could not be loaded: ${response.status}`);
-    }
-    insuranceGeoJson = await response.json();
-  }
-
-  // Fast lookups for shading: prefer county_fips when present; fall back to
-  // county name (lowercased) since the current CSV does not carry FIPS codes.
-  const countyLookup = Object.fromEntries(
-    selectedState.locations
-      .filter((location) => location.county_fips)
-      .map((location) => [location.county_fips, location])
-  );
-  const countyNameLookup = Object.fromEntries(
-    selectedState.locations
-      .filter((location) => location.county)
-      .map((location) => [String(location.county).trim().toLowerCase(), location])
-  );
-
-  // Resolve the 2-digit FIPS prefix for this state. We use the static map
-  // exposed by OpsInsurance.stateFips first and only fall back to row data.
-  const stateFipsMap = (model.insurance && model.insurance.stateFips) || OpsInsurance.stateFips || {};
-  const stateFips = stateFipsMap[selectedStateCode]
-    || (selectedState.rows.find((row) => row.county_fips)?.county_fips?.slice(0, 2) || '');
-
-  if (!stateFips) {
-    el.insuranceCountyMap.innerHTML = `<div class="empty-state">No FIPS prefix is configured for ${escapeHtml(selectedStateCode)}, so the county map cannot be drawn.</div>`;
-    return;
-  }
-  const stateFeatures = insuranceGeoJson.features.filter((feature) => feature.properties.STATE === stateFips);
-  const breaks = buildInsuranceBreaks(selectedState.locations.map((location) => location.total_enrollment));
-  const mode = state.mapMode === 'priority' ? 'priority' : 'enrollment';
-
-  // Marketing-priority palette: red (no in-network) → yellow → green (high in-network share).
-  // Choosing 5 buckets to match the existing enrollment palette length.
-  const priorityPalette = ['#7a1f1f', '#a64a2a', '#c8861f', '#9bbf3a', '#3f9d5a'];
-  function priorityColor(share) {
-    if (share <= 0) return priorityPalette[0];
-    if (share < 0.2) return priorityPalette[1];
-    if (share < 0.4) return priorityPalette[2];
-    if (share < 0.7) return priorityPalette[3];
-    return priorityPalette[4];
-  }
-
-  if (!insuranceMap) {
-    insuranceMap = L.map(el.insuranceCountyMap, {
-      attributionControl: false,
-      zoomControl: true,
-    });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 12,
-    }).addTo(insuranceMap);
-  }
-
-  if (insuranceMapLayer) {
-    insuranceMapLayer.remove();
-    insuranceMapLayer = null;
-  }
-
-  insuranceMapLayer = L.geoJSON({
-    type: 'FeatureCollection',
-    features: stateFeatures,
-  }, {
-    style(feature) {
-      const county = countyLookup[feature.id]
-        || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
-      let fillColor = '#16213d';
-      let fillOpacity = 0.15;
-      if (county) {
-        fillOpacity = 0.82;
-        if (mode === 'priority') {
-          fillColor = priorityColor(county.in_network_share || 0);
-        } else {
-          fillColor = insuranceColor(county.total_enrollment, breaks);
-        }
-      }
-      return {
-        color: '#d6e2ff',
-        weight: 1,
-        fillOpacity,
-        fillColor,
-      };
-    },
-    onEachFeature(feature, layer) {
-      const location = countyLookup[feature.id]
-        || countyNameLookup[String(feature.properties.NAME || '').trim().toLowerCase()];
-      const countyName = feature.properties.NAME;
-      if (!location) {
-        layer.bindTooltip(`<strong>${escapeHtml(countyName)}</strong><br>No verified insurance rows loaded yet`);
-        return;
-      }
-      const sharePct = Math.round((location.in_network_share || 0) * 100);
-      const inNetParents = (location.in_network_parent_orgs || []).slice(0, 3).join(', ') || '—';
-      const outOfNetParents = (location.out_of_network_parent_orgs || []).slice(0, 3).join(', ') || '—';
-      const top = (location.plan_names || []).slice(0, 3).join(', ') || '—';
-      const tooltipBody = mode === 'priority'
-        ? `<strong>${escapeHtml(countyName)}</strong>
-           <br><b>${sharePct}%</b> of enrollment on plans you accept
-           <br>Addressable: ${wholeNumber(location.in_network_enrollment || 0)}
-           <br>Out-of-network: ${wholeNumber(location.out_of_network_enrollment || 0)}
-           <br>In-network parents: ${escapeHtml(inNetParents)}
-           <br>Gap parents: ${escapeHtml(outOfNetParents)}`
-        : `<strong>${escapeHtml(countyName)}</strong>
-           <br>${wholeNumber(location.total_enrollment)} total enrollment across ${location.row_count} rows
-           <br>Plans: ${escapeHtml(top)}
-           <br>Parents: ${escapeHtml((location.parent_orgs || []).slice(0, 2).join(', ') || '—')}`;
-      layer.bindTooltip(tooltipBody);
-    },
-  }).addTo(insuranceMap);
-
-  const bounds = insuranceMapLayer.getBounds();
-  if (bounds.isValid()) {
-    insuranceMap.fitBounds(bounds, { padding: [16, 16] });
-  }
-  setTimeout(() => insuranceMap.invalidateSize(), 0);
-
-  // Legend reflects whichever mode is active
-  if (el.insuranceMapLegend) {
-    if (mode === 'priority') {
-      el.insuranceMapLegend.innerHTML = `
-        <div class="legend-row"><span>% of enrollment on plans you accept:</span></div>
-        <div class="legend-bar">
-          ${priorityPalette.map((c) => `<span style="background:${c}"></span>`).join('')}
-        </div>
-        <div class="legend-row"><span>0%</span><span style="margin:0 0.6rem">→</span><span>100%</span></div>
-      `;
-    } else {
-      el.insuranceMapLegend.innerHTML = `
-        <div class="legend-row"><span>Total enrollment per county:</span></div>
-        <div class="legend-bar">
-          <span style="background:#213a6b"></span>
-          <span style="background:#295598"></span>
-          <span style="background:#3f73bb"></span>
-          <span style="background:#5b8fd0"></span>
-          <span style="background:#7fafe8"></span>
-        </div>
-        <div class="legend-row"><span>low</span><span style="margin:0 0.6rem">→</span><span>high</span></div>
-      `;
-    }
-  }
-}
-
-// State-level marketing summary: total addressable enrollment, top in-network
-// parent orgs, top "gap" parent orgs (high enrollment, not contracted).
-function renderMarketingSummary(selectedState) {
-  if (!el.insuranceMarketingSummary) return;
-  if (!selectedState || !selectedState.locations) {
-    el.insuranceMarketingSummary.innerHTML = '';
-    return;
-  }
-  const totalEnrollment = selectedState.locations.reduce((s, l) => s + (l.total_enrollment || 0), 0);
-  const inNet = selectedState.locations.reduce((s, l) => s + (l.in_network_enrollment || 0), 0);
-  const outOfNet = totalEnrollment - inNet;
-  const sharePct = totalEnrollment > 0 ? Math.round((inNet / totalEnrollment) * 100) : 0;
-
-  // Aggregate by parent_org across all rows in the state
-  const parentTotals = {};
-  selectedState.rows.forEach((row) => {
-    if (!row.parent_org) return;
-    if (!parentTotals[row.parent_org]) {
-      parentTotals[row.parent_org] = { total: 0, in_network: false };
-    }
-    parentTotals[row.parent_org].total += row.total_enrollment || 0;
-    if (row.in_network) parentTotals[row.parent_org].in_network = true;
-  });
-  const parentRows = Object.entries(parentTotals)
-    .map(([parent, v]) => ({ parent, total: v.total, in_network: v.in_network }))
-    .sort((a, b) => b.total - a.total);
-  const inNetTop = parentRows.filter((p) => p.in_network).slice(0, 5);
-  const gapTop = parentRows.filter((p) => !p.in_network).slice(0, 5);
-
-  el.insuranceMarketingSummary.innerHTML = `
-    <div class="metric-row"><span>Total enrollment</span><strong>${wholeNumber(totalEnrollment)}</strong></div>
-    <div class="metric-row"><span>Addressable (in-network)</span><strong>${wholeNumber(inNet)} · ${sharePct}%</strong></div>
-    <div class="metric-row"><span>Out-of-network</span><strong>${wholeNumber(outOfNet)}</strong></div>
-    <div class="note-card">
-      <strong>Top in-network parent orgs</strong>
-      ${inNetTop.length
-        ? inNetTop.map((p) => `<div class="metric-row"><span>${escapeHtml(p.parent)}</span><strong>${wholeNumber(p.total)}</strong></div>`).join('')
-        : '<div class="empty-state">No parent orgs marked "in-network" yet — edit data/contracted_plans.csv to set status.</div>'}
-    </div>
-    <div class="note-card">
-      <strong>Gap list — high enrollment, not yet contracted</strong>
-      ${gapTop.length
-        ? gapTop.map((p) => `<div class="metric-row"><span>${escapeHtml(p.parent)}</span><strong>${wholeNumber(p.total)}</strong></div>`).join('')
-        : '<div class="empty-state">All major parent orgs in this state are already in-network.</div>'}
-    </div>
-  `;
+function syncInsuranceViewContext(context) {
+  insuranceMap = context.insuranceMap;
+  insuranceMapLayer = context.insuranceMapLayer;
+  insuranceGeoJson = context.insuranceGeoJson;
+  insuranceGeoJsonByState = context.insuranceGeoJsonByState;
+  insuranceMapRenderKey = context.insuranceMapRenderKey;
 }
 
 async function renderInsuranceView() {
-  if (!model) return;
-
-  if (!model.insurance || !Array.isArray(model.insurance.states)) {
-    el.insuranceValidationBanner.textContent = 'Insurance System: loading source files…';
-    el.insuranceSelectionSummary.textContent = 'Loading verified insurance rows…';
-    el.insuranceStatus.innerHTML = '<div class="note-card">Insurance datasets are loading on demand for this tab.</div>';
-    el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading county insurance rows…</td></tr>';
-    el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">Loading plan rows…</td></tr>';
-    await ensureInsuranceData();
-  }
-
-  const insurance = model.insurance || {
-    states: [],
-    rows: [],
-    error: 'Insurance data is not loaded yet.',
-  };
-  const validation = insurance.validation || {
-    validStateCount: 0,
-    invalidRowCount: 0,
-    invalidStateValues: [],
-  };
-
-  if (!insurance.states.length) {
-    el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
-    el.insuranceSelectionSummary.textContent = 'No verified insurance rows are loaded yet.';
-    el.insuranceStateSelect.innerHTML = '<option value="all">No states available</option>';
-    el.insuranceStatus.innerHTML = [
-      `<div class="empty-state">${escapeHtml(insurance.error || 'Insurance data is not available yet.')}</div>`,
-      `<div class="note-card">Valid states loaded: ${escapeHtml(validation.validStateCount)}</div>`,
-      `<div class="note-card">Invalid rows rejected: ${escapeHtml(validation.invalidRowCount)}</div>`,
-    ].join('');
-    el.insuranceKpis.innerHTML = '';
-    el.insuranceSourceMeta.innerHTML = [
-      '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
-      `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
-      `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
-    ].join('');
-    el.insuranceCountyTable.innerHTML = '<tr><td colspan="5" class="empty-state">No county insurance rows are available.</td></tr>';
-    el.insurancePlanTable.innerHTML = '<tr><td colspan="6" class="empty-state">No verified plan rows are available.</td></tr>';
-    el.insuranceSourceCatalog.innerHTML = '';
-    return;
-  }
-
-  const insuranceLookup = Object.fromEntries(insurance.states.map((entry) => [entry.state, entry]));
-  const validStates = insurance.states.map((entry) => entry.state);
-  if (!validStates.includes(state.insuranceState)) {
-    state.insuranceState = validStates[0];
-  }
-  const selectedState = insuranceLookup[state.insuranceState];
-  el.insuranceValidationBanner.textContent = `Insurance System: MASTER CSV ACTIVE — ${validation.validStateCount} valid states, ${validation.invalidRowCount} invalid rows rejected`;
-
-  el.insuranceStateSelect.innerHTML = insurance.states.map((entry) => `
-    <option value="${escapeHtml(entry.state)}" ${entry.state === state.insuranceState ? 'selected' : ''}>
-      ${escapeHtml(entry.label)}
-    </option>
-  `).join('');
-  el.insuranceStateSelect.value = state.insuranceState;
-
-  el.insuranceSelectionSummary.textContent = `${selectedState.label} · ${selectedState.locations.length} geography rows · ${selectedState.plan_count} plan rows`;
-  el.insuranceMapTitle.textContent = `${selectedState.label} County Insurance Enrollment`;
-  el.insuranceMapSub.textContent = `Source years: ${selectedState.source_years.join(', ') || 'N/A'} · rows are loaded from external CSV files`;
-
-  el.insuranceStatus.innerHTML = [
-    `No hardcoded state buttons are used here. The dropdown is populated dynamically from the master CSV at data/state_insurance_sample.csv with ${validation.validStateCount} valid states.`,
-    'Renderer path: insurance.js -> renderInsuranceView().',
-    'The system supports either county or geographic_region and continues rendering when some fields are blank.',
-    `Invalid rows rejected during state validation: ${validation.invalidRowCount}.`,
-    selectedState.notes[0] || 'No source note available for this state.',
-  ].map((line) => `<div class="note-card">${escapeHtml(line)}</div>`).join('');
-
-  el.insuranceKpis.innerHTML = [
-    { label: 'Valid States', value: validation.validStateCount },
-    { label: 'Invalid Rows Rejected', value: validation.invalidRowCount },
-    { label: 'Geographies', value: selectedState.locations.length },
-    { label: 'Total Enrollment', value: wholeNumber(selectedState.total_enrollment) },
-    { label: 'Plan Rows', value: selectedState.plan_count },
-    { label: 'Parent Orgs', value: selectedState.parent_org_count },
-  ].map((card) => `
-    <div class="mini-kpi">
-      <div class="k">${escapeHtml(card.label)}</div>
-      <div class="v">${escapeHtml(card.value)}</div>
-    </div>
-  `).join('');
-
-  el.insuranceSourceMeta.innerHTML = [
-    `<div class="metric-row"><span>Valid states</span><strong>${escapeHtml(validation.validStateCount)}</strong></div>`,
-    `<div class="metric-row"><span>Invalid rows rejected</span><strong>${escapeHtml(validation.invalidRowCount)}</strong></div>`,
-    '<div class="metric-row"><span>Master CSV source</span><strong>data/state_insurance_sample.csv</strong></div>',
-    `<div class="metric-row"><span>Source years</span><strong>${escapeHtml(selectedState.source_years.join(', ') || 'N/A')}</strong></div>`,
-    validation.invalidStateValues.length ? `
-      <div class="note-card">
-        <strong>Rejected state values</strong>
-        <div>${escapeHtml(validation.invalidStateValues.slice(0, 8).join(', '))}${validation.invalidStateValues.length > 8 ? ' …' : ''}</div>
-      </div>
-    ` : '',
-    ...selectedState.source_urls.map((url) => `
-      <div class="note-card">
-        <strong>Verified source</strong>
-        <div><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></div>
-      </div>
-    `),
-  ].join('');
-
-  el.insuranceCountyTable.innerHTML = selectedState.locations.map((location) => `
-    <tr>
-      <td>${escapeHtml(location.location_label)}</td>
-      <td>${wholeNumber(location.total_enrollment)}</td>
-      <td>${wholeNumber(location.row_count)}</td>
-      <td>${wholeNumber(location.parent_orgs.length)}</td>
-      <td>${escapeHtml(location.source_years.join(', ') || 'N/A')}</td>
-    </tr>
-  `).join('');
-
-  el.insurancePlanTable.innerHTML = selectedState.rows.map((row) => `
-    <tr>
-      <td>${escapeHtml(row.county)}</td>
-      <td>${escapeHtml(row.program_type)}</td>
-      <td>${escapeHtml(row.plan_name)}</td>
-      <td>${escapeHtml(row.parent_org)}</td>
-      <td>${wholeNumber(row.total_enrollment)}</td>
-      <td>${row.source_url ? `<a href="${escapeHtml(row.source_url)}" target="_blank" rel="noreferrer">${escapeHtml(row.source_year || 'Source')}</a>` : escapeHtml(row.source_year || 'N/A')}</td>
-    </tr>
-  `).join('');
-
-  const sourceCards = Array.from(new Set(selectedState.rows
-    .filter((row) => row.source_url || row.source_year)
-    .map((row) => JSON.stringify({
-      url: row.source_url,
-      year: row.source_year,
-      note: row.notes,
-    })))).map((entry) => JSON.parse(entry));
-
-  el.insuranceSourceCatalog.innerHTML = sourceCards.length
-    ? sourceCards.map((source) => `
-      <div class="note-card">
-        <strong>Source ${escapeHtml(source.year || 'N/A')}</strong>
-        <div class="table-note">${escapeHtml(source.note || 'No note provided')}</div>
-        <div>${source.url ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.url)}</a>` : 'No source URL provided'}</div>
-      </div>
-    `).join('')
-    : '<div class="empty-state">No source URL or year is available for this state.</div>';
-
-  renderMarketingSummary(selectedState);
-
-  renderInsuranceMap(state.insuranceState).catch((error) => {
-    console.error(error);
-    el.insuranceCountyMap.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-  });
+  const context = getInsuranceViewContext();
+  await OpsCenterInsuranceView.renderInsuranceView(context);
+  syncInsuranceViewContext(context);
 }
 
 function summarizeCounts(values) {
@@ -2444,6 +1972,79 @@ async function ensureInsuranceData() {
   return insuranceLoadPromise;
 }
 
+function getInsuranceStateRenderData(selectedState) {
+  return OpsCenterData.getInsuranceStateRenderData(model, selectedState, escapeHtml, wholeNumber);
+}
+
+function scheduleIdleTask(callback, timeout = 600) {
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(callback, { timeout });
+  } else {
+    window.setTimeout(callback, Math.min(timeout, 250));
+  }
+}
+
+async function ensureAgingData() {
+  if (!model) return null;
+  if (model.aging && !model.aging.loading) {
+    return model.aging;
+  }
+  if (!agingLoadPromise) {
+    agingLoadPromise = OpsSheets.loadAgingData()
+      .then((agingData) => {
+        model.aging = agingData;
+        if (state.view === 'aging' || state.view === 'executive') {
+          render();
+        } else {
+          renderHealthBanner();
+        }
+        return agingData;
+      })
+      .catch((error) => {
+        console.error('Aging load error:', error);
+        return model.aging;
+      })
+      .finally(() => {
+        agingLoadPromise = null;
+      });
+  }
+  return agingLoadPromise;
+}
+
+async function ensureHubstaffData() {
+  if (!model) return null;
+  if (model.hubstaff && model.hubstaff.source !== 'loading') {
+    return model.hubstaff;
+  }
+  if (!hubstaffLoadPromise) {
+    hubstaffLoadPromise = OpsSheets.loadHubstaffData()
+      .then((hubstaffData) => {
+        model.hubstaff = hubstaffData;
+        if (state.view === 'hubstaff') {
+          render();
+        } else {
+          renderHealthBanner();
+        }
+        return hubstaffData;
+      })
+      .catch((error) => {
+        console.error('Hubstaff load error:', error);
+        return model.hubstaff;
+      })
+      .finally(() => {
+        hubstaffLoadPromise = null;
+      });
+  }
+  return hubstaffLoadPromise;
+}
+
+function warmDeferredViewData() {
+  scheduleIdleTask(() => {
+    ensureAgingData();
+    ensureHubstaffData();
+  });
+}
+
 function bind() {
   el.stateFilter.addEventListener('change', (event) => {
     state.stateFilter = event.target.value;
@@ -2531,16 +2132,25 @@ async function loadData() {
   el.resultsSummary.textContent = 'Loading';
   el.issuesTable.innerHTML = '<tr><td colspan="8" class="empty-state">Loading workbook data…</td></tr>';
   insuranceLoadPromise = null;
+  insuranceMapRenderKey = '';
+  agingLoadPromise = null;
+  hubstaffLoadPromise = null;
 
   try {
-    model = await OpsSheets.loadWorkbookData();
+    model = await OpsSheets.loadPrimaryWorkbookData();
     model.insurance = null;
+    marketingModel = null;
+    minutesModel = null;
     initFilters();
     renderHealthBanner();
     render();
     const liveCount = model.sourceMeta.filter((item) => item.source === 'live').length;
     const cacheCount = model.sourceMeta.filter((item) => item.source === 'cache').length;
     el.liveStatus.textContent = `● ${liveCount} live tabs · ${cacheCount} cached tabs · refreshed ${formatDate(model.loadedAt)}`;
+    if (state.view === 'aging') ensureAgingData();
+    if (state.view === 'hubstaff') ensureHubstaffData();
+    if (state.view === 'insurance') ensureInsuranceData();
+    warmDeferredViewData();
     // Load marketing data in parallel (non-blocking)
     loadMarketingData();
     // Load meeting minutes in parallel (non-blocking)
