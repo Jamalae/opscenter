@@ -1704,18 +1704,18 @@ function renderHubstaffView() {
     isLoading
       ? 'Loading state: waiting for the Hubstaff source response.'
       : isUnavailable
-        ? `Hubstaff JSON could not be loaded: ${hubstaff.sourceError || 'Unknown error.'}`
+        ? `Hubstaff source could not be loaded: ${hubstaff.sourceError || 'Unknown error.'}`
       : sourceConfigured
         ? isEmpty
-          ? 'Empty state: the Hubstaff JSON endpoint is connected, but it returned no rows for the current snapshot.'
-          : `Hubstaff data is connected from Apps Script JSON with ${rows.length} imported rows.`
+          ? 'Empty state: the Hubstaff published CSV is reachable, but it returned no rows for the current snapshot.'
+          : `Hubstaff data is connected from the published CSV feed with ${rows.length} imported rows.`
         : 'Empty state: no Hubstaff source is connected yet. The tab is in place so we can add it without changing the site structure again.',
     hubstaff.stale
       ? `Stale-data flag: ${hubstaff.staleReason || 'the last available Hubstaff data may be out of date.'}`
       : 'Stale-data flag: current snapshot is considered fresh.',
     sourceConfigured
-      ? `Attendance issues: ${hubstaff.attendanceIssues || 0} · JSON endpoint: ${hubstaff.sourceUrl || 'Not set'}`
-      : 'The safest GitHub Pages pattern is to load Hubstaff data from a sanitized Apps Script JSON endpoint, not from private Hubstaff credentials in browser code.',
+      ? `Attendance issues: ${hubstaff.attendanceIssues || 0} · feed URL: ${hubstaff.sourceUrl || 'Not set'}`
+      : 'The safest GitHub Pages pattern is to load Hubstaff data from a sanitized published feed, not from private Hubstaff credentials in browser code.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   el.hubstaffReadiness.innerHTML = sourceConfigured
@@ -1728,19 +1728,19 @@ function renderHubstaffView() {
       `).join('')
       : '<div class="empty-state">No employee-level Hubstaff rollups are available yet.</div>'
     : [
-      'Set `HUBSTAFF_JSON_URL` in `sheets.js` to the published Apps Script Web App endpoint.',
-      'The endpoint should return sanitized JSON rows only, never Hubstaff tokens or refresh credentials.',
+      'Set `HUBSTAFF_CSV_URL` in `sheets.js` to the published Hubstaff export feed.',
+      'The feed should expose sanitized rows only, never Hubstaff tokens or refresh credentials.',
       'Expected fields: employee_name, team_name, date, tracked_hours, activity_percent, pay_rate, payroll_estimate, attendance_status, source_updated_at.',
     ].map((line) => `<div class="note-card">${line}</div>`).join('');
 
   if (isLoading) {
     el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">Loading Hubstaff rows…</td></tr>';
   } else if (isUnavailable) {
-    el.hubstaffMetricsTable.innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(hubstaff.sourceError || 'Hubstaff JSON could not be loaded.')}</td></tr>`;
+    el.hubstaffMetricsTable.innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(hubstaff.sourceError || 'Hubstaff source could not be loaded.')}</td></tr>`;
   } else if (isEmpty) {
-    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">No Hubstaff rows were returned by the JSON endpoint.</td></tr>';
+    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">No Hubstaff rows were returned by the published CSV feed.</td></tr>';
   } else if (!sourceConfigured) {
-    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">Configure `HUBSTAFF_JSON_URL` to load Hubstaff rows.</td></tr>';
+    el.hubstaffMetricsTable.innerHTML = '<tr><td colspan="8" class="empty-state">Configure `HUBSTAFF_CSV_URL` to load Hubstaff rows.</td></tr>';
   } else {
     el.hubstaffMetricsTable.innerHTML = rows.map((row) => `
     <tr>
@@ -1758,14 +1758,14 @@ function renderHubstaffView() {
 
   el.hubstaffNotes.innerHTML = [
     sourceConfigured
-      ? `Live source: ${hubstaff.sourceUrl || 'Apps Script JSON endpoint'}`
-      : 'Hubstaff is now designed for an Apps Script JSON backend rather than direct Hubstaff browser access.',
+      ? `Live source: ${hubstaff.sourceUrl || 'Published Hubstaff CSV feed'}`
+      : 'Hubstaff is now designed for a published sanitized feed rather than direct browser-side Hubstaff access.',
     sourceConfigured
-      ? `Rows loaded: ${rows.length}. Last updated field comes from source_updated_at on the JSON rows.`
+      ? `Rows loaded: ${rows.length}. Last updated field comes from source_updated_at on the exported rows.`
       : 'Do not place Hubstaff API keys, refresh tokens, or access tokens in this website code.',
     sourceConfigured
       ? 'If the endpoint changes shape, keep the expected field names stable so the static site does not need a secrets-bearing update.'
-      : 'Once the Apps Script Web App URL is set, the tab will fetch the sanitized JSON directly from GitHub Pages.',
+      : 'Once the published feed URL is set, the tab will fetch the sanitized export directly from the static site.',
   ].map((line) => `<div class="note-card">${line}</div>`).join('');
 }
 

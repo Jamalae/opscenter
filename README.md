@@ -24,6 +24,8 @@ The current published workbook is:
 
 - [Candidates for Hire workbook](https://docs.google.com/spreadsheets/d/e/2PACX-1vTUQ5bqosxRzkSWO_xPAp6EauqGTV01N0meOZekSRzW93Z3DbPGbU4xpFnrvAgH4QhQF5QZHi7wp1-r/pubhtml)
 
+If Google stops serving all tabs from that legacy published workbook, define `window.OPS_CENTER_SOURCE_OVERRIDES` before [`sheets.js`](/Users/yasirahmad/Documents/GitHub/opscenter/sheets.js) loads. You can either set `primaryWorkbookSheetId` to a link-shared workbook ID that supports anonymous `gviz` CSV access, or override tabs individually with keys like `candidatePool`, `interviews`, `finalHires`, `currentWorkforce`, `resumePool`, and `newHiring`.
+
 ## Local preview
 
 Because the app fetches CSV data over HTTP, preview it with a simple static server instead of opening `index.html` directly from Finder.
@@ -78,7 +80,7 @@ npm run test:smoke:served
 - No explicit owner field exists in the workbook, so owner accountability is derived from workflow type.
 - No direct revenue, patient census, or referral outcome table is present, so Ops Center uses hiring capacity proxies for risk and flow.
 - `Resume Pool` is currently header-only, so it contributes structure but not operational volume yet.
-- The Hubstaff tab is present in the UI, but it is not connected to a live source yet.
+- The Hubstaff tab reads from a published sanitized export feed, not directly from a Hubstaff API key in browser code.
 
 ## Hubstaff integration
 
@@ -86,6 +88,6 @@ For GitHub Pages, do not place a private Hubstaff API token in front-end JavaScr
 
 Recommended options:
 
-- Best static option: export Hubstaff data into a published Google Sheet and add that source to `sheets.js`
+- Best static option: export Hubstaff data into a published Google Sheet or CSV feed and add that source to `sheets.js`
 - Good fallback: commit a CSV snapshot that the app can read statically
 - Secure live option: use a small backend or serverless proxy to call Hubstaff privately and return sanitized data to the browser
