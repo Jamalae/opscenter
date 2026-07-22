@@ -9,5 +9,8 @@ cypress/downloads/
 # Puppeteer artifacts
 tests/puppeteer/screenshots/
 
+# Patch artifacts
+*.patch
+
 # OS
 .DS_Store
