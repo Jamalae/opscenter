@@ -36,7 +36,6 @@ jobs:
             **/.htpasswd
             **/README.md
             **/*.patch
-            hb_index_*.html
             scripts/**
             node_modules/**
             cypress/**
